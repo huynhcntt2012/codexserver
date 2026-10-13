@@ -19,8 +19,10 @@ docker compose up -d --build --wait
 docker compose ps
 ```
 
-Mở `apps/client/project.godot` bằng Godot và nhấn F5. Mở hai instance client,
-giữ URL mặc định, bấm **Join arena** rồi **Ready** ở cả hai. Để username trống
+Mở `apps/client/project.godot` bằng Godot và nhấn F5. Client điền sẵn server LAN
+`192.168.1.98` (API cổng 8000, arena cổng 2567). Khi chạy Compose mặc định trên
+cùng máy, đổi hai URL thành `http://127.0.0.1:8000` và `http://127.0.0.1:2567`.
+Mở hai instance client, bấm **Join arena** rồi **Ready** ở cả hai. Để username trống
 để tạo tài khoản khách riêng; tài khoản đăng ký qua API có thể đăng nhập bằng username/password.
 
 | Phím           | Thao tác         |

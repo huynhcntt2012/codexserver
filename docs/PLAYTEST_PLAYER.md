@@ -10,8 +10,9 @@ và ít nhất hai người chơi. Không có chế độ offline/bot trong bả
 2. Windows: mở `suni-bomb-arena.exe`.
    Linux: chạy `chmod +x suni-bomb-arena.x86_64`, rồi `./suni-bomb-arena.x86_64`.
 3. Kết nối cùng mạng LAN hoặc VPN với máy chủ.
-4. Nhập hai URL do người tổ chức cung cấp. Ví dụ nếu IP máy chủ là `192.168.1.50`:
-   API URL: `http://192.168.1.50:8000`; Arena URL: `http://192.168.1.50:2567`.
+4. Bản này đã điền sẵn IP máy chủ `192.168.1.98`:
+   API URL: `http://192.168.1.98:8000`; Arena URL: `http://192.168.1.98:2567`.
+   Nếu người tổ chức đổi server, sửa hai URL trước khi Join.
    `127.0.0.1` chỉ dùng khi game và server chạy trên cùng máy.
 5. Để username/password trống rồi bấm **Join arena** để chơi bằng tài khoản khách.
 6. Chờ mọi người vào cùng phòng (2–8 người), rồi tất cả bấm **Ready**.

@@ -46,18 +46,20 @@ openssl rand -hex 32
 ```
 
 Điền hai chuỗi vừa tạo lần lượt vào `POSTGRES_PASSWORD` và `JWT_SECRET` trong
-`.env`. Đặt `BIND_ADDRESS` bằng IP LAN/VPN **của máy chủ**, ví dụ `192.168.1.50`.
+`.env`. Server chơi thử hiện tại dùng `192.168.1.98`; đặt `BIND_ADDRESS=192.168.1.98`.
 IP đó phải tồn tại trên máy và người chơi phải truy cập được; giữ nguyên
 `API_PORT=8000`, `ARENA_PORT=2567`. Repo mặc định vẫn bind loopback.
 
 ```bash
 docker compose up -d --build --wait
 docker compose ps
-curl --fail http://192.168.1.50:8000/health
-curl --fail http://192.168.1.50:2567/health
+curl --fail http://192.168.1.98:8000/health
+curl --fail http://192.168.1.98:2567/health
 ```
 
-Thay IP ví dụ trong mọi lệnh bằng IP thật. Cho phép TCP 8000 và 2567 từ đúng
+Client đã điền sẵn hai URL trên; có thể sửa trong giao diện hoặc qua biến môi trường
+`SUNI_API_URL`/`SUNI_ARENA_URL`. Nếu đổi server, cập nhật IP trong các lệnh.
+Cho phép TCP 8000 và 2567 từ đúng
 subnet LAN/VPN trên firewall của máy chủ; không mở PostgreSQL/Redis hay forward
 port router ra Internet. HTTP chỉ dành cho mạng thử nghiệm tin cậy; nên dùng guest.
 Gửi người chơi ZIP, checksum và hai URL: `http://IP:8000`, `http://IP:2567`.
@@ -66,7 +68,7 @@ Người chơi trên VPN dùng IP VPN ở cả hai URL, người chơi LAN dùng
 ## Kiểm tra trước khi mời người chơi
 
 ```bash
-SUNI_API_URL=http://192.168.1.50:8000 SUNI_ARENA_URL=http://192.168.1.50:2567 \
+SUNI_API_URL=http://192.168.1.98:8000 SUNI_ARENA_URL=http://192.168.1.98:2567 \
   /tmp/suni-godot/godot --headless --path apps/client --script res://tests/smoke.gd
 ```
 
