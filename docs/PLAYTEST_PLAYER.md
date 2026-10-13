@@ -15,6 +15,7 @@ và ít nhất hai người chơi. Không có chế độ offline/bot trong bả
    Nếu người tổ chức đổi server, sửa hai URL trước khi Join.
    `127.0.0.1` chỉ dùng khi game và server chạy trên cùng máy.
 5. Để username/password trống rồi bấm **Join arena** để chơi bằng tài khoản khách.
+   Username dùng cho tài khoản đã đăng ký, không phải tên nhân vật tùy chọn.
 6. Chờ mọi người vào cùng phòng (2–8 người), rồi tất cả bấm **Ready**.
    Phòng đã bắt đầu sẽ không nhận thêm người; người vào sau có thể ở phòng khác.
 
@@ -27,6 +28,11 @@ và ít nhất hai người chơi. Không có chế độ offline/bot trong bả
 - Sau kết quả 8 giây, mọi người Ready để chơi tiếp.
 
 ## Khi không kết nối được
+
+Nếu bản cũ báo **Sign-in failed**, xóa cả Username và Password để chơi guest.
+Nếu đăng nhập tài khoản đã đăng ký: username gồm 3–24 ký tự `a-z`, `0-9`, `_`;
+password dài 10–128 ký tự. HTTP 422 là sai định dạng; HTTP 401 là đăng nhập bị
+từ chối. Game chưa có nút đăng ký tài khoản trong giao diện.
 
 Kiểm tra lại IP máy chủ, kết nối LAN/VPN và trạng thái server với người tổ chức.
 Mất kết nối sẽ bị loại khỏi trận; Join lại để vào phòng mới.

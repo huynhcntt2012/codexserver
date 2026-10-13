@@ -26,7 +26,10 @@ var move_timer := 0.0
 func _ready() -> void:
 	add_child(net)
 	net.snapshot_received.connect(_on_snapshot)
-	net.status_changed.connect(func(message: String): status_label.text = message)
+	net.status_changed.connect(func(message: String):
+		status_label.text = message
+		status_label.tooltip_text = message
+	)
 	_setup_inputs()
 	_build_ui()
 

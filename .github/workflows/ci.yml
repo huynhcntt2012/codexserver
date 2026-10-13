@@ -48,6 +48,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash scripts/install-godot.sh /tmp/godot
       - run: GODOT=/tmp/godot/godot python3 scripts/check-godot.py
+      - run: GODOT=/tmp/godot/godot python3 scripts/check-client-errors.py
       - name: Create ephemeral CI configuration
         run: |
           echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)" >> .env
