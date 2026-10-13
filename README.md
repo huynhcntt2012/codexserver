@@ -19,8 +19,10 @@ docker compose up -d --build --wait
 docker compose ps
 ```
 
-Mở `apps/client/project.godot` bằng Godot và nhấn F5. Mở hai instance client,
-giữ URL mặc định, bấm **Join arena** rồi **Ready** ở cả hai. Để username trống
+Mở `apps/client/project.godot` bằng Godot và nhấn F5. Client điền sẵn server LAN
+`192.168.1.98` (API cổng 8000, arena cổng 2567). Khi chạy Compose mặc định trên
+cùng máy, đổi hai URL thành `http://127.0.0.1:8000` và `http://127.0.0.1:2567`.
+Mở hai instance client, bấm **Join arena** rồi **Ready** ở cả hai. Để username trống
 để tạo tài khoản khách riêng; tài khoản đăng ký qua API có thể đăng nhập bằng username/password.
 
 | Phím           | Thao tác         |
@@ -34,6 +36,10 @@ tầm 2 ô theo bốn hướng. Tường chặn tia nổ; thùng bị phá và c
 Bom kích nổ dây chuyền. Lửa tồn tại 0,5 giây. Người sống cuối thắng; chết đồng thời
 hoặc hết 180 giây là hòa. Sau 8 giây hiển thị kết quả, phòng về lobby.
 Mất kết nối bị loại; Join lại tìm phòng mới. Không cho vào trận đang diễn ra.
+
+Bản dùng thử độc lập cho Windows/Linux qua LAN/VPN:
+[chuẩn bị server và tải/build gói](docs/PLAYTEST.md),
+[hướng dẫn người chơi](docs/PLAYTEST_PLAYER.md).
 
 ## Monorepo
 

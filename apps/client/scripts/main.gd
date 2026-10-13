@@ -26,7 +26,10 @@ var move_timer := 0.0
 func _ready() -> void:
 	add_child(net)
 	net.snapshot_received.connect(_on_snapshot)
-	net.status_changed.connect(func(message: String): status_label.text = message)
+	net.status_changed.connect(func(message: String):
+		status_label.text = message
+		status_label.tooltip_text = message
+	)
 	_setup_inputs()
 	_build_ui()
 
@@ -66,8 +69,8 @@ func _build_ui() -> void:
 	_label("SUNI / BOMB ARENA", Vector2(28, 24), 32)
 	_label("NEON GARDEN   /   01", Vector2(30, 76), 16)
 	_label("PLAY TOGETHER", Vector2(666, 36), 22)
-	_field(api_input, "API URL", _env("SUNI_API_URL", "http://127.0.0.1:8000"), 88)
-	_field(arena_input, "Arena URL", _env("SUNI_ARENA_URL", "http://127.0.0.1:2567"), 132)
+	_field(api_input, "API URL", _env("SUNI_API_URL", "http://192.168.1.98:8000"), 88)
+	_field(arena_input, "Arena URL", _env("SUNI_ARENA_URL", "http://192.168.1.98:2567"), 132)
 	_field(username_input, "Username (empty = guest)", "", 176)
 	_field(password_input, "Password", "", 220)
 	password_input.secret = true
