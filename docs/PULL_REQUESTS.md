@@ -16,3 +16,19 @@ Các nhóm review theo thứ tự:
 PR phụ thuộc dùng base nhánh trước; sau merge đổi base về nhánh mặc định.
 Không tự merge. Không commit `.env`, database, dependencies hoặc artifacts.
 Ghi rõ test local và trạng thái GitHub Actions thực tế, không đánh đồng hai loại.
+
+## Xuất bản các nhánh đã chuẩn bị
+
+Bốn nhánh `suni/01-arena` đến `suni/04-delivery` được xếp chồng trên commit nền
+`main`. Nội dung PR nằm trong `docs/prs/`. Từ workspace có các nhánh này, đăng
+nhập GitHub bằng chính user đang chạy Git rồi thực hiện:
+
+```bash
+gh auth login --hostname github.com --git-protocol https --web --scopes workflow
+gh auth setup-git
+bash scripts/open-prs.sh
+```
+
+Script kiểm tra remote, trạng thái sạch và đăng nhập trước khi push các nhánh
+bằng một thao tác atomic, không force. Sau đó tạo bốn draft PR; nếu đã có PR mở
+cho nhánh tương ứng thì in lại URL. Script không merge hoặc deploy.
