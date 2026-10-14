@@ -13,6 +13,8 @@ COPY package.json package-lock.json ./
 COPY apps/arena/package.json apps/arena/package.json
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/apps/arena/dist apps/arena/dist
+COPY apps/arena/public apps/arena/public
+COPY docs/ARENA.md docs/ARENA.md
 USER node
 EXPOSE 2567
 CMD ["node", "apps/arena/dist/index.js"]

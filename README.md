@@ -27,6 +27,7 @@ Xem [hướng dẫn web](docs/WEB.md), [danh sách công việc](docs/TASKS.md) 
 
 Dev tích hợp realtime: [tính năng server Colyseus](docs/ARENA.md) liệt kê
 những gì đã có, vòng đời phòng, endpoint, message/snapshot và giới hạn hiện tại.
+Đọc trực tiếp tại <https://arena.sunifactory.com/documents> (không cần đăng nhập).
 
 ## Bản desktop cũ
 

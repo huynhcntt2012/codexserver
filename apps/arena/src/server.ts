@@ -5,6 +5,7 @@ import { Server, matchMaker } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { authenticate } from './auth.js';
 import { ArenaRoom } from './room.js';
+import { registerDocuments } from './documents.js';
 
 export function createArenaServer() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -12,6 +13,7 @@ export function createArenaServer() {
   }
   const app = express();
   app.disable('x-powered-by');
+  registerDocuments(app);
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
   app.use(
     '/matchmake',

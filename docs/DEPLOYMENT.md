@@ -95,6 +95,28 @@ Rollback code bằng checkout commit trước ở thư mục riêng rồi rebuil
 cần migration hoặc backup tương ứng. `docker compose down` giữ dữ liệu;
 `docker compose down -v` **xóa volume**, chỉ dành cho test dùng một lần.
 
+## Cập nhật trang tài liệu arena
+
+Trang công khai <https://arena.sunifactory.com/documents> được render từ
+`docs/ARENA.md` khi arena khởi động. Docker runtime chứa Markdown và stylesheet
+`apps/arena/public/documents.css`; sửa các file này cần build lại image arena.
+Không cần dịch vụ tài liệu hoặc CDN riêng. Các link source trỏ tới nhánh
+`suni/06-client-polish` trên GitHub; cập nhật `sourceUrl` trong
+`apps/arena/src/documents.ts` nếu chuyển nhánh tài liệu chính.
+
+Sau khi kiểm thử trên stack riêng và được yêu cầu triển khai, chọn image đã
+kiểm chứng bằng `ARENA_IMAGE` trong `.env`, rồi chỉ thay service arena:
+
+```bash
+docker compose up -d --no-deps --no-build --wait arena
+curl --fail https://arena.sunifactory.com/documents
+curl --fail https://arena.sunifactory.com/health
+```
+
+Lưu tag image cũ để rollback bằng cùng lệnh sau khi đổi `ARENA_IMAGE` về tag cũ.
+Thay arena sẽ ngắt trận đang chơi. `/documents` không yêu cầu JWT; `/rooms` và
+handshake WebSocket vẫn dùng xác thực như trước.
+
 ## CI/CD
 
 Push/PR: format, lint, unit/network/API tests, Docker builds, Godot parse/runtime,

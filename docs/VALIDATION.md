@@ -1,5 +1,27 @@
 # Kiểm thử giai đoạn 1
 
+## Trang tài liệu arena — 2026-10-14
+
+- Node 22: lint, build và 13/13 arena tests đạt. Network test kiểm tra thêm
+  HTML/CSS công khai, mục lục, liên kết source, hai URL `/documents` và
+  `/documents/`, cùng các hành vi WebSocket/gameplay có sẵn.
+- Format và whitespace check đạt. Audit dependency production không có cảnh báo;
+  notices của Marked 18.1.1 được giữ trong package và bundle Node.
+- Docker runtime mới chạy healthy trên stack riêng `suni-room-preview`.
+  Web multiplayer smoke và Godot 4.4.1 headless smoke đạt trên stack này.
+- Chromium 1440px và 390px: kiểm tra đường dẫn trực tiếp và qua `/arena/` proxy,
+  hai dạng URL có/không dấu `/` cuối, CSS, mục lục, cuộn đến section và không
+  tràn ngang toàn trang; không có lỗi JavaScript/console.
+  Ảnh: [desktop](screenshots/arena-documents.png),
+  [mobile](screenshots/arena-documents-mobile.png).
+- Đã triển khai riêng arena theo yêu cầu của chủ dự án bằng image
+  `suni-arena:documents-20261014`; giữ image cũ `suni-arena:e7bd301` để rollback.
+  Chromium xác nhận HTTPS `/documents` và `/documents/` trả 200, tải CSS và mục
+  lục đúng; `/health` trả `{"status":"ok"}`. Proxy web local cũng trả trang 200.
+- Các kết quả trên là kiểm thử local và xác nhận triển khai, không phải kết quả
+  GitHub Actions của commit mới. Không chạy kịch bản tạo tài khoản/trận thử trên
+  production trong đợt cập nhật tài liệu này.
+
 ## Bản web — 2026-10-14
 
 Chạy local trên stack riêng `suni-web-preview`, website tại loopback cổng 18080,

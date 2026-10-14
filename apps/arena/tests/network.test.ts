@@ -92,6 +92,37 @@ test(
       };
     };
     try {
+      // Public documentation must work through the same HTTP router as rooms.
+      for (const path of ['/documents', '/documents/']) {
+        const response = await fetch(`${base}${path}`);
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get('content-type')!, /text\/html/);
+        assert.equal(response.headers.get('cache-control'), 'no-cache');
+        assert.match(
+          response.headers.get('content-security-policy')!,
+          /default-src 'none'/,
+        );
+        const html = await response.text();
+        assert.match(html, /<html lang="vi">/);
+        assert.match(html, /<h1[^>]*>Server realtime Colyseus/);
+        assert.match(html, /<table>/);
+        assert.match(html, /href="#message-va-snapshot-version-1"/);
+        assert.match(html, /id="message-va-snapshot-version-1"/);
+        assert.match(
+          html,
+          /https:\/\/github.com\/huynhcntt2012\/codexserver\/blob\/suni\/06-client-polish\/apps\/arena\/src\/game.ts/,
+        );
+        assert.doesNotMatch(html, /<script\b|__STYLESHEET__|href="\.\.\//);
+        const stylesheet = html.match(/rel="stylesheet" href="([^"]+)"/);
+        assert.ok(stylesheet?.[1]);
+        const css = await fetch(new URL(stylesheet[1], `${base}${path}`));
+        assert.equal(css.status, 200);
+        assert.match(css.headers.get('content-type')!, /text\/css/);
+        assert.match(await css.text(), /\.table-scroll/);
+      }
+      assert.deepEqual(await (await fetch(`${base}/health`)).json(), {
+        status: 'ok',
+      });
       assert.equal((await fetch(`${base}/rooms`)).status, 401);
       assert.equal(
         (

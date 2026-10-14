@@ -1,5 +1,9 @@
 # Server realtime Colyseus: tính năng và tích hợp
 
+Đọc trực tiếp tại <https://arena.sunifactory.com/documents>, không cần đăng nhập.
+Arena phục vụ trang HTML từ chính file này; cập nhật tài liệu cần build và triển
+khai lại arena. Local: <http://127.0.0.1:2567/documents>.
+
 Tài liệu mô tả những gì đã có trong `apps/arena`, dành cho dev frontend, gameplay
 và backend. Web là client đang phát triển; Godot là client cũ. Cả hai dùng cùng
 room `arena` và snapshot version 1. Phiên bản đang khóa trong
@@ -25,14 +29,10 @@ cho từng tick. Inventory/VIP chưa tác động tới gameplay.
 
 ## Phòng và vòng đời trận
 
-```mermaid
-stateDiagram-v2
-    [*] --> waiting
-    waiting --> countdown: Có ít nhất 2 người, tất cả ready
-    countdown --> waiting: Có người rời phòng
-    countdown --> playing: Sau 3 giây
-    playing --> finished: Còn tối đa 1 người sống hoặc hết 180 giây
-    finished --> waiting: Sau 8 giây, tạo lại bản đồ
+```text
+waiting → countdown (3 giây) → playing (tối đa 180 giây)
+   ↑                              ↓
+   └──────── finished (8 giây) ←───┘
 ```
 
 - Chỉ nhận người mới ở `waiting`. Phòng khóa khi `countdown`, `playing` hoặc
@@ -81,6 +81,7 @@ timer, damage, tốc độ hoặc kết quả trận.
 | Method và endpoint                   | Xác thực/body                        | Kết quả                                                                     |
 | ------------------------------------ | ------------------------------------ | --------------------------------------------------------------------------- |
 | `GET /health`                        | Không cần token                      | `{ "status": "ok" }`; kiểm tra HTTP arena, không kiểm tra DB/Redis          |
+| `GET /documents`                     | Không cần token                      | Trang tài liệu HTML, có mục lục; hỗ trợ cả `/documents/`                    |
 | `GET /rooms`                         | Header `Authorization: Bearer <JWT>` | `{ "rooms": [{ "roomId", "players", "maxPlayers", "ready", "joinable" }] }` |
 | `POST /matchmake/create/arena`       | JSON `{ "token": "<JWT>" }`          | Tạo phòng và đặt chỗ                                                        |
 | `POST /matchmake/joinById/{roomId}`  | JSON `{ "token": "<JWT>" }`          | Đặt chỗ trong phòng đã chọn                                                 |

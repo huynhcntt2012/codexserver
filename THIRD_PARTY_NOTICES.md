@@ -13,6 +13,7 @@ Phiên bản chính xác nằm trong `package-lock.json`, `apps/api/uv.lock` và
 | Thư viện và font đi kèm Godot | [Copyright và notices đầy đủ](https://github.com/godotengine/godot/blob/4.4.1-stable/COPYRIGHT.txt); giữ nguyên khi phân phối engine |
 | Colyseus core / transport | [MIT, Endel Dreyer](https://github.com/colyseus/colyseus/blob/master/LICENSE) |
 | Express, express-rate-limit, ws, jose | MIT; notices được thu thập trực tiếp từ gói đã khóa |
+| Marked 18.1.1 | [MIT, MarkedJS (2018+) và Christopher Jeffrey (2011–2018)](https://github.com/markedjs/marked/blob/v18.1.1/LICENSE); kèm notice Markdown BSD của John Gruber (2004). Render tài liệu trên server; giữ nguyên toàn bộ LICENSE trong package và gói notices |
 | FastAPI, Starlette, SQLAlchemy, pwdlib, PyJWT, redis-py | MIT hoặc BSD; notices chính xác từ metadata gói đã khóa |
 | Uvicorn | BSD-3-Clause |
 | Psycopg 3 | [LGPL-3.0, kèm ngoại lệ cho OpenSSL](https://www.psycopg.org/psycopg3/docs/basic/install.html#license); giữ thư viện riêng, cho phép thay thế, cung cấp license và nguồn tương ứng khi phân phối image |
