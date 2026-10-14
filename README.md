@@ -25,6 +25,9 @@ là tài liệu bản desktop cũ.
 Xem [hướng dẫn web](docs/WEB.md), [danh sách công việc](docs/TASKS.md) và
 [kết quả kiểm thử](docs/VALIDATION.md).
 
+Dev tích hợp realtime: [tính năng server Colyseus](docs/ARENA.md) liệt kê
+những gì đã có, vòng đời phòng, endpoint, message/snapshot và giới hạn hiện tại.
+
 ## Bản desktop cũ
 
 Prototype multiplayer 2D pixel art nguyên bản: Godot 4.4.1, Colyseus 0.17 + TypeScript,

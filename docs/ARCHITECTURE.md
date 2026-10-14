@@ -1,5 +1,8 @@
 # Kiến trúc giai đoạn 1
 
+Tra cứu [tính năng server realtime Colyseus](ARENA.md) để xem chức năng đã có,
+endpoint, cấu trúc snapshot, giới hạn và vị trí code/kiểm thử tương ứng.
+
 ## Client web (hướng phát triển hiện tại)
 
 `apps/web/public` là frontend HTML/CSS/Canvas và JavaScript modules. Nginx phục vụ
