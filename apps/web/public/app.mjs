@@ -1,5 +1,8 @@
 import { ArenaClient } from './network.mjs';
 import { drawBoard } from './renderer.mjs';
+import { MovementVisual } from './movement.mjs';
+const movement = new MovementVisual();
+let nextMoveAt = 0;
 
 const $ = (id) => document.getElementById(id);
 const client = new ArenaClient();
@@ -224,6 +227,7 @@ client.addEventListener('account', () => {
   render();
 });
 client.addEventListener('change', () => {
+  movement.clear();
   held.clear();
   authView();
   render();
@@ -408,7 +412,13 @@ function render() {
 function act(action) {
   if ($('characters').open) return;
   if (action === 'ready' && !$('ready').disabled) client.send(action);
-  else if (client.snapshot?.phase === 'playing') client.send(action);
+  else if (client.snapshot?.phase === 'playing') {
+    client.send(action);
+    if (['up', 'down', 'left', 'right'].includes(action)) {
+      nextMoveAt = performance.now() + 150;
+      movement.intent(client.snapshot, client.id, action, performance.now());
+    }
+  }
 }
 
 document.addEventListener('keydown', (event) => {
@@ -443,14 +453,18 @@ for (const button of document.querySelectorAll('[data-action]')) {
     button.addEventListener(type, (event) => held.delete(event.pointerId));
 }
 window.addEventListener('pagehide', () => client.leave());
-setInterval(() => {
-  if (held.size) act([...held.values()].at(-1));
-}, 160);
-let lastDraw = 0;
 function frame(time) {
-  if (screen === 'game' && time - lastDraw > 32) {
-    drawBoard($('board'), client.snapshot, client.id, time, selectedCharacter);
-    lastDraw = time;
+  if (held.size && time >= nextMoveAt) act([...held.values()].at(-1));
+  if (screen === 'game') {
+    const positions = movement.sample(client.snapshot, client.id, time);
+    drawBoard(
+      $('board'),
+      client.snapshot,
+      client.id,
+      time,
+      selectedCharacter,
+      positions,
+    );
   }
   requestAnimationFrame(frame);
 }

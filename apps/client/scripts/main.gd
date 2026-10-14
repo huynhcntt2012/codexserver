@@ -44,6 +44,7 @@ var overlay_title: Label
 var overlay_detail: Label
 var overlay_tag: Label
 var move_timer := 0.0
+var move_direction := ""
 var was_connected := false
 var elapsed := 0.0
 var readiness: ColorRect
@@ -350,6 +351,7 @@ func _clear_match() -> void:
 	snapshot = {}
 	arena_view.clear()
 	move_timer = 0
+	move_direction = ""
 	_refresh_lobby()
 
 
@@ -496,12 +498,24 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("place_bomb"):
 		net.send_action("bomb")
 	move_timer -= delta
-	if move_timer <= 0:
-		move_timer = 0.05
-		for direction in ["up", "down", "left", "right"]:
-			if Input.is_action_pressed("move_" + direction):
-				net.send_action(direction)
+	var direction := ""
+	for candidate in ["up", "down", "left", "right"]:
+		if Input.is_action_just_pressed("move_" + candidate):
+			direction = candidate
+			break
+	if direction.is_empty() and not move_direction.is_empty() and Input.is_action_pressed("move_" + move_direction):
+		direction = move_direction
+	if direction.is_empty():
+		for candidate in ["up", "down", "left", "right"]:
+			if Input.is_action_pressed("move_" + candidate):
+				direction = candidate
 				break
+	if not direction.is_empty() and (direction != move_direction or move_timer <= 0):
+		net.send_action(direction)
+		arena_view.movement_intent(direction)
+		move_timer = 0.15
+	move_direction = direction
+
 
 
 func _build_characters() -> void:

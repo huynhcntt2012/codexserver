@@ -46,7 +46,9 @@ mở rộng cluster. Không chạy nhiều replica arena với cấu hình hiệ
   client không được tự đẩy thời gian server.
 - `waiting → countdown (3 giây) → playing → finished (8 giây) → waiting`.
   Tất cả người trong lobby phải Ready, tối thiểu hai người.
-- Một input đang chờ/người/tick, bomb ưu tiên movement. Chỉ nhận enum hợp lệ.
+- Tối đa một input đang chờ/người, bomb ưu tiên movement. Lệnh di chuyển đến
+  sớm được giữ tới bước hợp lệ kế tiếp (tối đa 150 ms theo đồng hồ mô phỏng);
+  hướng mới thay hướng cũ, xử lý một lần rồi xóa. Chỉ nhận enum hợp lệ.
   Session ID do Colyseus cấp, không lấy từ payload.
 - Client không gửi tọa độ, damage, tốc độ, timer hoặc winner. JWT xác thực issuer,
   audience, chữ ký HS256 và expiry. Tên lấy từ JWT đã ký.

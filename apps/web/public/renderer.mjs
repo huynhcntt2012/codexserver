@@ -4,7 +4,14 @@ const mascots = ['bong', 'may', 'la', 'nang'].map((name) => {
   return image;
 });
 
-export function drawBoard(canvas, snapshot, localId, time, selected = null) {
+export function drawBoard(
+  canvas,
+  snapshot,
+  localId,
+  time,
+  selected = null,
+  positions = new Map(),
+) {
   const ctx = canvas.getContext('2d');
   const cell = 48;
   const round = (x, y, w, h, radius, color) => {
@@ -67,8 +74,9 @@ export function drawBoard(canvas, snapshot, localId, time, selected = null) {
       '#69d6ed',
     );
   for (const p of snapshot?.players || []) {
-    const x = p.x * cell,
-      y = p.y * cell;
+    const position = positions.get(p.id) ?? p;
+    const x = position.x * cell,
+      y = position.y * cell;
     if (!p.alive) {
       round(x + 15, y + 34, 18, 6, 3, '#98b4ad');
       continue;

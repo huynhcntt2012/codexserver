@@ -176,3 +176,37 @@ test('entering a live flame is fatal; disconnection forfeits; timeout is draw', 
   assert.equal(t.phase, 'finished');
   assert.equal(t.winner, null);
 });
+
+test('early movement is buffered once, latest direction wins, and cannot accelerate movement', () => {
+  const g = playing();
+  g.input('a', 'right');
+  g.tick(50);
+  assert.equal(g.players.get('a')!.x, 2);
+  for (let i = 0; i < 100; i++) g.input('a', 'right');
+  g.tick(50);
+  assert.equal(g.players.get('a')!.x, 2);
+  g.input('a', 'left');
+  g.tick(50);
+  assert.equal(g.players.get('a')!.x, 2);
+  g.tick(50);
+  assert.equal(g.players.get('a')!.x, 1);
+  g.tick(500);
+  assert.equal(g.players.get('a')!.x, 1);
+});
+
+test('buffer does not move disconnected players or survive a finished round', () => {
+  const g = playing();
+  g.input('a', 'right');
+  g.tick(50);
+  g.input('a', 'right');
+  g.tick(50);
+  g.removePlayer('a');
+  g.tick(8000);
+  assert.equal(g.phase, 'waiting');
+  g.addPlayer('a', 'Again');
+  g.input('a', 'ready');
+  g.input('b', 'ready');
+  g.tick(3000);
+  g.tick(500);
+  assert.equal(g.players.get('a')!.x, 1);
+});

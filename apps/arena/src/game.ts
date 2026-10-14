@@ -139,7 +139,8 @@ export class Arena {
       !['up', 'down', 'left', 'right', 'bomb'].includes(value)
     )
       return false;
-    // One pending action per player/tick; packets cannot accelerate the clock.
+    // One pending action per player; an early move waits for the next legal step.
+    // New directions replace the buffered direction; packets cannot accelerate time.
     // A bomb has priority over held movement, so a key press is not lost.
     if (this.inputs.get(id) !== 'bomb') this.inputs.set(id, value as Action);
     return true;
@@ -167,7 +168,12 @@ export class Arena {
     this.killInFlames();
     for (const [id, action] of this.inputs) {
       const p = this.players.get(id);
-      if (!p?.alive) continue;
+      if (!p?.alive) {
+        this.inputs.delete(id);
+        continue;
+      }
+      if (action !== 'bomb' && this.now < p.nextMove) continue;
+      this.inputs.delete(id);
       if (action === 'bomb') this.placeBomb(p);
       else if (action in directions && this.now >= p.nextMove) {
         const [dx, dy] = directions[action as keyof typeof directions];
@@ -189,7 +195,6 @@ export class Arena {
         }
       }
     }
-    this.inputs.clear();
     this.killInFlames();
     this.resolveWinner();
     if (this.phase === 'playing' && this.now >= this.deadline)

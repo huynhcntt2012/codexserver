@@ -19,6 +19,7 @@ var previous_flames: Dictionary = {}
 var facings: Dictionary = {}
 var rings: Array[Dictionary] = []
 var dust_timer := 0.0
+var movement_cue: Dictionary = {}
 
 
 func set_snapshot(value: Dictionary, session: String) -> void:
@@ -48,6 +49,8 @@ func set_snapshot(value: Dictionary, session: String) -> void:
 					"life": 0.38, "duration": 0.38, "color": Color("7edff2")})
 	snapshot = value
 	local_id = session
+	if value.get("phase") != "playing":
+		movement_cue.clear()
 	var active: Dictionary = {}
 	for player in value.get("players", []):
 		active[player.id] = true
@@ -73,6 +76,7 @@ func set_snapshot(value: Dictionary, session: String) -> void:
 
 func clear() -> void:
 	snapshot = {}
+	movement_cue.clear()
 	positions.clear()
 	moving.clear()
 	facings.clear()
@@ -90,13 +94,18 @@ func _process(delta: float) -> void:
 	dust_timer -= delta
 	for player in snapshot.get("players", []):
 		var target := Vector2(player.x, player.y)
+		if player.id == local_id and not movement_cue.is_empty():
+			if not player.alive or target != movement_cue.origin:
+				movement_cue.clear()
+			elif elapsed - movement_cue.started < 0.25:
+				target += movement_cue.direction * 0.25 * minf(1.0, (elapsed - movement_cue.started) / 0.05)
 		var current: Vector2 = positions.get(player.id, target)
 		moving[player.id] = current.distance_to(target) > 0.02
 		if moving[player.id]:
 			facings[player.id] = current.direction_to(target)
 			if dust_timer <= 0 and player.alive:
 				_burst(ORIGIN + current * CELL + Vector2(22, 38), Color("83b8ad"), 1, 10, 0.25)
-		positions[player.id] = current.move_toward(target, delta * 12.0)
+		positions[player.id] = current.move_toward(target, delta * (20.0 if player.id == local_id else 14.0))
 	if dust_timer <= 0:
 		dust_timer = 0.08
 	for particle in sparks:
@@ -108,6 +117,32 @@ func _process(delta: float) -> void:
 		ring.life -= delta
 	rings = rings.filter(func(r: Dictionary): return r.life > 0)
 	queue_redraw()
+
+
+func movement_intent(action: String) -> void:
+	if snapshot.get("phase") != "playing":
+		return
+	var directions := {"up": Vector2.UP, "down": Vector2.DOWN, "left": Vector2.LEFT, "right": Vector2.RIGHT}
+	if not directions.has(action):
+		return
+	for player in snapshot.get("players", []):
+		if player.id != local_id or not player.alive:
+			continue
+		var origin := Vector2(player.x, player.y)
+		var target: Vector2 = origin + directions[action]
+		if target.x < 0 or target.y < 0 or target.y >= snapshot.grid.size() or target.x >= snapshot.grid[int(target.y)].size():
+			return
+		if int(snapshot.grid[int(target.y)][int(target.x)]) != 0:
+			return
+		for bomb in snapshot.get("bombs", []):
+			if Vector2(bomb.x, bomb.y) == target:
+				return
+		for other in snapshot.players:
+			if other.id != local_id and other.alive and Vector2(other.x, other.y) == target:
+				return
+		if movement_cue.get("origin") == origin and movement_cue.get("action") == action:
+			return
+		movement_cue = {"origin": origin, "direction": directions[action], "action": action, "started": elapsed}
 
 
 func _burst(center: Vector2, color: Color, count: int, speed: float, life: float) -> void:
