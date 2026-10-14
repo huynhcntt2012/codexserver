@@ -14,7 +14,7 @@ let rosterKey = '';
 let previousPhase;
 let selectedCharacter = null;
 let pendingCharacter = 0;
-const characterNames = ['bong', 'may', 'la', 'nang'];
+const characterNames = ['bombo', 'mimi', 'zin', 'lala', 'kai'];
 $('characters-open').addEventListener('click', () => {
   pendingCharacter = selectedCharacter ?? 0;
   for (const button of document.querySelectorAll('[data-character]'))
@@ -356,13 +356,13 @@ function render() {
           if (className === 'slot' && player) {
             const avatar = document.createElement('img');
             avatar.src =
-              '/art/' +
+              '/art/boom/characters/portraits/' +
               characterNames[
                 player.id === client.id && selectedCharacter !== null
                   ? selectedCharacter
-                  : i % 4
+                  : i % 5
               ] +
-              '.svg';
+              '.png';
             avatar.alt = '';
             span.replaceChildren(avatar);
           }
@@ -396,13 +396,13 @@ function render() {
   $('result-avatar').hidden = phase !== 'finished' || !winner;
   if (winner)
     $('result-avatar').src =
-      '/art/' +
+      '/art/boom/characters/portraits/' +
       characterNames[
         winner.id === client.id && selectedCharacter !== null
           ? selectedCharacter
-          : winner.slot % 4
+          : winner.slot % 5
       ] +
-      '.svg';
+      '.png';
   $('overlay-title').textContent = title;
   $('overlay-detail').textContent = detail;
   $('overlay-tag').textContent = tag;

@@ -4,11 +4,11 @@ extends Node2D
 const Network = preload("res://scripts/network.gd")
 const ArenaView = preload("res://scripts/arena_view.gd")
 const LobbyView = preload("res://scripts/lobby_view.gd")
-const INK := Color("225470")
-const PANEL := Color("ffffff")
-const MUTED := Color("618499")
-const MINT := Color("225470")
-const WHITE := Color("225470")
+const INK := Color("113f6b")
+const PANEL := Color("0e365d")
+const MUTED := Color("b8d9ed")
+const MINT := Color("ffe17b")
+const WHITE := Color("effaff")
 
 var net = Network.new()
 var arena_view = ArenaView.new()
@@ -85,7 +85,7 @@ func _panel(parent: Node, rect: Rect2, color := PANEL) -> Panel:
 	panel.position = rect.position
 	panel.size = rect.size
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_theme_stylebox_override("panel", _style(color, Color("dcecf3"), 28))
+	panel.add_theme_stylebox_override("panel", _style(color, Color("376c91"), 28))
 	parent.add_child(panel)
 	return panel
 
@@ -114,10 +114,10 @@ func _button(parent: Node, text: String, rect: Rect2, primary := false) -> Butto
 	button.add_theme_color_override("font_hover_color", INK if primary else WHITE)
 	button.add_theme_color_override("font_pressed_color", INK if primary else WHITE)
 	button.add_theme_color_override("font_disabled_color", Color("68838b"))
-	button.add_theme_stylebox_override("normal", _style(Color("ffda6c") if primary else Color("def5fc"), MINT if primary else Color("dcecf3")))
-	button.add_theme_stylebox_override("hover", _style(Color("ffe89a") if primary else Color("c5edf8"), MINT))
-	button.add_theme_stylebox_override("pressed", _style(Color("ffd16a") if primary else Color("d4eef7"), MINT))
-	button.add_theme_stylebox_override("disabled", _style(Color("e9f1f5"), Color("dcecf3")))
+	button.add_theme_stylebox_override("normal", _style(Color("ffda6c") if primary else Color("18527d"), MINT if primary else Color("376c91")))
+	button.add_theme_stylebox_override("hover", _style(Color("ffe89a") if primary else Color("246b94"), MINT))
+	button.add_theme_stylebox_override("pressed", _style(Color("ffd16a") if primary else Color("16466c"), MINT))
+	button.add_theme_stylebox_override("disabled", _style(Color("244561"), Color("376c91")))
 	parent.add_child(button)
 	return button
 
@@ -130,20 +130,20 @@ func _field(field: LineEdit, hint: String, value: String, y: float) -> void:
 	field.add_theme_font_size_override("font_size", 16)
 	field.add_theme_color_override("font_color", WHITE)
 	field.add_theme_color_override("font_placeholder_color", MUTED)
-	field.add_theme_stylebox_override("normal", _style(Color("f4fbff"), Color("cce6ee"), 8))
-	field.add_theme_stylebox_override("focus", _style(Color("f4fbff"), MINT, 8))
+	field.add_theme_stylebox_override("normal", _style(Color("102f50"), Color("376c91"), 8))
+	field.add_theme_stylebox_override("focus", _style(Color("102f50"), MINT, 8))
 	form.add_child(field)
 
 
 func _build_ui() -> void:
 	# Background panels sit behind the separately rendered arena.
-	var board_panel := _panel(self, Rect2(28, 124, 704, 624), Color("f5fcff"))
+	var board_panel := _panel(self, Rect2(28, 124, 704, 624), Color("0e365d"))
 	move_child(board_panel, 0)
 	_panel(self, Rect2(756, 124, 496, 624))
 	_label(self, "BỤP BỤP!", Rect2(30, 24, 270, 52), 38, MINT)
 	_label(self, "ĐẤU TRƯỜNG BÓNG NƯỚC", Rect2(280, 36, 500, 36), 22)
 	_label(self, "ĐẶT BÓNG. NÉ NHANH. CHƠI CÙNG NHAU.", Rect2(32, 78, 660, 26), 14, MUTED)
-	_panel(self, Rect2(1018, 34, 234, 42), Color("def7f1"))
+	_panel(self, Rect2(1018, 34, 234, 42), Color("18527d"))
 	connection_label = _label(self, "●  CHƯA KẾT NỐI", Rect2(1034, 40, 210, 30), 14, MINT)
 	phase_label = _label(self, "VƯỜN KẸO NGỌT   /   SÂN ĐẤU 01", Rect2(50, 721, 660, 23), 13, MUTED)
 	panel_title = _label(self, "VÀO SÂN ĐẤU", Rect2(784, 148, 440, 32), 26)
@@ -184,7 +184,7 @@ func _build_ui() -> void:
 	readiness = ColorRect.new()
 	readiness.position = Vector2(784, 536)
 	readiness.size = Vector2(440, 4)
-	readiness.color = Color("d8ebf2")
+	readiness.color = Color("376c91")
 	readiness.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lobby.add_child(readiness)
 	readiness_fill = ColorRect.new()
@@ -193,7 +193,7 @@ func _build_ui() -> void:
 	readiness.add_child(readiness_fill)
 	readiness_label = _label(lobby, "", Rect2(784, 661, 440, 22), 12, MUTED)
 	for i in range(8):
-		var row := _panel(lobby, Rect2(784, 249 + i * 36, 440, 32), Color("eaf6fc"))
+		var row := _panel(lobby, Rect2(784, 249 + i * 36, 440, 32), Color("18527d"))
 		_label(row, "", Rect2(12, 3, 276, 26), 15)
 		var state := _label(row, "", Rect2(286, 3, 142, 26), 12, MUTED)
 		state.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -221,7 +221,7 @@ func _build_ui() -> void:
 	credits.add_child(text)
 	add_child(credits)
 	credits_button.pressed.connect(func(): credits.popup_centered())
-	overlay = _panel(self, Rect2(176, 334, 408, 168), Color("ffffff"))
+	overlay = _panel(self, Rect2(176, 334, 408, 168), Color("0e365d"))
 	overlay_tag = _label(overlay, "VƯỜN KẸO NGỌT", Rect2(16, 14, 376, 24), 13, MINT)
 	overlay_title = _label(overlay, "CHƠI CÙNG BẠN BÈ", Rect2(16, 42, 376, 52), 27)
 	overlay_detail = _label(overlay, "Chọn Chơi khách để vào sảnh chờ.\n2–8 người chơi · Một người sống cuối cùng.", Rect2(16, 102, 376, 52), 15, MUTED)
@@ -234,7 +234,7 @@ func _build_ui() -> void:
 	for label in [overlay_tag, overlay_title, overlay_detail]:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		overlay_title.clip_text = true
-	_panel(self, Rect2(28, 764, 1224, 40), Color("ffffff"))
+	_panel(self, Rect2(28, 764, 1224, 40), Color("0e365d"))
 	status_label = _label(self, "Chào người chơi! Chọn Chơi khách để bắt đầu.", Rect2(44, 768, 770, 32), 13, MUTED)
 	status_label.clip_text = true
 	status_label.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -395,7 +395,7 @@ func _refresh_lobby() -> void:
 		var accent := row.get_child(2) as ColorRect
 		name_label.clip_text = true
 		if i >= players.size():
-			accent.color = Color("dcecf3")
+			accent.color = Color("376c91")
 			name_label.tooltip_text = ""
 			name_label.text = "%02d   Đang chờ người chơi…" % (i + 1)
 			name_label.add_theme_color_override("font_color", Color("527481"))
@@ -457,7 +457,7 @@ func _refresh_lobby() -> void:
 		var winner_name := "HÒA!"
 		for player in players:
 			if player.id == snapshot.get("winner"):
-				result_avatar.texture = ArenaView.Pilot.ART[ArenaView.Pilot.selected if player.id == net.session_id and ArenaView.Pilot.selected >= 0 else int(player.slot) % 4]
+				result_avatar.texture = ArenaView.Pilot.ART[ArenaView.Pilot.selected if player.id == net.session_id and ArenaView.Pilot.selected >= 0 else int(player.slot) % 5]
 				result_avatar.visible = true
 				winner_name = "BẠN THẮNG!" if player.id == net.session_id else player.name + " thắng!"
 		if snapshot.get("winner") != null and winner_name == "HÒA!":
@@ -521,17 +521,18 @@ func _process(delta: float) -> void:
 func _build_characters() -> void:
 	character_dialog = AcceptDialog.new()
 	character_dialog.title = "Chọn người bạn đồng hành"
-	character_dialog.min_size = Vector2i(880, 380)
+	character_dialog.min_size = Vector2i(1080, 380)
 	character_dialog.ok_button_text = "Xác nhận chọn"
-	character_dialog.add_theme_stylebox_override("panel", _style(Color("fffcf4"), Color("dcecf3")))
-	var frame := _style(Color("fffcf4"), Color("dcecf3"))
+	character_dialog.add_theme_stylebox_override("panel", _style(Color("0e365d"), Color("376c91")))
+	var frame := _style(Color("0e365d"), Color("376c91"))
 	frame.set_border_width_all(2)
 	frame.border_width_top = 32
 	character_dialog.add_theme_stylebox_override("embedded_border", frame)
 	character_dialog.add_theme_color_override("title_color", WHITE)
 	var confirm := character_dialog.get_ok_button()
 	confirm.add_theme_stylebox_override("normal", _style(Color("ffda6c"), Color("ffda6c")))
-	confirm.add_theme_color_override("font_color", WHITE)
+	confirm.add_theme_color_override("font_color", INK)
+	confirm.custom_minimum_size = Vector2(260, 44)
 	var content := VBoxContainer.new()
 	var hint := Label.new()
 	hint.text = "Diện mạo trên máy bạn · Không thay đổi sức mạnh"
@@ -540,20 +541,22 @@ func _build_characters() -> void:
 	var cards := HBoxContainer.new()
 	cards.add_theme_constant_override("separation", 16)
 	content.add_child(cards)
-	var names := ["BÔNG", "MÂY", "LÁ", "NẮNG"]
+	var names = ArenaView.Pilot.NAMES
 	var group := ButtonGroup.new()
-	for i in range(4):
+	for i in range(5):
 		var card := Button.new()
 		card.text = names[i]
 		card.icon = ArenaView.Pilot.ART[i]
 		card.expand_icon = true
 		card.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-		card.custom_minimum_size = Vector2(200, 280)
+		card.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		card.add_theme_font_size_override("font_size", 18)
+		card.custom_minimum_size = Vector2(196, 280)
 		card.toggle_mode = true
 		card.button_group = group
 		card.add_theme_color_override("font_color", WHITE)
-		card.add_theme_stylebox_override("normal", _style(ArenaView.COLORS[i].lightened(0.75), Color("dcecf3")))
-		card.add_theme_stylebox_override("pressed", _style(ArenaView.COLORS[i].lightened(0.45), MINT))
+		card.add_theme_stylebox_override("normal", _style(ArenaView.COLORS[i].darkened(0.65), Color("376c91")))
+		card.add_theme_stylebox_override("pressed", _style(ArenaView.COLORS[i].darkened(0.35), MINT))
 		card.pressed.connect(func(): ArenaView.Pilot.selected = i)
 		cards.add_child(card)
 	character_dialog.add_child(content)
@@ -563,6 +566,4 @@ func _build_characters() -> void:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, 1280, 820), Color("e9fbf5"))
-	draw_circle(Vector2(1160, 0), 380, Color("d6f5ed"))
-	draw_circle(Vector2(20, 840), 320, Color("d5f5eb"))
+	draw_texture_rect(preload("res://art/boom/backdrop.png"), Rect2(0, 0, 1280, 820), false)

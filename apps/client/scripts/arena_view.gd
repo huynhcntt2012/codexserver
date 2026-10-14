@@ -195,29 +195,36 @@ func _rounded(rect: Rect2, color: Color, radius := 8) -> void:
 	draw_style_box(style, rect)
 
 
-func _draw_tile(pos: Vector2, tile: int, checker: bool) -> void:
-	_rounded(Rect2(pos, Vector2.ONE * CELL), Color("e7f8d7") if checker else Color("d7efc5"), 4)
+const FLOORS := [preload("res://art/boom/tiles/grass/0_0.png"), preload("res://art/boom/tiles/grass/0_1.png"), preload("res://art/boom/tiles/grass/1_0.png"), preload("res://art/boom/tiles/grass/1_1.png")]
+const WALL = preload("res://art/boom/obstacles/stone_wall/00.png")
+const CRATE = preload("res://art/boom/obstacles/wood_crate/00.png")
+const BOMB = preload("res://art/boom/bombs/water_blue.png")
+const SPLASH := [preload("res://art/boom/effects/water_splash/00.png"), preload("res://art/boom/effects/water_splash/01.png"), preload("res://art/boom/effects/water_splash/02.png"), preload("res://art/boom/effects/water_splash/03.png"), preload("res://art/boom/effects/water_splash/04.png"), preload("res://art/boom/effects/water_splash/05.png")]
+
+
+func _draw_tile(pos: Vector2, tile: int, _checker: bool) -> void:
+	var cell := (pos - ORIGIN) / CELL
+	var rect := Rect2(pos, Vector2.ONE * CELL)
+	draw_texture_rect(FLOORS[posmod(int(cell.x) * 7 + int(cell.y) * 3, 4)], rect, false)
 	if tile == 1:
-		_rounded(Rect2(pos + Vector2(3, 5), Vector2(38, 37)), Color("90b0c1"))
-		_rounded(Rect2(pos + Vector2(3, 3), Vector2(38, 29)), Color("bdd6e2"))
+		draw_texture_rect(WALL, rect, false)
 	elif tile == 2:
-		_rounded(Rect2(pos + Vector2(4, 5), Vector2(36, 37)), Color("c69758"))
-		_rounded(Rect2(pos + Vector2(4, 3), Vector2(36, 12)), Color("f5d699"))
-		draw_line(pos + Vector2(8, 17), pos + Vector2(30, 30), Color("fff0ce"), 2, true)
+		draw_texture_rect(CRATE, rect, false)
 
 
 func _draw_bomb(bomb: Dictionary) -> void:
-	var center := ORIGIN + Vector2(bomb.x, bomb.y) * CELL + Vector2(22, 23)
-	var pulse := 17.0 + sin(elapsed * 10)
-	draw_circle(center, pulse, Color("69d6ed"))
-	draw_arc(center, pulse, 0, TAU, 48, Color.WHITE, 2, true)
-	draw_circle(center - Vector2(5, 6), 4, Color("f2ffff"))
+	var center := ORIGIN + Vector2(bomb.x, bomb.y) * CELL + Vector2(22, 22)
+	var size := 37.0 + sin(elapsed * 10) * 2
+	draw_texture_rect(BOMB, Rect2(center - Vector2.ONE * size / 2, Vector2.ONE * size), false)
 
 
 func _draw_flame(cell: Vector2i) -> void:
+	var frame := 0
+	for flame in snapshot.get("flames", []):
+		if int(flame.x) == cell.x and int(flame.y) == cell.y:
+			frame = clampi(int((500.0 - (float(flame.expiresAt) - float(snapshot.now))) / 500.0 * 6), 0, 5)
 	var pos := ORIGIN + Vector2(cell) * CELL
-	_rounded(Rect2(pos + Vector2.ONE, Vector2(42, 42)), Color("a1e6ed"), 12)
-	draw_circle(pos + Vector2(22, 22), 16, Color("bef6fa"))
+	draw_texture_rect(SPLASH[frame], Rect2(pos, Vector2.ONE * CELL), false)
 
 
 func _draw_player(player: Dictionary) -> void:

@@ -1,9 +1,21 @@
-const mascots = ['bong', 'may', 'la', 'nang'].map((name) => {
+const load = (path) => {
   const image = new Image();
-  image.src = `/art/${name}.svg`;
+  image.src = '/art/boom/' + path;
   return image;
-});
-
+};
+const names = ['bombo', 'mimi', 'zin', 'lala', 'kai'];
+const sheets = names.map((n) => load(`spritesheets/${n}.png`));
+const floor = ['0_0', '0_1', '1_0', '1_1'].map((n) =>
+  load(`tiles/grass/${n}.png`),
+);
+const wall = load('obstacles/stone_wall/00.png');
+const crate = load('obstacles/wood_crate/00.png');
+const bomb = load('bombs/water_blue.png');
+const splash = Array.from({ length: 6 }, (_, i) =>
+  load(`effects/water_splash/0${i}.png`),
+);
+const canvases = new WeakMap();
+const ready = (image) => image.complete && image.naturalWidth > 0;
 export function drawBoard(
   canvas,
   snapshot,
@@ -12,33 +24,26 @@ export function drawBoard(
   selected = null,
   positions = new Map(),
 ) {
-  const ctx = canvas.getContext('2d');
-  const cell = 48;
-  const round = (x, y, w, h, radius, color) => {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, radius);
-    ctx.fill();
-  };
-  const bubble = (x, y, radius, color) => {
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x - radius * 0.3, y - radius * 0.35, radius * 0.22, 0, Math.PI * 2);
-    ctx.fillStyle = '#f2ffff';
-    ctx.fill();
+  const ctx = canvas.getContext('2d'),
+    cell = 48;
+  let state = canvases.get(canvas);
+  if (
+    !state ||
+    state.round !== snapshot?.round ||
+    snapshot?.phase !== 'playing'
+  ) {
+    state = { round: snapshot?.round, players: new Map() };
+    canvases.set(canvas, state);
+  }
+  const draw = (image, x, y, w = cell, h = cell) => {
+    if (ready(image)) ctx.drawImage(image, x, y, w, h);
   };
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#7da951';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   for (let y = 0; y < 13; y++)
     for (let x = 0; x < 15; x++) {
-      const px = x * cell,
-        py = y * cell;
-      round(px, py, cell, cell, 4, (x + y) % 2 ? '#d7efc5' : '#e7f8d7');
+      draw(floor[(x * 7 + y * 3) % 4], x * cell, y * cell);
       const tile =
         snapshot?.grid[y]?.[x] ??
         (x === 0 ||
@@ -48,49 +53,75 @@ export function drawBoard(
         (x % 2 === 0 && y % 2 === 0)
           ? 1
           : 0);
-      if (tile === 1) {
-        round(px + 4, py + 5, 40, 39, 10, '#90b0c1');
-        round(px + 4, py + 3, 40, 31, 10, '#bdd6e2');
-      } else if (tile === 2) {
-        round(px + 5, py + 5, 38, 39, 9, '#c69758');
-        round(px + 5, py + 3, 38, 13, 8, '#f5d699');
-        ctx.strokeStyle = '#fff0ce';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(px + 9, py + 17);
-        ctx.lineTo(px + 31, py + 31);
-        ctx.stroke();
-      }
+      if (tile === 1) draw(wall, x * cell, y * cell);
+      if (tile === 2) draw(crate, x * cell, y * cell);
     }
-  for (const f of snapshot?.flames || []) {
-    round(f.x * cell + 1, f.y * cell + 1, 46, 46, 13, '#a1e6ed');
-    bubble(f.x * cell + 24, f.y * cell + 24, 17, '#bef6fa');
-  }
-  for (const b of snapshot?.bombs || [])
-    bubble(
-      b.x * cell + 24,
-      b.y * cell + 24,
-      18 + Math.sin(time / 130),
-      '#69d6ed',
+  for (const b of snapshot?.bombs || []) {
+    const size = 40 + Math.sin(time / 100) * 2;
+    draw(
+      bomb,
+      b.x * cell + (cell - size) / 2,
+      b.y * cell + (cell - size) / 2,
+      size,
+      size,
     );
+  }
+  for (const f of snapshot?.flames || []) {
+    const frame = Math.min(
+      5,
+      Math.max(0, Math.floor(((500 - (f.expiresAt - snapshot.now)) / 500) * 6)),
+    );
+    draw(splash[frame], f.x * cell, f.y * cell);
+  }
+  const active = new Set();
   for (const p of snapshot?.players || []) {
-    const position = positions.get(p.id) ?? p;
-    const x = position.x * cell,
-      y = position.y * cell;
-    if (!p.alive) {
-      round(x + 15, y + 34, 18, 6, 3, '#98b4ad');
-      continue;
+    active.add(p.id);
+    const pos = positions.get(p.id) ?? p;
+    const previous = state.players.get(p.id) ?? {
+      x: pos.x,
+      y: pos.y,
+      row: 1,
+      until: 0,
+    };
+    const dx = pos.x - previous.x,
+      dy = pos.y - previous.y;
+    if (Math.hypot(dx, dy) > 0.001) {
+      previous.row =
+        Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 4 : 3) : dy > 0 ? 1 : 2;
+      previous.until = time + 100;
     }
-    if (p.id === localId) {
-      ctx.strokeStyle = '#225470';
+    const row = !p.alive
+      ? 9
+      : snapshot.phase === 'finished' && snapshot.winner === p.id
+        ? 8
+        : time < previous.until
+          ? previous.row
+          : 0;
+    state.players.set(p.id, { ...previous, x: pos.x, y: pos.y });
+    const sheet =
+      sheets[p.id === localId && selected !== null ? selected : p.slot % 5];
+    const x = pos.x * cell,
+      y = pos.y * cell;
+    if (p.id === localId && p.alive) {
+      ctx.strokeStyle = '#fff0a3';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(x + 2, y + 2, 44, 44, 12);
+      ctx.ellipse(x + 24, y + 39, 20, 7, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
-    const avatar =
-      mascots[p.id === localId && selected !== null ? selected : p.slot % 4];
-    if (avatar.complete && avatar.naturalWidth)
-      ctx.drawImage(avatar, x + 5, y - 6, 38, 50);
+    if (ready(sheet))
+      ctx.drawImage(
+        sheet,
+        (Math.floor(time / 166) % 2) * 64,
+        row * 64,
+        64,
+        64,
+        x,
+        y - 3,
+        48,
+        48,
+      );
   }
+  for (const id of state.players.keys())
+    if (!active.has(id)) state.players.delete(id);
 }

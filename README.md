@@ -18,8 +18,9 @@ Web dùng `/api/` và `/arena/` cùng origin, chuyển tiếp tới API và WebS
 Không cần đổi CORS hoặc nhập địa chỉ máy chủ trong giao diện. Phiên tài khoản
 chỉ giữ trong tab; tải lại trang cần đăng nhập lại.
 
-Giao diện web và Windows được cập nhật theo mẫu Bụp Bụp: pastel, nhân vật SVG,
-bóng nước và màn chọn diện mạo cục bộ. Xem [bản UI để verify](docs/BUP_UI.md).
+Giao diện web và Windows hiện dùng bộ PNG trong hai ZIP người dùng cung cấp:
+Bombo, Mimi, Zin, Lala, Kai cùng nền xanh đậm, sân cỏ và bom nước.
+Xem [bộ nhân vật mới](docs/BOOM_ART.md) và [bản sửa di chuyển](docs/MOVEMENT.md).
 Desktop được đóng gói thủ công; CI chưa tự xuất bản desktop.
 
 Xem [hướng dẫn web](docs/WEB.md), [danh sách công việc](docs/TASKS.md) và

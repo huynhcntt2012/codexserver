@@ -190,7 +190,7 @@ test('desktop and mobile browsers authenticate, play a round, and retain account
   }
 });
 
-test('character chooser loads vector assets and supports keyboard dismissal', async ({
+test('character chooser loads five supplied characters and supports keyboard dismissal', async ({
   page,
   baseURL,
 }) => {
@@ -198,8 +198,9 @@ test('character chooser loads vector assets and supports keyboard dismissal', as
   await page.getByRole('button', { name: 'Nhân vật', exact: true }).click();
   const dialog = page.locator('#characters');
   await expect(dialog).toBeVisible();
-  await page.locator('[data-character="2"]').click();
-  await expect(page.locator('[data-character="2"]')).toHaveAttribute(
+  await expect(dialog.locator('[data-character]')).toHaveCount(5);
+  await page.locator('[data-character="4"]').click();
+  await expect(page.locator('[data-character="4"]')).toHaveAttribute(
     'aria-pressed',
     'true',
   );
@@ -213,7 +214,7 @@ test('character chooser loads vector assets and supports keyboard dismissal', as
   await page.locator('#characters-confirm').click();
   await expect(dialog).toBeHidden();
   await page.locator('#characters-open').click();
-  await expect(page.locator('[data-character="2"]')).toHaveAttribute(
+  await expect(page.locator('[data-character="4"]')).toHaveAttribute(
     'aria-pressed',
     'true',
   );

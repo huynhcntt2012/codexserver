@@ -1,15 +1,19 @@
 extends RefCounted
-## Original vector companions, shared with the browser client.
-
+## User-supplied starter art. Sheet layout: 2 columns × 10 rows, 64px cells.
 static var selected := -1
-
-const COLORS := [Color("ff95b8"), Color("83caf3"), Color("98ddb3"), Color("ffd57e"),
-	Color("ff95b8"), Color("83caf3"), Color("98ddb3"), Color("ffd57e")]
-const ART := [preload("res://art/bong.svg"), preload("res://art/may.svg"),
-	preload("res://art/la.svg"), preload("res://art/nang.svg")]
+const NAMES := ["BOMBO", "MIMI", "ZIN", "LALA", "KAI"]
+const COLORS := [Color("2baaff"), Color("ff6da9"), Color("ff6959"), Color("ffbe3c"), Color("5cdc90"), Color("2baaff"), Color("ff6da9"), Color("ff6959")]
+const ART := [preload("res://art/boom/characters/portraits/bombo.png"), preload("res://art/boom/characters/portraits/mimi.png"), preload("res://art/boom/characters/portraits/zin.png"), preload("res://art/boom/characters/portraits/lala.png"), preload("res://art/boom/characters/portraits/kai.png")]
+const SHEETS := [preload("res://art/boom/spritesheets/bombo.png"), preload("res://art/boom/spritesheets/mimi.png"), preload("res://art/boom/spritesheets/zin.png"), preload("res://art/boom/spritesheets/lala.png"), preload("res://art/boom/spritesheets/kai.png")]
 
 
 static func paint(canvas: CanvasItem, slot: int, time: float, walking := false,
-		_facing := Vector2.DOWN, celebrate := false) -> void:
-	var bob := sin(time * (15.0 if walking else 2.8) + slot) * (1.5 if walking or celebrate else 0.5)
-	canvas.draw_texture_rect(ART[posmod(slot, 4)], Rect2(3, -9 + bob, 38, 50), false)
+		facing := Vector2.DOWN, celebrate := false) -> void:
+	var row := 8 if celebrate else 0
+	if walking and not celebrate:
+		if absf(facing.x) > absf(facing.y):
+			row = 4 if facing.x > 0 else 3
+		else:
+			row = 1 if facing.y >= 0 else 2
+	var frame := int(time * 6.0) % 2
+	canvas.draw_texture_rect_region(SHEETS[posmod(slot, 5)], Rect2(0, -3, 44, 44), Rect2(frame * 64, row * 64, 64, 64))
