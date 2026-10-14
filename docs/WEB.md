@@ -79,12 +79,15 @@ SUNI_WEB_URL=http://127.0.0.1:18081 \
   npx playwright test --config apps/web/playwright.config.mjs
 ```
 
-## Đưa website ra Internet
+## Website kiểm tra qua Internet
 
-Chưa triển khai production. Sau khi duyệt bản web và kết quả kiểm thử, cấu hình
-hostname HTTPS riêng trỏ tunnel/reverse proxy tới dịch vụ web cổng 8081.
-WebSocket cần được chuyển tiếp cùng hostname. Người chơi chỉ cần một URL website;
-API/PostgreSQL/Redis không cần công khai thêm cổng.
+Website: <https://boom.sunifactory.com>. Tunnel/reverse proxy trỏ tới dịch vụ web
+ở `127.0.0.1:8081`, chuyển tiếp API và WebSocket cùng hostname. Người chơi chỉ cần
+một URL website; API/PostgreSQL/Redis không cần công khai thêm cổng.
+
+Cập nhật thủ công theo yêu cầu của chủ dự án, sau khi kiểm thử trên stack riêng
+và CI đạt. Giữ image trước đó để rollback; chỉ thay web/arena nếu API và database
+không đổi. Khởi động lại arena sẽ ngắt các trận đang chơi.
 
 Không đặt JWT secret vào frontend. Không tự động merge hoặc deploy production.
 CI hiện kiểm thử web và lưu bằng chứng, không tạo ZIP Linux/Windows.

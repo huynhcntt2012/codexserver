@@ -57,12 +57,27 @@ function authView() {
     : '';
 }
 
-window.addEventListener('hashchange', () => {
-  if (!client.hasSession() && !client.busy) {
-    mode = location.hash === '#register' ? 'register' : 'login';
+function setAuthMode(nextMode) {
+  if (nextMode !== mode) {
+    mode = nextMode;
     $('password').value = $('confirm').value = '';
     status('Đăng nhập hoặc tạo tài khoản để bắt đầu.');
   }
+}
+
+$('auth-switch').addEventListener('click', (event) => {
+  event.preventDefault();
+  if (client.hasSession() || client.busy) return;
+  // Render before new input: a deferred hashchange must not erase typed fields.
+  setAuthMode(mode === 'register' ? 'login' : 'register');
+  history.pushState(null, '', `#${mode}`);
+  authView();
+  render();
+});
+
+window.addEventListener('hashchange', () => {
+  if (!client.hasSession() && !client.busy)
+    setAuthMode(location.hash === '#register' ? 'register' : 'login');
   authView();
   render();
 });

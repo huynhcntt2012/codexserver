@@ -2,6 +2,31 @@ import { test, expect } from '@playwright/test';
 import { randomBytes } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 
+test('switching auth forms preserves input entered immediately after navigation', async ({
+  page,
+  baseURL,
+}) => {
+  await page.goto(baseURL);
+  await expect(page.locator('#auth-title')).toHaveText('Đăng nhập');
+  await page.evaluate(() => {
+    document.getElementById('auth-switch').click();
+    document.getElementById('password').value = 'test-only-immediate';
+    document.getElementById('confirm').value = 'test-only-immediate';
+  });
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  await expect(page.locator('#auth-title')).toHaveText('Tạo tài khoản');
+  await expect(page.locator('#password')).toHaveValue('test-only-immediate');
+  await expect(page.locator('#confirm')).toHaveValue('test-only-immediate');
+  await page.goBack();
+  await expect(page.locator('#auth-title')).toHaveText('Đăng nhập');
+  await expect(page.locator('#password')).toHaveValue('');
+});
+
 test('desktop and mobile browsers authenticate, play a round, and retain account sessions', async ({
   browser,
   baseURL,
