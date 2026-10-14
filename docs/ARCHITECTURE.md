@@ -1,5 +1,27 @@
 # Kiến trúc giai đoạn 1
 
+## Client web (hướng phát triển hiện tại)
+
+`apps/web/public` là frontend HTML/CSS/Canvas và JavaScript modules. Nginx phục vụ
+website tại cổng 8081, proxy `/api/` tới FastAPI và `/arena/` tới Colyseus, gồm
+WebSocket Upgrade. Browser dùng cùng origin nên không cần mở CORS trên API.
+Adapter `network.mjs` giữ wire protocol version 1 bên dưới, không thay luật server.
+Token tài khoản chỉ giữ trong RAM của tab; đăng xuất/tải lại trang xóa phiên client.
+Web yêu cầu đăng nhập/đăng ký trước khi chọn phòng. Luồng: `#login` / `#register`
+→ `#rooms` → `#lobby` → `#game`. `GET /rooms` trên arena yêu cầu Bearer JWT,
+trả `{ rooms: [{ roomId, players, maxPlayers, ready, joinable }] }` chỉ cho phòng
+đang waiting và có người. Danh sách lấy từ local matchmaker và mô phỏng server,
+không trả danh tính người chơi hoặc token. Phòng đầy không thể chọn. Web làm mới
+mỗi 5 giây, tạo phòng qua `POST /matchmake/create/arena`, chọn phòng qua
+`POST /matchmake/joinById/{roomId}`; handshake và snapshot giữ nguyên.
+Danh sách phòng giới hạn 120 request/IP/phút, tách khỏi giới hạn matchmaking.
+Rời phòng giữ phiên để chọn phòng khác. API guest và joinOrCreate vẫn tương thích
+client Godot cũ.
+
+CI chuyển sang kiểm thử web/API/arena và ngừng đóng gói desktop tự động.
+Godot được giữ làm bản cũ để tham khảo, không tiếp tục cập nhật Linux.
+Chi tiết chạy, kiểm thử và proxy: [WEB.md](WEB.md).
+
 ```mermaid
 flowchart LR
     G[Godot client] -->|HTTPS guest/login| A[FastAPI]
@@ -38,7 +60,7 @@ mở rộng cluster. Không chạy nhiều replica arena với cấu hình hiệ
 Adapter tự viết, giới hạn phạm vi, khóa phiên bản bằng lockfile; không phải SDK tổng quát.
 Arena dùng hostname riêng, không có URL path prefix.
 
-1. `POST /v1/guests` hoặc `/v1/login` để nhận JWT.
+1. `POST /v1/guests`, `/v1/register` hoặc `/v1/login` để nhận JWT.
 2. `POST /matchmake/joinOrCreate/arena`, JSON `{ "token": "..." }`.
 3. Colyseus 0.17 trả object phẳng: `sessionId`, `roomId`, `processId`.
 4. Mở `ws(s)://host/processId/roomId?sessionId=...`.
@@ -60,6 +82,12 @@ Nguồn: package đã cài và [Colyseus room messages](https://docs.colyseus.io
 Username chữ thường 3–24 ký tự (`a-z0-9_`), password 10–128 ký tự, Argon2id qua pwdlib.
 Register/guest nhận `pilot_default`. Inventory/VIP chỉ đọc theo danh tính JWT;
 không nhận account ID tùy ý. Chưa có reset password/refresh/revoke.
+Client có ba chế độ Chơi khách / Đăng nhập / Đăng ký. Đăng ký yêu cầu nhập lại
+mật khẩu tại client; API vẫn kiểm tra tên và mật khẩu độc lập. Đăng ký trả JWT
+và client dùng ngay để vào phòng. Phiên tài khoản đăng ký chỉ giữ trong RAM,
+gắn với API URL và username, dùng lại sau khi rời phòng hoặc lỗi kết nối arena.
+Đăng xuất xóa phiên ở client; không thu hồi JWT đã phát hành trên server.
+Không lưu mật khẩu/token ra đĩa; đóng game hoặc hết hạn phải đăng nhập lại.
 JWT secret dùng chung API/arena, tối thiểu 32 ký tự, nên sinh 32 byte ngẫu nhiên.
 Không log token/password/sessionId.
 

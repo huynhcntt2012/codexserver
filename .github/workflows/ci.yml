@@ -22,6 +22,7 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - run: npm test
+      - run: npm run test:web
       - run: npm run build
       - run: npm audit --omit=dev --audit-level=high
       - run: node scripts/collect-node-licenses.mjs
@@ -42,76 +43,29 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: python-license-notices, path: build/licenses/python }
 
-  client-and-stack:
+  web-and-stack:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: bash scripts/install-godot.sh /tmp/godot
-      - run: GODOT=/tmp/godot/godot python3 scripts/check-godot.py
-      - run: GODOT=/tmp/godot/godot python3 scripts/check-client-errors.py
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps --only-shell chromium
       - name: Create ephemeral CI configuration
         run: |
           echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)" >> .env
           echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env
       - run: docker compose up -d --build --wait
-      - run: /tmp/godot/godot --headless --path apps/client --script res://tests/smoke.gd
-      - name: Build client resource pack
-        run: |
-          mkdir -p apps/client/build
-          /tmp/godot/godot --headless --path apps/client --export-pack Linux build/suni-bomb-arena.pck
+      - run: npm run test:web:smoke
+      - run: npx playwright test --config apps/web/playwright.config.mjs
       - uses: actions/upload-artifact@v4
-        with: { name: godot-client-pack, path: apps/client/build/*.pck }
+        if: always()
+        with:
+          name: web-test-evidence
+          path: |
+            build/web-screenshots
+            build/web-test-results
       - if: failure()
         run: docker compose logs --tail=120
       - if: always()
         run: docker compose down -v
-
-  desktop-playtest:
-    needs: [arena, api, client-and-stack]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - run: bash scripts/install-godot.sh /tmp/godot
-      - uses: actions/cache@v4
-        id: templates
-        with:
-          path: build/godot-data/godot/export_templates/4.4.1.stable
-          key: godot-desktop-templates-4.4.1-v1
-      - if: steps.templates.outputs.cache-hit != 'true'
-        run: bash scripts/install-godot-templates.sh
-      - run: GODOT=/tmp/godot/godot python3 scripts/build-playtest.py
-      - run: cd build/playtest && sha256sum --check SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: desktop-playtest
-          path: build/playtest/*
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 14
-
-  windows-playtest:
-    needs: desktop-playtest
-    runs-on: windows-2022
-    timeout-minutes: 5
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: desktop-playtest
-          path: playtest
-      - name: Launch the standalone Windows client
-        shell: pwsh
-        run: |
-          Expand-Archive playtest/suni-bomb-arena-windows-x86_64.zip -DestinationPath playtest/unpacked
-          $binary = Resolve-Path playtest/unpacked/suni-bomb-arena-windows-x86_64/suni-bomb-arena.exe
-          $log = Join-Path $env:RUNNER_TEMP "suni-windows.log"
-          $process = Start-Process -FilePath $binary -ArgumentList @("--headless", "--quit-after", "3", "--log-file", $log) -PassThru
-          if (-not $process.WaitForExit(60000)) {
-            $process.Kill()
-            throw "Windows client startup timed out"
-          }
-          if ($process.ExitCode -ne 0) { throw "Windows client exited with $($process.ExitCode)" }
-          if (-not (Test-Path $log)) { throw "Windows client did not write a runtime log" }
-          Get-Content $log
-          if (Select-String -Path $log -Pattern "SCRIPT ERROR|ERROR:") {
-            throw "Windows client reported a runtime error"
-          }

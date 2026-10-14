@@ -1,0 +1,181 @@
+@import url('./theme.css');
+
+main {
+  min-height: calc(100vh - 175px);
+  padding-bottom: 32px;
+}
+.steps {
+  display: flex;
+  gap: 12px 28px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 40px;
+}
+.steps span {
+  padding-bottom: 10px;
+  border-bottom: 2px solid transparent;
+}
+.steps .active {
+  color: var(--mint);
+  border-color: var(--mint);
+}
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  align-items: center;
+  gap: 70px;
+  max-width: 1050px;
+  margin: 36px auto 60px;
+}
+.auth-intro h1 {
+  font-size: clamp(38px, 4.5vw, 62px);
+}
+.auth-intro > .muted {
+  line-height: 1.9;
+}
+.auth-intro .pilot-mark {
+  margin: 64px 14px 40px;
+}
+.auth-card {
+  min-height: 0;
+  padding: 32px;
+}
+.auth-switch {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 24px 0 0;
+}
+.auth-switch a {
+  color: var(--mint);
+  text-decoration: underline;
+  margin-left: 8px;
+}
+.account-menu {
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.account-menu button {
+  margin-left: auto;
+}
+.room-toolbar,
+.room-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.room-toolbar {
+  justify-content: space-between;
+  padding: 18px 0;
+  border-top: 1px solid #31434a;
+  margin-top: 30px;
+}
+.room-actions button {
+  width: auto;
+  margin: 0;
+  white-space: nowrap;
+}
+.rooms-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 20px;
+  margin: 12px 0 24px;
+}
+.room-card,
+.empty-state {
+  border: 1px solid #31434a;
+  background: #13252d;
+  padding: 26px;
+  border-radius: 16px;
+}
+.room-card h2 {
+  overflow-wrap: anywhere;
+  font-size: 20px;
+}
+.room-card .muted {
+  font-size: 13px;
+  margin-bottom: 28px;
+}
+.empty-state {
+  padding: 60px 24px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.8;
+}
+.lobby-layout {
+  display: block;
+  max-width: 850px;
+  margin: auto;
+}
+.lobby-layout .side-panel {
+  min-height: 0;
+}
+.lobby-layout .roster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.lobby-layout .roster li {
+  min-height: 80px;
+  margin: 0;
+}
+.lobby-layout .roster .slot {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 42px;
+  border: 1px solid #426143;
+  border-radius: 10px;
+  color: var(--mint);
+  flex-shrink: 0;
+}
+@media (max-width: 680px) {
+  .steps {
+    gap: 14px;
+    font-size: 10px;
+    margin-bottom: 24px;
+  }
+  .auth-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin: 0 0 24px;
+  }
+  .auth-intro .pilot-mark,
+  .auth-intro > .eyebrow:last-child {
+    display: none;
+  }
+  .auth-intro h1 {
+    font-size: 36px;
+  }
+  .auth-card {
+    padding: 24px;
+  }
+  .account-menu {
+    text-align: left;
+    margin-top: 24px;
+  }
+  .account-menu button {
+    margin-left: 0;
+  }
+  .room-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .room-actions button {
+    flex: 1;
+  }
+  .lobby-layout .roster {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .lobby-layout .roster li {
+    min-height: 54px;
+  }
+}
+
+/* Programmatic heading focus announces screen changes to assistive readers. */
+h1[tabindex='-1'],
+h2[tabindex='-1'] {
+  outline: none;
+}

@@ -1,9 +1,42 @@
 # Suni Bomb Arena
 
+## Chơi trên website — hướng phát triển hiện tại
+
+Bản web ở `apps/web` dùng API FastAPI và arena Colyseus hiện có: trang đăng ký/đăng nhập riêng, danh sách phòng chờ để chọn hoặc tạo phòng,
+sảnh sẵn sàng 2–8 người, di chuyển, đặt bom, kết quả và ván tiếp theo.
+Điều khiển bằng bàn phím hoặc nút cảm ứng, không cần cài ứng dụng.
+
+![Giao diện web Suni Bomb Arena](docs/screenshots/web-home.png)
+
+```bash
+# Chuẩn bị .env như hướng dẫn bên dưới, rồi chạy:
+docker compose up -d --build --wait
+# Mở http://127.0.0.1:8081 trong hai tab để chơi thử.
+```
+
+Web dùng `/api/` và `/arena/` cùng origin, chuyển tiếp tới API và WebSocket.
+Không cần đổi CORS hoặc nhập địa chỉ máy chủ trong giao diện. Phiên tài khoản
+chỉ giữ trong tab; tải lại trang cần đăng nhập lại.
+
+Đã dừng đóng gói desktop tự động trong CI; không tiếp tục cập nhật ứng dụng Linux.
+Mã Godot và các thay đổi có sẵn được giữ để tham khảo. Phần mô tả Godot bên dưới
+là tài liệu bản desktop cũ.
+
+Xem [hướng dẫn web](docs/WEB.md), [danh sách công việc](docs/TASKS.md) và
+[kết quả kiểm thử](docs/VALIDATION.md).
+
+## Bản desktop cũ
+
 Prototype multiplayer 2D pixel art nguyên bản: Godot 4.4.1, Colyseus 0.17 + TypeScript,
 FastAPI, PostgreSQL 16, Redis 7.2. Server quyết định trạng thái và thắng thua.
 
-![Gameplay thật từ client Godot](docs/images/gameplay.png)
+![Sảnh chờ thật từ client Godot](docs/screenshots/lobby.png)
+
+Sảnh chờ có tám bục phi công, trạng thái sẵn sàng và đánh dấu người chơi của bạn.
+Nhân vật pixel tự vẽ có tám màu, bốn kiểu mũ, hoạt ảnh chớp mắt, bước chân và vẫy tay.
+Trong trận có ngòi bom phát sáng, tia nổ liền mạch, bụi bước chân và mảnh thùng vỡ.
+
+![Gameplay thật từ client Godot](docs/screenshots/gameplay.png)
 
 ## Chạy nhanh trên Ubuntu
 
@@ -19,11 +52,22 @@ docker compose up -d --build --wait
 docker compose ps
 ```
 
-Mở `apps/client/project.godot` bằng Godot và nhấn F5. Client điền sẵn server LAN
-`192.168.1.98` (API cổng 8000, arena cổng 2567). Khi chạy Compose mặc định trên
+Mở `apps/client/project.godot` bằng Godot và nhấn F5. Client điền sẵn
+`https://api.sunifactory.com` và `https://arena.sunifactory.com` qua Cloudflare Tunnel.
+Khi chạy Compose mặc định trên
 cùng máy, đổi hai URL thành `http://127.0.0.1:8000` và `http://127.0.0.1:2567`.
-Mở hai instance client, bấm **Join arena** rồi **Ready** ở cả hai. Để username trống
-để tạo tài khoản khách riêng; tài khoản đăng ký qua API có thể đăng nhập bằng username/password.
+Mở hai instance client, chọn **Chơi khách → Vào chơi ngay** rồi **Sẵn sàng** ở cả hai.
+Mỗi client được tạo tài khoản khách riêng. Để dùng tài khoản lâu dài, chọn
+**Đăng ký**, nhập tên tài khoản (3–24 ký tự `a-z`, `0-9`, `_`), mật khẩu
+(10–128 ký tự) và nhập lại mật khẩu. Game tự đăng nhập và vào phòng sau khi tạo.
+Lần mở game sau, chọn **Đăng nhập** với tài khoản đó.
+
+Rời phòng giữ phiên tài khoản trong bộ nhớ để vào lại; nút **Đăng xuất** xuất hiện
+trên màn hình vào phòng. Game không lưu mật khẩu hoặc token ra đĩa. Khi đóng game
+hoặc phiên hết hạn, cần nhập lại mật khẩu. Tài khoản khách chưa chuyển được thành
+tài khoản đăng ký.
+
+![Đăng ký tài khoản ngay trong game](docs/screenshots/account-register.png)
 
 | Phím           | Thao tác         |
 | -------------- | ---------------- |
@@ -37,7 +81,7 @@ Bom kích nổ dây chuyền. Lửa tồn tại 0,5 giây. Người sống cuố
 hoặc hết 180 giây là hòa. Sau 8 giây hiển thị kết quả, phòng về lobby.
 Mất kết nối bị loại; Join lại tìm phòng mới. Không cho vào trận đang diễn ra.
 
-Bản dùng thử độc lập cho Windows/Linux qua LAN/VPN:
+Bản dùng thử độc lập cho Windows/Linux qua Internet hoặc LAN/VPN:
 [chuẩn bị server và tải/build gói](docs/PLAYTEST.md),
 [hướng dẫn người chơi](docs/PLAYTEST_PLAYER.md).
 
@@ -45,6 +89,7 @@ Bản dùng thử độc lập cho Windows/Linux qua LAN/VPN:
 
 ```text
 apps/client/          Godot project, hình khối pixel tự vẽ, adapter và smoke test
+apps/web/             Website, adapter API/WebSocket, Nginx và kiểm thử trình duyệt
 apps/arena/src/       mô phỏng độc lập + phòng Colyseus + xác thực JWT
 apps/arena/tests/     unit test gameplay và WebSocket thật với 8 client
 apps/api/app/         tài khoản khách/đăng ký/đăng nhập, inventory, VIP chỉ đọc
@@ -93,15 +138,26 @@ bash scripts/install-godot.sh /tmp/suni-godot
 GODOT=/tmp/suni-godot/godot python3 scripts/check-godot.py
 docker compose up -d --build --wait
 /tmp/suni-godot/godot --headless --path apps/client --script res://tests/smoke.gd
+/tmp/suni-godot/godot --headless --path apps/client --script res://tests/lobby.gd
+/tmp/suni-godot/godot --headless --path apps/client --script res://tests/accounts.gd
 mkdir -p apps/client/build
 /tmp/suni-godot/godot --headless --path apps/client --export-pack Linux build/suni-bomb-arena.pck
 /tmp/suni-godot/godot --main-pack apps/client/build/suni-bomb-arena.pck
 ```
 
-CI build resource pack `.pck`, chạy bằng Godot 4.4.1. Muốn executable độc lập:
+Resource pack `.pck` build thủ công, chạy bằng Godot 4.4.1. Muốn executable độc lập:
 cài export templates 4.4.1 từ Godot, rồi `godot --headless --path apps/client --export-release Linux`.
 Format TypeScript/Markdown/YAML: `npm run format`; Python: `uv run --project apps/api ruff format apps/api`.
 GDScript dùng tab, kiểm tra parse/runtime bằng Godot.
+
+Test `lobby.gd` kiểm tra vào phòng, sẵn sàng, đếm ngược, kết quả, tự về sảnh,
+rời phòng và vào lại bằng hai client thật. Dùng `SUNI_API_URL` và `SUNI_ARENA_URL`
+nếu server không nằm trên loopback. Để chụp giao diện, chạy test này với display
+đồ họa (bỏ `--headless`) và đặt `SUNI_CAPTURE_DIR` trỏ tới thư mục ảnh đã tạo.
+
+Test `accounts.gd` tạo tài khoản thử nghiệm có tên ngẫu nhiên trên server được cấu hình,
+kiểm tra form, đăng ký, đăng nhập sai/đúng, trùng tên, thử lại khi arena lỗi,
+rời phòng, đăng xuất và phiên hết hạn. Chỉ chạy trên server phát triển/kiểm thử.
 
 ## Phạm vi giai đoạn 1
 

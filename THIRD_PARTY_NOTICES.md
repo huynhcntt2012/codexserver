@@ -19,6 +19,8 @@ Phiên bản chính xác nằm trong `package-lock.json`, `apps/api/uv.lock` và
 | PostgreSQL 16 | [PostgreSQL License](https://www.postgresql.org/about/licence/) |
 | Redis 7.2 | [BSD-3-Clause](https://github.com/redis/redis/blob/7.2/COPYING); không tự ý đổi sang nhánh có license khác |
 | Node.js / Python / Debian images | Giữ notices của runtime và các gói hệ điều hành trong image |
+| Nginx (web proxy) | [BSD-2-Clause, Igor Sysoev và Nginx, Inc.](https://nginx.org/LICENSE); giữ notices trong image và `apps/web/licenses/NGINX_LICENSE.txt` |
+| Playwright (chỉ kiểm thử) | Apache-2.0; license từ package `@playwright/test` đã khóa, không gửi xuống trình duyệt người chơi |
 
 ## Tạo gói notices
 

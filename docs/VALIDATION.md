@@ -1,5 +1,32 @@
 # Kiểm thử giai đoạn 1
 
+## Bản web — 2026-10-14
+
+Chạy local trên stack riêng `suni-web-preview`, website tại loopback cổng 18080,
+PostgreSQL/Redis/API/arena riêng. Không kiểm thử trên production.
+
+| Hạng mục                                                        | Kết quả                                                                                   |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Node 22: arena lint, strict TypeScript, build                   | Qua                                                                                       |
+| Gameplay + WebSocket arena thật                                 | 13/13 qua                                                                                 |
+| Python 3.12: API pytest                                         | 21/21 qua                                                                                 |
+| Web adapter: enum, validation, lỗi HTTP, giữ phiên, hủy request | 4/4 qua                                                                                   |
+| Web → Nginx → API/arena smoke                                   | Qua: auth, inventory/VIP, 2 client, move/bomb, winner, ván tiếp, rời phòng/đăng xuất      |
+| Chromium desktop 1440px + mobile 390px                          | Qua một kịch bản xuyên suốt: form, keyboard/touch, trận 2 người, kết quả, phiên và reload |
+| Compose web healthcheck                                         | Qua                                                                                       |
+
+Ảnh giao diện: [trang chủ](screenshots/web-home.png),
+[trận đấu](screenshots/web-gameplay.png), [mobile](screenshots/web-mobile.png).
+API vẫn có một deprecation warning Starlette/httpx. Kiểm thử Node ban đầu trên
+host Node 18 không tương thích; đã chạy lại thành công bằng Node 22.23.3 container.
+
+Đã đổi CI sang kiểm thử web. Kết quả local dưới đây không thay thế GitHub Actions. Chưa đo tải
+nhiều phòng, chưa chơi giữa hai thiết bị vật lý, chưa xác nhận Safari/Firefox hoặc
+hostname HTTPS production. Giới hạn auth qua proxy vẫn gộp 20 yêu cầu/phút.
+Không build/cập nhật gói ứng dụng Linux trong đợt chuyển web.
+
+## Kết quả lịch sử của bản desktop
+
 Đã chạy trong workspace ngày 2026-10-13:
 
 | Hạng mục                                       | Kết quả                                  |
@@ -28,3 +55,32 @@ Có một cảnh báo deprecation từ FastAPI/Starlette TestClient về httpx; 
 Chưa đo latency qua WAN hoặc load test nhiều phòng; chưa kiểm thử Windows/macOS,
 độc lập export templates, failover DB hoặc production rollout.
 GitHub Actions cần được xác nhận trên remote sau khi push; kết quả local không thay thế CI.
+
+## Web: đăng nhập → chọn phòng → sẵn sàng → trận đấu (2026-10-14)
+
+- Trang đăng nhập/đăng ký riêng; chỉ mở danh sách phòng sau xác thực.
+- Danh sách phòng thật có mã phòng, số người, số sẵn sàng, tạo phòng và chọn
+  đúng phòng. Phòng đầy khóa nút vào; countdown/playing không còn trong danh sách.
+- Node 22 trong Docker: lint, 13 arena tests (gồm WebSocket thật), 5 web client
+  tests và build đều đạt. Format check và diff whitespace check đạt.
+- Stack riêng `suni-room-preview`, web `127.0.0.1:18081`: web multiplayer smoke
+  và Godot 4.4.1 headless smoke đạt. Không thay protocol snapshot của Godot.
+- Playwright Chromium: desktop 1440px và mobile 390px, đăng ký/sai mật khẩu,
+  chặn truy cập màn hình phòng khi chưa đăng nhập, tạo hai phòng riêng, chọn
+  đúng phòng, chờ tất cả Ready, keyboard/touch, kết quả, ván sau, rời phòng,
+  giữ phiên, đăng xuất và tải lại trang đều đạt; không có lỗi JavaScript.
+- Ảnh kiểm thử tại `build/web-screenshots`; ảnh để review trong
+  `docs/screenshots/web-*.png`. Chưa triển khai production.
+
+## Kiểm tra lại trước khi push — 2026-10-14
+
+- Node 22.23.3: cài bằng lockfile, lint, 13 arena tests, 5 web tests, build,
+  format và kiểm tra whitespace đều đạt. Audit production không có cảnh báo.
+- Python 3.12 trong Docker test target: Ruff lint/format và 21 API tests đạt;
+  còn một cảnh báo deprecation Starlette/httpx.
+- Build lại stack `suni-room-preview` riêng trên loopback; cả năm service healthy.
+  Web multiplayer smoke và Playwright Chromium desktop/mobile đều đạt.
+- Godot 4.4.1: import/runtime, smoke multiplayer, lobby và account tests đạt.
+  Không tạo gói desktop mới.
+- Đã tạo bundle notices Node/Python trong `build/licenses` và cập nhật ảnh review
+  từ lần kiểm thử trình duyệt này.

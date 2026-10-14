@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1820" />
+    <meta
+      name="description"
+      content="Suni Bomb Arena — đặt bom, né nhanh và chơi cùng bạn bè ngay trên trình duyệt."
+    />
+    <title>Suni · Bomb Arena</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.mjs"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Suni Bomb Arena"
+        ><span class="brand-icon">S</span> SUNI
+        <span class="brand-sub">BOMB ARENA</span></a
+      >
+      <span class="edition"
+        >PHIÊN BẢN WEB <span class="pill">PLAYTEST</span></span
+      >
+    </header>
+    <main>
+      <nav class="steps" aria-label="Các bước vào chơi">
+        <span data-step="auth">01 · Tài khoản</span>
+        <span data-step="rooms">02 · Chọn phòng</span>
+        <span data-step="lobby">03 · Sẵn sàng</span>
+        <span data-step="game">04 · Vào trận</span>
+      </nav>
+      <section id="auth-panel" class="auth-layout" aria-labelledby="auth-title">
+        <div class="auth-intro">
+          <p class="eyebrow">MỘT SÂN ĐẤU. TÁM PHI CÔNG.</p>
+          <h1>Hẹn nhau.<br /><em>Trong đấu trường.</em></h1>
+          <p class="muted">
+            Đăng nhập, chọn phòng và chờ đồng đội.<br />Một ván vui bắt đầu khi
+            tất cả sẵn sàng.
+          </p>
+          <div class="pilot-mark" aria-hidden="true"><span></span></div>
+          <p class="eyebrow">NEON GARDEN · 2–8 NGƯỜI CHƠI</p>
+        </div>
+        <div class="side-panel auth-card">
+          <p class="eyebrow">CHÀO MỪNG PHI CÔNG</p>
+          <h2 id="auth-title" tabindex="-1">Đăng nhập</h2>
+          <p id="auth-description" class="muted">
+            Đăng nhập để xem danh sách phòng chờ.
+          </p>
+          <form id="auth-form">
+            <div id="credentials">
+              <label for="username">Tên tài khoản</label>
+              <input
+                id="username"
+                name="username"
+                autocomplete="username"
+                placeholder="Ví dụ: phi_cong_01"
+                minlength="3"
+                maxlength="24"
+                pattern="[a-z0-9_]{3,24}"
+                required
+              />
+              <p class="field-hint">3–24 ký tự: chữ thường, số hoặc dấu _</p>
+              <label for="password">Mật khẩu</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                minlength="10"
+                maxlength="128"
+                placeholder="Từ 10 ký tự"
+                required
+              />
+              <div id="confirmation" hidden>
+                <label for="confirm">Nhập lại mật khẩu</label>
+                <input
+                  id="confirm"
+                  name="confirmation"
+                  type="password"
+                  autocomplete="new-password"
+                  minlength="10"
+                  maxlength="128"
+                  disabled
+                />
+              </div>
+            </div>
+            <button class="primary" id="join" type="submit">Đăng nhập →</button>
+          </form>
+          <p class="auth-switch">
+            <span id="auth-switch-copy">Chưa có tài khoản?</span>
+            <a id="auth-switch" href="#register">Đăng ký</a>
+          </p>
+        </div>
+      </section>
+      <section
+        id="rooms-panel"
+        class="rooms-panel"
+        aria-labelledby="rooms-title"
+        hidden
+      >
+        <div class="intro">
+          <div>
+            <p class="eyebrow">CHỌN ĐIỂM HẸN CỦA BẠN</p>
+            <h1 id="rooms-title" tabindex="-1">
+              Danh sách <em>phòng chờ.</em>
+            </h1>
+            <p>Vào một phòng bên dưới, hoặc tạo phòng mới và rủ bạn bè.</p>
+          </div>
+          <div id="session-panel" class="account-menu">
+            <span id="session-name"></span>
+            <button class="text-button" id="logout">Đăng xuất</button>
+          </div>
+        </div>
+        <div class="room-toolbar">
+          <p id="rooms-summary" class="muted" role="status">
+            Đang tải phòng chờ…
+          </p>
+          <div class="room-actions">
+            <button id="refresh-rooms" class="secondary">Làm mới</button>
+            <button id="create-room" class="primary">+ Tạo phòng mới</button>
+          </div>
+        </div>
+        <p id="rooms-empty" class="empty-state" hidden>
+          Chưa có phòng chờ nào. Tạo phòng mới để mời mọi người cùng chơi!
+        </p>
+        <div id="rooms-list" class="rooms-list"></div>
+        <p class="field-hint">
+          Danh sách tự cập nhật mỗi 5 giây. Chỉ hiển thị phòng đang chờ; mỗi
+          phòng tối đa 8 người.
+        </p>
+      </section>
+      <section id="play-panel" hidden aria-label="Phòng chơi">
+        <div class="intro">
+          <div>
+            <p class="eyebrow">HẸN NHAU TRONG SẢNH</p>
+            <h1 id="play-title" tabindex="-1">Phòng chờ</h1>
+          </div>
+          <div class="connection">
+            <span id="connection-dot"></span
+            ><span id="connection">Chưa vào phòng</span>
+          </div>
+        </div>
+        <div id="play-layout" class="game-layout lobby-layout">
+          <section class="arena-panel" aria-label="Sân đấu">
+            <div class="panel-bar">
+              <span
+                ><span class="live-dot"></span> NEON GARDEN
+                <small>/ 01</small></span
+              ><span id="round">2–8 NGƯỜI CHƠI</span>
+            </div>
+            <div class="board-wrap">
+              <canvas
+                id="board"
+                width="720"
+                height="624"
+                aria-label="Bản đồ trận đấu; dùng WASD hoặc phím mũi tên để di chuyển, Space đặt bom"
+              ></canvas>
+              <div class="board-overlay" id="overlay">
+                <span class="eyebrow" id="overlay-tag"
+                  >SÂN ĐẤU ĐÃ SẴN SÀNG</span
+                >
+                <h2 id="overlay-title">Chuẩn bị vào trận.</h2>
+                <p id="overlay-detail">
+                  Trận đấu bắt đầu khi tất cả người chơi sẵn sàng.
+                </p>
+              </div>
+            </div>
+            <div class="board-footer">
+              <span><kbd>W A S D</kbd> / <kbd>↑ ↓ ← →</kbd> Di chuyển</span
+              ><span><kbd>SPACE</kbd> Đặt bom</span>
+            </div>
+          </section>
+          <aside class="side-panel">
+            <div id="room-panel" hidden>
+              <p class="eyebrow" id="room-id">PHÒNG CHƠI</p>
+              <h2 id="room-title">Sảnh chờ</h2>
+              <p class="muted" id="room-hint">
+                Cần ít nhất hai người để bắt đầu.
+              </p>
+              <ol id="roster" class="roster"></ol>
+              <button id="ready" class="primary">
+                Sẵn sàng <span>[R]</span></button
+              ><button id="leave" class="secondary">Rời phòng</button>
+            </div>
+          </aside>
+        </div>
+        <div
+          id="touch-controls"
+          class="touch-controls"
+          aria-label="Điều khiển cảm ứng"
+          hidden
+        >
+          <div class="dpad">
+            <button data-action="up" aria-label="Lên">↑</button
+            ><button data-action="left" aria-label="Trái">←</button
+            ><button data-action="down" aria-label="Xuống">↓</button
+            ><button data-action="right" aria-label="Phải">→</button>
+          </div>
+          <button class="bomb-button" data-action="bomb">ĐẶT BOM</button>
+        </div>
+      </section>
+      <p id="status" role="status" aria-live="polite">
+        Đăng nhập hoặc tạo tài khoản để bắt đầu.
+      </p>
+    </main>
+    <footer>
+      <span
+        >SUNI <span class="muted">/ Trò chơi nhỏ, những trận vui.</span></span
+      ><span>Đồ họa nguyên bản · <a href="/LICENSE.txt">MIT License</a></span>
+    </footer>
+  </body>
+</html>
