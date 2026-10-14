@@ -5,6 +5,7 @@ extends Node
 
 signal snapshot_received(snapshot: Dictionary)
 signal status_changed(message: String)
+signal account_changed
 
 var session_id := ""
 var room_id := ""
@@ -16,6 +17,10 @@ var _was_open := false
 var _opening := false
 var _connect_deadline := 0
 var _request_error := ""
+var account_name := ""
+var _access_token := ""
+var _token_deadline := 0
+var _account_api := ""
 
 
 func _ready() -> void:
@@ -41,6 +46,8 @@ func _post(url: String, body: Dictionary) -> Dictionary:
 		match int(response[1]):
 			401, 403:
 				_request_error = "HTTP %s: Login rejected. Use a registered account or clear Username for guest." % response[1]
+			409:
+				_request_error = "HTTP 409: Tên tài khoản đã được dùng. Chọn tên khác hoặc Đăng nhập."
 			422:
 				_request_error = "HTTP 422: Username: 3-24 lowercase letters/digits/_. Password: 10-128 characters."
 			429:
@@ -57,24 +64,53 @@ func _post(url: String, body: Dictionary) -> Dictionary:
 	return parsed
 
 
-func join_game(api_url: String, arena_url: String, username := "", password := "") -> void:
+func has_account_session(api_url: String, username: String) -> bool:
+	return not _access_token.is_empty() and Time.get_ticks_msec() < _token_deadline and _account_api == api_url.strip_edges().trim_suffix("/") and account_name == username.strip_edges()
+
+
+func logout() -> void:
+	disconnect_game()
+	_access_token = ""
+	_token_deadline = 0
+	_account_api = ""
+	account_name = ""
+	account_changed.emit()
+
+
+func join_game(api_url: String, arena_url: String, username := "", password := "", register := false) -> void:
 	if busy or connected:
 		return
 	username = username.strip_edges()
-	busy = true
-	status_changed.emit("Signing in...")
-	var auth_path := "/v1/guests" if username.is_empty() else "/v1/login"
-	var body := {} if username.is_empty() else {"username": username, "password": password}
-	var auth := await _post(api_url.strip_edges().trim_suffix("/") + auth_path, body)
-	if not auth.get("access_token") is String or str(auth.get("access_token", "")).is_empty():
-		busy = false
-		var reason := _request_error if not _request_error.is_empty() else "API response has no access token. Check API URL."
-		status_changed.emit("Sign-in failed: " + reason)
+	if register and username.is_empty():
+		status_changed.emit("Nhập tên tài khoản để đăng ký.")
 		return
+	busy = true
+	var token := _access_token
+	if register or not password.is_empty() or not has_account_session(api_url, username):
+		# Only registered sessions are kept, in memory; never persist credentials.
+		_access_token = ""
+		account_name = ""
+		account_changed.emit()
+		status_changed.emit("Đang tạo tài khoản…" if register else "Signing in...")
+		var auth_path := "/v1/register" if register else ("/v1/guests" if username.is_empty() else "/v1/login")
+		var body := {} if username.is_empty() else {"username": username, "password": password}
+		var auth := await _post(api_url.strip_edges().trim_suffix("/") + auth_path, body)
+		if not auth.get("access_token") is String or str(auth.get("access_token", "")).is_empty():
+			busy = false
+			var reason := _request_error if not _request_error.is_empty() else "API response has no access token. Check API URL."
+			status_changed.emit(("Đăng ký thất bại: " if register else "Sign-in failed: ") + reason)
+			return
+		token = auth.access_token
+		if not username.is_empty():
+			_access_token = token
+			account_name = username
+			_account_api = api_url.strip_edges().trim_suffix("/")
+			_token_deadline = Time.get_ticks_msec() + maxi(0, int(auth.get("expires_in", 0)) - 10) * 1000
+			account_changed.emit()
 	status_changed.emit("Finding an arena...")
 	var endpoint := arena_url.strip_edges().trim_suffix("/")
 	var seat := await _post(
-		endpoint + "/matchmake/joinOrCreate/arena", {"token": auth.access_token}
+		endpoint + "/matchmake/joinOrCreate/arena", {"token": token}
 	)
 	if not seat.has("roomId") or not seat.has("sessionId") or not seat.has("processId"):
 		busy = false
