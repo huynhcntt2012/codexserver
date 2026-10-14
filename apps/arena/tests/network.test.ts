@@ -76,7 +76,32 @@ test(
         body: JSON.stringify({ token: await token(id) }),
       });
     };
+    const list = async () => {
+      const response = await fetch(`${base}/rooms`, {
+        headers: { Authorization: `Bearer ${await token('browser')}` },
+      });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      return (await response.json()) as {
+        rooms: {
+          roomId: string;
+          players: number;
+          ready: number;
+          joinable: boolean;
+        }[];
+      };
+    };
     try {
+      assert.equal((await fetch(`${base}/rooms`)).status, 401);
+      assert.equal(
+        (
+          await fetch(`${base}/rooms`, {
+            headers: { Authorization: 'Bearer forged' },
+          })
+        ).status,
+        401,
+      );
+      assert.deepEqual((await list()).rooms, []);
       const oversized = await fetch(`${base}/matchmake/joinOrCreate/arena`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,12 +129,45 @@ test(
         const client = wireClient(base, seat);
         clients.push(client);
         await waitUntil(() => client.state.joined && !!client.state.snapshot);
+        if (i === 0) {
+          const rooms = (await list()).rooms;
+          assert.equal(rooms.length, 1);
+          assert.deepEqual(rooms[0], {
+            roomId,
+            players: 1,
+            maxPlayers: 8,
+            ready: 0,
+            joinable: true,
+          });
+          const duplicate = await reserve('0', roomId);
+          const duplicateClient = wireClient(
+            base,
+            (await duplicate.json()) as Seat,
+          );
+          clients.push(duplicateClient);
+          await waitUntil(() => duplicateClient.state.rejected);
+          duplicateClient.ws.close();
+          clients.pop();
+        }
       }
       await waitUntil(() => clients[0]!.state.snapshot?.players.length === 8);
+      const full = (await list()).rooms.find((room) => room.roomId === roomId);
+      assert.equal(full?.players, 8);
+      assert.equal(full?.joinable, false);
       const ninth = await reserve('ninth', roomId);
       assert.ok(ninth.status >= 400);
-      for (const c of clients) c.send('ready');
+      clients[0]!.send('ready');
+      await waitUntil(
+        () => clients[0]!.state.snapshot?.players[0]?.ready === true,
+      );
+      assert.equal(clients[0]!.state.snapshot?.phase, 'waiting');
+      assert.equal((await list()).rooms[0]?.ready, 1);
+      for (const c of clients.slice(1)) c.send('ready');
+      await waitUntil(() => clients[0]!.state.snapshot?.phase === 'countdown');
+      assert.deepEqual((await list()).rooms, []);
+      assert.ok((await reserve('late', roomId)).status >= 400);
       await waitUntil(() => clients[0]!.state.snapshot?.phase === 'playing');
+      assert.deepEqual((await list()).rooms, []);
       const a = clients[0]!;
       a.send('right');
       await waitUntil(

@@ -1,8 +1,9 @@
 import { createServer } from 'node:http';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { Server } from '@colyseus/core';
+import { Server, matchMaker } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
+import { authenticate } from './auth.js';
 import { ArenaRoom } from './room.js';
 
 export function createArenaServer() {
@@ -20,6 +21,53 @@ export function createArenaServer() {
       standardHeaders: 'draft-7',
       legacyHeaders: false,
     }),
+  );
+  app.get(
+    '/rooms',
+    rateLimit({ windowMs: 60_000, limit: 120 }),
+    async (req, res) => {
+      res.setHeader('Cache-Control', 'no-store');
+      try {
+        const authorization = req.headers.authorization;
+        await authenticate(
+          authorization?.startsWith('Bearer ')
+            ? authorization.slice(7)
+            : undefined,
+        );
+      } catch {
+        res.status(401).json({ error: 'Invalid access token' });
+        return;
+      }
+      try {
+        const listings = await matchMaker.query({
+          name: 'arena',
+          private: false,
+        });
+        const rooms = listings.flatMap((listing) => {
+          const room = matchMaker.getLocalRoomById(listing.roomId);
+          if (
+            !(room instanceof ArenaRoom) ||
+            room.game.phase !== 'waiting' ||
+            !room.game.players.size
+          )
+            return [];
+          return [
+            {
+              roomId: listing.roomId,
+              players: room.game.players.size,
+              maxPlayers: room.maxClients,
+              ready: [...room.game.players.values()].filter(
+                (player) => player.ready,
+              ).length,
+              joinable: !room.locked && listing.clients < room.maxClients,
+            },
+          ];
+        });
+        res.json({ rooms });
+      } catch {
+        res.status(503).json({ error: 'Room list unavailable' });
+      }
+    },
   );
   app.use(express.json({ limit: '8kb' }));
   const httpServer = createServer();

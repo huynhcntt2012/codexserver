@@ -1,5 +1,5 @@
 import { Room, type Client, ServerError } from '@colyseus/core';
-import { jwtVerify } from 'jose';
+import { authenticate } from './auth.js';
 import { Arena, TICK_MS } from './game.js';
 
 export class ArenaRoom extends Room {
@@ -28,30 +28,7 @@ export class ArenaRoom extends Room {
   }
 
   async onAuth(_client: Client, options: { token?: unknown }) {
-    if (typeof options?.token !== 'string' || options.token.length > 4096) {
-      throw new ServerError(401, 'Missing access token');
-    }
-    try {
-      const { payload } = await jwtVerify(
-        options.token,
-        new TextEncoder().encode(process.env.JWT_SECRET),
-        {
-          algorithms: ['HS256'],
-          issuer: 'suni-api',
-          audience: 'suni-arena',
-        },
-      );
-      if (
-        typeof payload.sub !== 'string' ||
-        !payload.exp ||
-        typeof payload.name !== 'string'
-      ) {
-        throw new Error('Invalid identity');
-      }
-      return { accountId: payload.sub, name: payload.name };
-    } catch {
-      throw new ServerError(401, 'Invalid access token');
-    }
+    return authenticate(options?.token);
   }
 
   onJoin(
