@@ -84,3 +84,9 @@ GitHub Actions cần được xác nhận trên remote sau khi push; kết quả
   Không tạo gói desktop mới.
 - Đã tạo bundle notices Node/Python trong `build/licenses` và cập nhật ảnh review
   từ lần kiểm thử trình duyệt này.
+
+## GitHub Actions
+
+Commit `dd0b840` trên nhánh `suni/06-client-polish` đã đạt cả ba job `arena`,
+`api` và `web-and-stack`: [lần chạy CI](https://github.com/huynhcntt2012/codexserver/actions/runs/38527697488).
+Kết quả gồm build stack sạch và kiểm thử Chromium trên GitHub runner.

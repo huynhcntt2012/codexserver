@@ -15,6 +15,7 @@ Cập nhật 2026-10-14. Ưu tiên bản web dùng API hiện có; dừng cập 
 - [x] Thay CI đóng gói desktop bằng kiểm thử web/API/arena.
 - [x] Thêm unit test, smoke qua proxy và kiểm thử Chromium desktop/mobile.
 - [x] Viết hướng dẫn chạy web và chuẩn bị hostname HTTPS.
+- [x] Push lên GitHub và xác nhận cả ba job CI đạt trên commit `dd0b840`.
 
 Kết quả thực thi được ghi riêng trong [VALIDATION.md](VALIDATION.md).
 
@@ -22,7 +23,6 @@ Kết quả thực thi được ghi riêng trong [VALIDATION.md](VALIDATION.md).
 
 - [ ] Người dùng duyệt giao diện và chơi thử giữa hai thiết bị thật.
 - [ ] Chọn hostname website, cấu hình HTTPS/WebSocket sau khi được phép triển khai.
-- [ ] Xác nhận GitHub Actions trên nhánh/PR sau khi push.
 - [ ] Trước buổi thử đông người: thiết kế trusted proxy/rate limit và đo tải nhiều phòng.
 
 Godot giữ nguyên trạng thái công việc có sẵn; không build gói Linux mới trong đợt này.
