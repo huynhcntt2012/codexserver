@@ -4,11 +4,11 @@ extends Node2D
 const Network = preload("res://scripts/network.gd")
 const ArenaView = preload("res://scripts/arena_view.gd")
 const LobbyView = preload("res://scripts/lobby_view.gd")
-const INK := Color("0c1926")
-const PANEL := Color("142736")
-const MUTED := Color("91aeb9")
-const MINT := Color("63e6be")
-const WHITE := Color("edf7f5")
+const INK := Color("225470")
+const PANEL := Color("ffffff")
+const MUTED := Color("618499")
+const MINT := Color("225470")
+const WHITE := Color("225470")
 
 var net = Network.new()
 var arena_view = ArenaView.new()
@@ -50,6 +50,8 @@ var readiness: ColorRect
 var readiness_fill: ColorRect
 var readiness_label: Label
 var last_overlay_key := ""
+var character_dialog: AcceptDialog
+var result_avatar: TextureRect
 
 
 func _ready() -> void:
@@ -57,6 +59,7 @@ func _ready() -> void:
 	add_child(arena_view)
 	add_child(lobby_view)
 	_build_ui()
+	_build_characters()
 	_setup_inputs()
 	net.snapshot_received.connect(_on_snapshot)
 	net.status_changed.connect(_on_status)
@@ -65,7 +68,7 @@ func _ready() -> void:
 	_refresh_lobby()
 
 
-func _style(background: Color, border: Color, radius := 12) -> StyleBoxFlat:
+func _style(background: Color, border: Color, radius := 24) -> StyleBoxFlat:
 	var box := StyleBoxFlat.new()
 	box.bg_color = background
 	box.border_color = border
@@ -81,7 +84,7 @@ func _panel(parent: Node, rect: Rect2, color := PANEL) -> Panel:
 	panel.position = rect.position
 	panel.size = rect.size
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_theme_stylebox_override("panel", _style(color, Color("294351"), 16))
+	panel.add_theme_stylebox_override("panel", _style(color, Color("dcecf3"), 28))
 	parent.add_child(panel)
 	return panel
 
@@ -110,10 +113,10 @@ func _button(parent: Node, text: String, rect: Rect2, primary := false) -> Butto
 	button.add_theme_color_override("font_hover_color", INK if primary else WHITE)
 	button.add_theme_color_override("font_pressed_color", INK if primary else WHITE)
 	button.add_theme_color_override("font_disabled_color", Color("68838b"))
-	button.add_theme_stylebox_override("normal", _style(MINT if primary else Color("203c49"), MINT if primary else Color("365663")))
-	button.add_theme_stylebox_override("hover", _style(Color("95f4d6") if primary else Color("2c5260"), MINT))
-	button.add_theme_stylebox_override("pressed", _style(Color("4bb296") if primary else Color("162e3a"), MINT))
-	button.add_theme_stylebox_override("disabled", _style(Color("1b313d"), Color("294351")))
+	button.add_theme_stylebox_override("normal", _style(Color("ffda6c") if primary else Color("def5fc"), MINT if primary else Color("dcecf3")))
+	button.add_theme_stylebox_override("hover", _style(Color("ffe89a") if primary else Color("c5edf8"), MINT))
+	button.add_theme_stylebox_override("pressed", _style(Color("ffd16a") if primary else Color("d4eef7"), MINT))
+	button.add_theme_stylebox_override("disabled", _style(Color("e9f1f5"), Color("dcecf3")))
 	parent.add_child(button)
 	return button
 
@@ -126,22 +129,22 @@ func _field(field: LineEdit, hint: String, value: String, y: float) -> void:
 	field.add_theme_font_size_override("font_size", 16)
 	field.add_theme_color_override("font_color", WHITE)
 	field.add_theme_color_override("font_placeholder_color", MUTED)
-	field.add_theme_stylebox_override("normal", _style(Color("0e202e"), Color("2d4855"), 8))
-	field.add_theme_stylebox_override("focus", _style(Color("0e202e"), MINT, 8))
+	field.add_theme_stylebox_override("normal", _style(Color("f4fbff"), Color("cce6ee"), 8))
+	field.add_theme_stylebox_override("focus", _style(Color("f4fbff"), MINT, 8))
 	form.add_child(field)
 
 
 func _build_ui() -> void:
 	# Background panels sit behind the separately rendered arena.
-	var board_panel := _panel(self, Rect2(28, 124, 704, 624), Color("10232e"))
+	var board_panel := _panel(self, Rect2(28, 124, 704, 624), Color("f5fcff"))
 	move_child(board_panel, 0)
 	_panel(self, Rect2(756, 124, 496, 624))
-	_label(self, "SUNI", Rect2(30, 24, 180, 52), 42, MINT)
-	_label(self, "BOMB ARENA", Rect2(154, 36, 270, 36), 26)
-	_label(self, "ĐẶT BOM. NÉ NHANH. CHƠI CÙNG NHAU.", Rect2(32, 78, 660, 26), 14, MUTED)
-	_panel(self, Rect2(1018, 34, 234, 42), Color("18332f"))
+	_label(self, "BỤP BỤP!", Rect2(30, 24, 270, 52), 38, MINT)
+	_label(self, "ĐẤU TRƯỜNG BÓNG NƯỚC", Rect2(280, 36, 500, 36), 22)
+	_label(self, "ĐẶT BÓNG. NÉ NHANH. CHƠI CÙNG NHAU.", Rect2(32, 78, 660, 26), 14, MUTED)
+	_panel(self, Rect2(1018, 34, 234, 42), Color("def7f1"))
 	connection_label = _label(self, "●  CHƯA KẾT NỐI", Rect2(1034, 40, 210, 30), 14, MINT)
-	phase_label = _label(self, "NEON GARDEN   /   SÂN ĐẤU 01", Rect2(50, 721, 660, 23), 13, MUTED)
+	phase_label = _label(self, "VƯỜN KẸO NGỌT   /   SÂN ĐẤU 01", Rect2(50, 721, 660, 23), 13, MUTED)
 	panel_title = _label(self, "VÀO SÂN ĐẤU", Rect2(784, 148, 440, 32), 26)
 	panel_subtitle = _label(self, "Một trận vui, thêm vài người bạn.", Rect2(784, 183, 440, 24), 15, MUTED)
 	add_child(form)
@@ -151,7 +154,7 @@ func _build_ui() -> void:
 	guest_button.pressed.connect(func(): _set_login_mode(false))
 	login_button.pressed.connect(func(): _set_login_mode(true))
 	register_button.pressed.connect(func(): _set_auth_mode("register"))
-	guest_hint = _label(form, "Vào chơi ngay, không cần tài khoản.\nTên phi công sẽ được tạo tự động.", Rect2(800, 286, 408, 80), 18, MINT)
+	guest_hint = _label(form, "Vào chơi ngay, không cần tài khoản.\nTên người chơi sẽ được tạo tự động.", Rect2(800, 286, 408, 80), 18, MINT)
 	_field(username_input, "Tên tài khoản (3–24 ký tự: a-z, 0-9, _)", "", 278)
 	_field(password_input, "Mật khẩu (10–128 ký tự)", "", 326)
 	password_input.secret = true
@@ -180,7 +183,7 @@ func _build_ui() -> void:
 	readiness = ColorRect.new()
 	readiness.position = Vector2(784, 536)
 	readiness.size = Vector2(440, 4)
-	readiness.color = Color("243e4a")
+	readiness.color = Color("d8ebf2")
 	readiness.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lobby.add_child(readiness)
 	readiness_fill = ColorRect.new()
@@ -189,7 +192,7 @@ func _build_ui() -> void:
 	readiness.add_child(readiness_fill)
 	readiness_label = _label(lobby, "", Rect2(784, 661, 440, 22), 12, MUTED)
 	for i in range(8):
-		var row := _panel(lobby, Rect2(784, 249 + i * 36, 440, 32), Color("19323e"))
+		var row := _panel(lobby, Rect2(784, 249 + i * 36, 440, 32), Color("eaf6fc"))
 		_label(row, "", Rect2(12, 3, 276, 26), 15)
 		var state := _label(row, "", Rect2(286, 3, 142, 26), 12, MUTED)
 		state.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -206,29 +209,35 @@ func _build_ui() -> void:
 	var credits_button := _button(self, "Thông tin & bản quyền", Rect2(784, 688, 440, 36))
 	credits_button.add_theme_font_size_override("font_size", 13)
 	var credits := AcceptDialog.new()
-	credits.title = "Suni / Credits & licenses"
+	credits.title = "Bụp Bụp! / Credits & licenses"
 	credits.min_size = Vector2i(720, 480)
 	var text := RichTextLabel.new()
 	text.custom_minimum_size = Vector2(680, 420)
-	text.text = "Suni Bomb Arena / Original code and procedural pixel art\n"
+	text.text = "Suni Bomb Arena / Original code and vector companions\n"
 	text.text += "Copyright (c) 2026 Suni Bomb Arena contributors / MIT\n\n"
 	text.text += Engine.get_license_text() + "\n\n"
 	text.text += FileAccess.get_file_as_string("res://licenses/GODOT_COPYRIGHT.txt")
 	credits.add_child(text)
 	add_child(credits)
 	credits_button.pressed.connect(func(): credits.popup_centered())
-	overlay = _panel(self, Rect2(176, 334, 408, 168), Color("102430"))
-	overlay_tag = _label(overlay, "NEON GARDEN", Rect2(16, 14, 376, 24), 13, MINT)
+	overlay = _panel(self, Rect2(176, 334, 408, 168), Color("ffffff"))
+	overlay_tag = _label(overlay, "VƯỜN KẸO NGỌT", Rect2(16, 14, 376, 24), 13, MINT)
 	overlay_title = _label(overlay, "CHƠI CÙNG BẠN BÈ", Rect2(16, 42, 376, 52), 27)
-	overlay_detail = _label(overlay, "Chọn Chơi khách để vào sảnh chờ.\n2–8 phi công · Một người sống cuối cùng.", Rect2(16, 102, 376, 52), 15, MUTED)
+	overlay_detail = _label(overlay, "Chọn Chơi khách để vào sảnh chờ.\n2–8 người chơi · Một người sống cuối cùng.", Rect2(16, 102, 376, 52), 15, MUTED)
+	result_avatar = TextureRect.new()
+	result_avatar.position = Vector2(220, 128)
+	result_avatar.size = Vector2(140, 182)
+	result_avatar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	result_avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	overlay.add_child(result_avatar)
 	for label in [overlay_tag, overlay_title, overlay_detail]:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		overlay_title.clip_text = true
-	_panel(self, Rect2(28, 764, 1224, 40), Color("142b35"))
-	status_label = _label(self, "Chào phi công! Chọn Chơi khách để bắt đầu.", Rect2(44, 768, 770, 32), 13, MUTED)
+	_panel(self, Rect2(28, 764, 1224, 40), Color("ffffff"))
+	status_label = _label(self, "Chào người chơi! Chọn Chơi khách để bắt đầu.", Rect2(44, 768, 770, 32), 13, MUTED)
 	status_label.clip_text = true
 	status_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	_label(self, "WASD / ↑↓←→   Di chuyển      SPACE   Đặt bom", Rect2(830, 774, 412, 24), 13, MINT)
+	_label(self, "WASD / ↑↓←→   Di chuyển      SPACE   Đặt bóng", Rect2(830, 774, 412, 24), 13, MINT)
 
 
 func _setup_inputs() -> void:
@@ -370,7 +379,7 @@ func _refresh_lobby() -> void:
 	arena_view.visible = not lobby_view.visible
 	var seconds := maxi(0, int(ceil((float(snapshot.get("deadline", 0)) - float(snapshot.get("now", 0))) / 1000.0)))
 	panel_title.text = "VÀO SÂN ĐẤU" if not connected else ("SẢNH CHỜ" if phase == "waiting" else "TRẬN ĐẤU")
-	panel_subtitle.text = "Một trận vui, thêm vài người bạn." if not connected else "Ván %d  ·  %d / 8 phi công" % [int(snapshot.get("round", 1)), players.size()]
+	panel_subtitle.text = "Một trận vui, thêm vài người bạn." if not connected else "Ván %d  ·  %d / 8 người chơi" % [int(snapshot.get("round", 1)), players.size()]
 	room_label.text = "PHÒNG  " + net.room_id.to_upper()
 	room_label.tooltip_text = room_label.text
 	room_label.clip_text = true
@@ -384,7 +393,7 @@ func _refresh_lobby() -> void:
 		var accent := row.get_child(2) as ColorRect
 		name_label.clip_text = true
 		if i >= players.size():
-			accent.color = Color("294351")
+			accent.color = Color("dcecf3")
 			name_label.tooltip_text = ""
 			name_label.text = "%02d   Đang chờ người chơi…" % (i + 1)
 			name_label.add_theme_color_override("font_color", Color("527481"))
@@ -396,7 +405,7 @@ func _refresh_lobby() -> void:
 		accent.color = ArenaView.COLORS[int(player.slot) % 8]
 		name_label.text = "%02d   %s%s" % [int(player.slot) + 1, player.name, "  (bạn)" if is_you else ""]
 		name_label.tooltip_text = name_label.text
-		name_label.add_theme_color_override("font_color", ArenaView.COLORS[int(player.slot) % 8])
+		name_label.add_theme_color_override("font_color", WHITE)
 		var ready: bool = player.ready
 		if ready:
 			ready_count += 1
@@ -411,10 +420,10 @@ func _refresh_lobby() -> void:
 		else:
 			state_label.add_theme_color_override("font_color", MINT if ready else MUTED)
 	readiness_fill.size = Vector2(440.0 * ready_count / maxi(2, players.size()), 4)
-	readiness_label.text = "%d / %d đã sẵn sàng · Cần ít nhất 2 phi công" % [ready_count, players.size()]
+	readiness_label.text = "%d / %d đã sẵn sàng · Cần ít nhất 2 người chơi" % [ready_count, players.size()]
 	if phase != "waiting":
 		readiness_fill.size.x = 440.0 * alive_count / maxi(1, players.size())
-		readiness_label.text = "%d / %d phi công còn lại · Space để đặt bom" % [alive_count, players.size()]
+		readiness_label.text = "%d / %d người chơi còn lại · Space để đặt bóng" % [alive_count, players.size()]
 	ready_button.disabled = not connected or phase != "waiting" or own_ready
 	ready_button.text = "Đã sẵn sàng · Chờ bạn bè" if own_ready else "Sẵn sàng  [R]"
 	if phase == "playing":
@@ -423,22 +432,31 @@ func _refresh_lobby() -> void:
 		ready_button.text = "Bắt đầu trong %d…" % seconds
 	elif phase == "finished":
 		ready_button.text = "Ván tiếp theo sau %d giây" % seconds
-	phase_label.text = "NEON GARDEN   /   SÂN ĐẤU 01"
+	phase_label.text = "VƯỜN KẸO NGỌT   /   SÂN ĐẤU 01"
 	if connected:
-		phase_label.text = "NEON GARDEN   /   VÁN %d   /   %s" % [int(snapshot.get("round", 1)), "CHỜ SẴN SÀNG" if phase == "waiting" else "%02d:%02d" % [seconds / 60, seconds % 60]]
+		phase_label.text = "VƯỜN KẸO NGỌT   /   VÁN %d   /   %s" % [int(snapshot.get("round", 1)), "CHỜ SẴN SÀNG" if phase == "waiting" else "%02d:%02d" % [seconds / 60, seconds % 60]]
 	overlay.visible = connected and (phase == "countdown" or phase == "finished")
-	overlay_tag.text = "NEON GARDEN"
+	var result := phase == "finished"
+	overlay.position = Vector2(90, 220) if result else Vector2(176, 334)
+	overlay.size = Vector2(580, 420) if result else Vector2(408, 168)
+	for label in [overlay_tag, overlay_title, overlay_detail]:
+		label.size.x = overlay.size.x - 32
+	overlay_detail.position.y = 340 if result else 102
+	result_avatar.visible = false
+	overlay_tag.text = "VƯỜN KẸO NGỌT"
 	overlay_title.text = "CHƠI CÙNG BẠN BÈ"
-	overlay_detail.text = "Chọn Chơi khách để vào sảnh chờ.\n2–8 phi công · Một người sống cuối cùng."
+	overlay_detail.text = "Chọn Chơi khách để vào sảnh chờ.\n2–8 người chơi · Một người sống cuối cùng."
 	if connected and phase == "countdown":
 		overlay_tag.text = "TẤT CẢ ĐÃ SẴN SÀNG"
 		overlay_title.text = str(seconds)
-		overlay_detail.text = "Chuẩn bị di chuyển.\nSpace để đặt bom, nhớ tìm đường thoát!"
+		overlay_detail.text = "Chuẩn bị di chuyển.\nSpace để đặt bóng, nhớ tìm đường thoát!"
 	elif connected and phase == "finished":
 		overlay_tag.text = "KẾT QUẢ VÁN ĐẤU"
 		var winner_name := "HÒA!"
 		for player in players:
 			if player.id == snapshot.get("winner"):
+				result_avatar.texture = ArenaView.Pilot.ART[ArenaView.Pilot.selected if player.id == net.session_id and ArenaView.Pilot.selected >= 0 else int(player.slot) % 4]
+				result_avatar.visible = true
 				winner_name = "BẠN THẮNG!" if player.id == net.session_id else player.name + " thắng!"
 		if snapshot.get("winner") != null and winner_name == "HÒA!":
 			winner_name = "Người thắng đã rời phòng"
@@ -469,7 +487,7 @@ func _process(delta: float) -> void:
 	connection_label.text = "●  ĐÃ KẾT NỐI" if net.connected else ("●  ĐANG KẾT NỐI…" if net.busy else "●  CHƯA KẾT NỐI")
 	if net.busy:
 		join_button.text = "Đang kết nối…"
-	if get_viewport().gui_get_focus_owner() is LineEdit or not net.connected:
+	if character_dialog.visible or get_viewport().gui_get_focus_owner() is LineEdit or not net.connected:
 		return
 	if Input.is_action_just_pressed("ready_match") and not ready_button.disabled:
 		net.send_action("ready")
@@ -486,10 +504,51 @@ func _process(delta: float) -> void:
 				break
 
 
+func _build_characters() -> void:
+	character_dialog = AcceptDialog.new()
+	character_dialog.title = "Chọn người bạn đồng hành"
+	character_dialog.min_size = Vector2i(880, 380)
+	character_dialog.ok_button_text = "Xác nhận chọn"
+	character_dialog.add_theme_stylebox_override("panel", _style(Color("fffcf4"), Color("dcecf3")))
+	var frame := _style(Color("fffcf4"), Color("dcecf3"))
+	frame.set_border_width_all(2)
+	frame.border_width_top = 32
+	character_dialog.add_theme_stylebox_override("embedded_border", frame)
+	character_dialog.add_theme_color_override("title_color", WHITE)
+	var confirm := character_dialog.get_ok_button()
+	confirm.add_theme_stylebox_override("normal", _style(Color("ffda6c"), Color("ffda6c")))
+	confirm.add_theme_color_override("font_color", WHITE)
+	var content := VBoxContainer.new()
+	var hint := Label.new()
+	hint.text = "Diện mạo trên máy bạn · Không thay đổi sức mạnh"
+	hint.add_theme_color_override("font_color", MUTED)
+	content.add_child(hint)
+	var cards := HBoxContainer.new()
+	cards.add_theme_constant_override("separation", 16)
+	content.add_child(cards)
+	var names := ["BÔNG", "MÂY", "LÁ", "NẮNG"]
+	var group := ButtonGroup.new()
+	for i in range(4):
+		var card := Button.new()
+		card.text = names[i]
+		card.icon = ArenaView.Pilot.ART[i]
+		card.expand_icon = true
+		card.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		card.custom_minimum_size = Vector2(200, 280)
+		card.toggle_mode = true
+		card.button_group = group
+		card.add_theme_color_override("font_color", WHITE)
+		card.add_theme_stylebox_override("normal", _style(ArenaView.COLORS[i].lightened(0.75), Color("dcecf3")))
+		card.add_theme_stylebox_override("pressed", _style(ArenaView.COLORS[i].lightened(0.45), MINT))
+		card.pressed.connect(func(): ArenaView.Pilot.selected = i)
+		cards.add_child(card)
+	character_dialog.add_child(content)
+	add_child(character_dialog)
+	var choose := _button(self, "Nhân vật", Rect2(828, 34, 170, 42))
+	choose.pressed.connect(func(): character_dialog.popup_centered())
+
+
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, 1280, 820), INK)
-	for i in range(24):
-		var x := float((i * 197 + 37) % 1280)
-		var y := float((i * 83 + 19) % 820)
-		draw_rect(Rect2(x, y, 2, 2), Color("24404a"))
-	draw_line(Vector2(444, 54), Vector2(980, 54), Color("28414c"), 1)
+	draw_rect(Rect2(0, 0, 1280, 820), Color("e9fbf5"))
+	draw_circle(Vector2(1160, 0), 380, Color("d6f5ed"))
+	draw_circle(Vector2(20, 840), 320, Color("d5f5eb"))

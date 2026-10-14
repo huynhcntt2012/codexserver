@@ -4,6 +4,10 @@ Mã, bản đồ Neon Garden và hình khối nhân vật Pilot được tạo r
 Copyright (c) 2026 Suni Bomb Arena contributors, theo [MIT](LICENSE).
 Không có nhạc, sprite, logo, source hoặc nhân vật từ Boom Online. Chưa nhập asset bên ngoài.
 
+Bộ SVG Bông, Mây, Lá, Nắng trong `apps/web/public/art` và `apps/client/art`
+được vẽ bằng mã trong repository theo các ảnh tham chiếu Bụp Bụp do người dùng cung cấp.
+Không nhúng ảnh tham chiếu hoặc tài nguyên của bên thứ ba vào gói game.
+
 Giữ notices của từng dependency khi phân phối. License dự án không thay thế license bên thứ ba.
 Phiên bản chính xác nằm trong `package-lock.json`, `apps/api/uv.lock` và image tags trong Compose.
 

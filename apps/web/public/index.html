@@ -6,20 +6,22 @@
     <meta name="theme-color" content="#0b1820" />
     <meta
       name="description"
-      content="Suni Bomb Arena — đặt bom, né nhanh và chơi cùng bạn bè ngay trên trình duyệt."
+      content="Bụp Bụp! — đặt bóng, né nhanh và chơi cùng bạn bè ngay trên trình duyệt."
     />
-    <title>Suni · Bomb Arena</title>
+    <title>Bụp Bụp! · Đấu trường bóng nước</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/style.css" />
     <script type="module" src="/app.mjs"></script>
   </head>
   <body>
     <header class="topbar">
-      <a class="brand" href="/" aria-label="Suni Bomb Arena"
-        ><span class="brand-icon">S</span> SUNI
-        <span class="brand-sub">BOMB ARENA</span></a
+      <a class="brand" href="/" aria-label="Bụp Bụp!"
+        ><span class="brand-icon">◦</span> BỤP BỤP!
+        <span class="brand-sub">ĐẤU TRƯỜNG BÓNG NƯỚC</span></a
       >
-      <span class="edition"
+      <button id="characters-open" class="secondary character-nav">
+        Nhân vật</button
+      ><span class="edition"
         >PHIÊN BẢN WEB <span class="pill">PLAYTEST</span></span
       >
     </header>
@@ -32,17 +34,25 @@
       </nav>
       <section id="auth-panel" class="auth-layout" aria-labelledby="auth-title">
         <div class="auth-intro">
-          <p class="eyebrow">MỘT SÂN ĐẤU. TÁM PHI CÔNG.</p>
-          <h1>Hẹn nhau.<br /><em>Trong đấu trường.</em></h1>
+          <p class="eyebrow">CÙNG BẠN BÈ TẠO NÊN NIỀM VUI</p>
+          <h1>BỤP BỤP!<br /><em>Đấu trường bóng nước</em></h1>
           <p class="muted">
             Đăng nhập, chọn phòng và chờ đồng đội.<br />Một ván vui bắt đầu khi
             tất cả sẵn sàng.
           </p>
-          <div class="pilot-mark" aria-hidden="true"><span></span></div>
-          <p class="eyebrow">NEON GARDEN · 2–8 NGƯỜI CHƠI</p>
+          <div class="mascots" aria-hidden="true">
+            <img src="/art/la.svg" alt="" /><img
+              src="/art/may.svg"
+              alt=""
+            /><img src="/art/bong.svg" alt="" /><img
+              src="/art/nang.svg"
+              alt=""
+            />
+          </div>
+          <p class="eyebrow">VƯỜN KẸO NGỌT · 2–8 NGƯỜI CHƠI</p>
         </div>
         <div class="side-panel auth-card">
-          <p class="eyebrow">CHÀO MỪNG PHI CÔNG</p>
+          <p class="eyebrow">CHÀO MỪNG BẠN</p>
           <h2 id="auth-title" tabindex="-1">Đăng nhập</h2>
           <p id="auth-description" class="muted">
             Đăng nhập để xem danh sách phòng chờ.
@@ -102,9 +112,7 @@
         <div class="intro">
           <div>
             <p class="eyebrow">CHỌN ĐIỂM HẸN CỦA BẠN</p>
-            <h1 id="rooms-title" tabindex="-1">
-              Danh sách <em>phòng chờ.</em>
-            </h1>
+            <h1 id="rooms-title" tabindex="-1">Chào mừng trở lại!</h1>
             <p>Vào một phòng bên dưới, hoặc tạo phòng mới và rủ bạn bè.</p>
           </div>
           <div id="session-panel" class="account-menu">
@@ -145,7 +153,7 @@
           <section class="arena-panel" aria-label="Sân đấu">
             <div class="panel-bar">
               <span
-                ><span class="live-dot"></span> NEON GARDEN
+                ><span class="live-dot"></span> VƯỜN KẸO NGỌT
                 <small>/ 01</small></span
               ><span id="round">2–8 NGƯỜI CHƠI</span>
             </div>
@@ -154,12 +162,18 @@
                 id="board"
                 width="720"
                 height="624"
-                aria-label="Bản đồ trận đấu; dùng WASD hoặc phím mũi tên để di chuyển, Space đặt bom"
+                aria-label="Bản đồ trận đấu; dùng WASD hoặc phím mũi tên để di chuyển, Space đặt bóng"
               ></canvas>
               <div class="board-overlay" id="overlay">
                 <span class="eyebrow" id="overlay-tag"
                   >SÂN ĐẤU ĐÃ SẴN SÀNG</span
                 >
+                <img
+                  id="result-avatar"
+                  src="/art/bong.svg"
+                  alt="Nhân vật chiến thắng"
+                  hidden
+                />
                 <h2 id="overlay-title">Chuẩn bị vào trận.</h2>
                 <p id="overlay-detail">
                   Trận đấu bắt đầu khi tất cả người chơi sẵn sàng.
@@ -168,7 +182,7 @@
             </div>
             <div class="board-footer">
               <span><kbd>W A S D</kbd> / <kbd>↑ ↓ ← →</kbd> Di chuyển</span
-              ><span><kbd>SPACE</kbd> Đặt bom</span>
+              ><span><kbd>SPACE</kbd> Đặt bóng</span>
             </div>
           </section>
           <aside class="side-panel">
@@ -204,9 +218,32 @@
         Đăng nhập hoặc tạo tài khoản để bắt đầu.
       </p>
     </main>
+    <dialog id="characters">
+      <h2>Chọn người bạn đồng hành</h2>
+      <p class="muted">
+        Diện mạo hiển thị trên máy bạn. Không thay đổi sức mạnh.
+      </p>
+      <div class="character-grid">
+        <button class="character-card" data-character="0" aria-pressed="false">
+          <img src="/art/bong.svg" alt="" /><strong>BÔNG</strong
+          ><span>Thích phiêu lưu</span></button
+        ><button class="character-card" data-character="1" aria-pressed="false">
+          <img src="/art/may.svg" alt="" /><strong>MÂY</strong
+          ><span>Nhanh như gió</span></button
+        ><button class="character-card" data-character="2" aria-pressed="false">
+          <img src="/art/la.svg" alt="" /><strong>LÁ</strong
+          ><span>Luôn lạc quan</span></button
+        ><button class="character-card" data-character="3" aria-pressed="false">
+          <img src="/art/nang.svg" alt="" /><strong>NẮNG</strong
+          ><span>Rất tinh nghịch</span>
+        </button>
+      </div>
+      <button id="characters-confirm" class="primary">Xác nhận chọn</button>
+    </dialog>
     <footer>
       <span
-        >SUNI <span class="muted">/ Trò chơi nhỏ, những trận vui.</span></span
+        >BỤP BỤP!
+        <span class="muted">/ Trò chơi nhỏ, những trận vui.</span></span
       ><span>Đồ họa nguyên bản · <a href="/LICENSE.txt">MIT License</a></span>
     </footer>
   </body>

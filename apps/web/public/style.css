@@ -179,3 +179,334 @@ h1[tabindex='-1'],
 h2[tabindex='-1'] {
   outline: none;
 }
+
+/* Bụp Bụp visual system: shared pastel colors and rounded vector artwork. */
+:root {
+  color-scheme: light;
+  color: #225470;
+  background: #e9fbf5;
+  --mint: #18839c;
+  --muted: #618499;
+}
+body {
+  background:
+    radial-gradient(ellipse at 95% 0, #d3f5ed 0, transparent 50%),
+    radial-gradient(ellipse at 0 100%, #c4f0dd 0, transparent 50%);
+}
+.topbar {
+  background: white;
+  border: 2px solid #e0eff5;
+  border-radius: 28px;
+  margin: 16px auto;
+  padding: 18px 28px;
+}
+.brand {
+  letter-spacing: 0;
+}
+.brand-icon {
+  background: #a6eafa;
+  color: white;
+  border-radius: 50%;
+}
+.brand-sub {
+  border-color: #d5e8ee;
+}
+.pill {
+  background: #fff3ce;
+  color: #225470;
+  border: 0;
+  border-radius: 24px;
+}
+main {
+  padding-top: 16px;
+}
+.steps {
+  margin-bottom: 22px;
+}
+.steps span {
+  border: 0;
+  border-radius: 24px;
+  padding: 10px 18px;
+}
+.steps .active {
+  background: #dcf7ff;
+  color: #225470;
+}
+h1 {
+  letter-spacing: -0.7px;
+}
+.auth-intro h1 {
+  font-size: 64px;
+  color: #27b1d2;
+}
+.auth-intro h1 em {
+  display: block;
+  font-size: 23px;
+  color: #225470;
+  margin-top: 14px;
+}
+.auth-layout {
+  max-width: 1180px;
+  gap: 48px;
+  margin: 20px auto 40px;
+}
+.mascots {
+  display: flex;
+  align-items: end;
+  margin: 35px 0 20px;
+}
+.mascots img {
+  width: 25%;
+  min-width: 0;
+}
+.mascots img:nth-child(3) {
+  transform: scale(1.13);
+}
+.arena-panel,
+.side-panel,
+.room-card,
+.empty-state {
+  background: white;
+  border: 2px solid #e1eef5;
+  border-radius: 28px;
+  box-shadow: 0 8px 0 #cce9eb80;
+}
+.primary,
+.secondary {
+  border-radius: 30px;
+  color: #225470;
+  box-shadow: 0 6px 0 #22547018;
+  justify-content: center;
+  gap: 12px;
+}
+.primary {
+  background: #ffda6c;
+}
+.primary:hover:not(:disabled) {
+  background: #ffe58e;
+}
+.secondary {
+  background: #def6ff;
+}
+.secondary:hover:not(:disabled) {
+  background: #c1eefb;
+}
+label,
+.text-button,
+#status {
+  color: #225470;
+}
+input {
+  background: #f5fbfe;
+  border: 2px solid #dcecf2;
+  border-radius: 14px;
+  color: #225470;
+}
+input::placeholder {
+  color: #6c899a;
+}
+#status.error {
+  color: #b02d50;
+}
+.room-toolbar {
+  border-color: #d7eae9;
+}
+.room-card:nth-child(3n + 1) {
+  background: #dff8fd;
+}
+.room-card:nth-child(3n + 2) {
+  background: #fff2d2;
+}
+.room-card:nth-child(3n) {
+  background: #ffe7ef;
+}
+.room-card:before {
+  content: '';
+  display: block;
+  height: 90px;
+  background: url('/art/may.svg') right center/80px 90px no-repeat;
+}
+.room-card:nth-child(3n):before {
+  background-image: url('/art/bong.svg');
+}
+.roster li {
+  background: #e8f6ff;
+  border-radius: 22px;
+  color: #225470;
+}
+.roster li:nth-child(4n + 1) {
+  background: #ffe5ef;
+}
+.roster li:nth-child(4n + 3) {
+  background: #e1f8e9;
+}
+.roster li:nth-child(4n) {
+  background: #fff1ce;
+}
+.roster .state {
+  color: #267c75;
+}
+.roster .slot {
+  color: #225470;
+}
+.roster img {
+  width: 60px;
+  height: 78px;
+}
+.lobby-layout {
+  max-width: 1100px;
+}
+.lobby-layout .roster li {
+  min-height: 110px;
+  padding: 14px;
+}
+.lobby-layout .roster .slot {
+  border: 0;
+  width: 60px;
+  height: auto;
+}
+.panel-bar {
+  background: #eff9fc;
+}
+.board-wrap {
+  background: #d7efbd;
+  border-radius: 20px;
+}
+canvas {
+  image-rendering: auto;
+}
+.board-overlay {
+  background: #ffffffed;
+  color: #225470;
+}
+.board-overlay p {
+  color: #618499;
+}
+kbd {
+  background: #e6f6fc;
+  color: #225470;
+  border-color: #c7e7ee;
+}
+.touch-controls button {
+  background: #dff5fc;
+  color: #225470;
+  border-color: #bddfe8;
+  border-radius: 22px;
+}
+footer {
+  border-color: #d3e8eb;
+  color: #618499;
+}
+@media (max-width: 680px) {
+  .topbar {
+    margin: 8px;
+    padding: 16px;
+  }
+  .brand {
+    font-size: 20px;
+  }
+  .brand-sub {
+    display: none;
+  }
+  .auth-intro h1 {
+    font-size: 42px;
+  }
+  .auth-intro h1 em {
+    font-size: 18px;
+  }
+  .auth-layout {
+    gap: 20px;
+  }
+  .mascots {
+    max-width: 340px;
+    margin: 12px auto;
+  }
+  .mascots img {
+    height: 105px;
+  }
+  .steps {
+    gap: 4px;
+  }
+  .steps span {
+    padding: 8px;
+  }
+  .roster img {
+    width: 42px;
+    height: 55px;
+  }
+}
+
+.character-nav {
+  width: auto;
+  margin: 0;
+  padding: 12px 25px;
+}
+dialog {
+  width: min(1000px, 95vw);
+  border: 2px solid #e0edf2;
+  border-radius: 28px;
+  padding: 30px;
+  color: #225470;
+  background: #fffcf4;
+}
+dialog::backdrop {
+  background: #22547066;
+}
+.character-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin: 25px 0;
+}
+.character-card {
+  border: 3px solid transparent;
+  border-radius: 28px;
+  padding: 15px;
+  background: #ffe4ed;
+  color: #225470;
+}
+.character-card:nth-child(2) {
+  background: #e0f4ff;
+}
+.character-card:nth-child(3) {
+  background: #e0f9e9;
+}
+.character-card:nth-child(4) {
+  background: #fff1cf;
+}
+.character-card[aria-pressed='true'] {
+  border-color: #2187a1;
+}
+.character-card img {
+  width: 100%;
+  height: 180px;
+}
+.character-card strong,
+.character-card span {
+  display: block;
+  margin: 10px 0;
+}
+#characters-confirm {
+  max-width: 300px;
+  margin: auto;
+}
+#result-avatar {
+  width: 120px;
+  height: 150px;
+}
+@media (max-width: 680px) {
+  .character-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .character-card img {
+    height: 100px;
+  }
+  .character-nav {
+    padding: 10px;
+    font-size: 12px;
+  }
+  .edition {
+    display: none;
+  }
+}

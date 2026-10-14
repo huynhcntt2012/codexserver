@@ -45,7 +45,7 @@ func set_snapshot(value: Dictionary, session: String) -> void:
 					remains = true
 			if not remains and value.get("phase") != "waiting":
 				rings.append({"pos": ORIGIN + Vector2(old_bomb.x, old_bomb.y) * CELL + Vector2(22, 22),
-					"life": 0.38, "duration": 0.38, "color": Color("ffd391")})
+					"life": 0.38, "duration": 0.38, "color": Color("7edff2")})
 	snapshot = value
 	local_id = session
 	var active: Dictionary = {}
@@ -63,7 +63,7 @@ func set_snapshot(value: Dictionary, session: String) -> void:
 		var key := Vector2i(flame.x, flame.y)
 		flames[key] = true
 		if not previous_flames.has(key):
-			_burst(ORIGIN + Vector2(key) * CELL + Vector2.ONE * CELL / 2, Color("ffcd83"), 5, 65, 0.42)
+			_burst(ORIGIN + Vector2(key) * CELL + Vector2.ONE * CELL / 2, Color("7edff2"), 5, 65, 0.42)
 	previous_flames = flames
 	if value.get("phase", "waiting") == "waiting":
 		sparks.clear()
@@ -153,71 +153,36 @@ func _draw() -> void:
 		draw_arc(ring.pos, 8 + progress * 32, 0, TAU, 40, Color(ring.color, (1 - progress) * 0.75), 2, true)
 
 
+func _rounded(rect: Rect2, color: Color, radius := 8) -> void:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.set_corner_radius_all(radius)
+	draw_style_box(style, rect)
+
+
 func _draw_tile(pos: Vector2, tile: int, checker: bool) -> void:
-	draw_rect(Rect2(pos, Vector2.ONE * CELL), Color("183c40") if checker else Color("1c4245"))
-	draw_rect(Rect2(pos + Vector2(1, 1), Vector2(42, 1)), Color("244b4d"))
-	if tile == 0:
-		draw_rect(Rect2(pos + Vector2(3, 40), Vector2(38, 2)), Color("153639"))
-		if int(pos.x + pos.y) % 7 == 0:
-			draw_line(pos + Vector2(33, 36), pos + Vector2(31, 31), Color("3e7260"), 2)
-			draw_line(pos + Vector2(34, 36), pos + Vector2(37, 32), Color("548268"), 2)
+	_rounded(Rect2(pos, Vector2.ONE * CELL), Color("e7f8d7") if checker else Color("d7efc5"), 4)
 	if tile == 1:
-		draw_rect(Rect2(pos + Vector2(2, 6), Vector2(40, 37)), Color("0b242f"))
-		draw_rect(Rect2(pos + Vector2(2, 2), Vector2(40, 34)), Color("345969"))
-		draw_rect(Rect2(pos + Vector2(3, 2), Vector2(38, 6)), Color("527e89"))
-		draw_rect(Rect2(pos + Vector2(7, 12), Vector2(30, 17)), Color("2b4c5d"))
-		draw_rect(Rect2(pos + Vector2(8, 12), Vector2(3, 13)), Color("416c79"))
-		draw_rect(Rect2(pos + Vector2(16, 30), Vector2(12, 4)), Color(0.39, 0.9, 0.75, 0.12))
-		draw_rect(Rect2(pos + Vector2(18, 31), Vector2(8, 2)), Color("6bb3aa"))
+		_rounded(Rect2(pos + Vector2(3, 5), Vector2(38, 37)), Color("90b0c1"))
+		_rounded(Rect2(pos + Vector2(3, 3), Vector2(38, 29)), Color("bdd6e2"))
 	elif tile == 2:
-		draw_rect(Rect2(pos + Vector2(5, 9), Vector2(36, 34)), Color("112d32"))
-		draw_rect(Rect2(pos + Vector2(4, 4), Vector2(35, 34)), Color("ad6f4f"))
-		draw_rect(Rect2(pos + Vector2(7, 7), Vector2(29, 27)), Color("87543f"))
-		for offset in [9, 20, 31]:
-			draw_rect(Rect2(pos + Vector2(offset, 7), Vector2(3, 27)), Color("c4865c"))
-		draw_rect(Rect2(pos + Vector2(4, 4), Vector2(35, 5)), Color("e2ab75"))
-		draw_rect(Rect2(pos + Vector2(4, 30), Vector2(35, 6)), Color("c38b60"))
-		for offset in [7, 32]:
-			draw_rect(Rect2(pos + Vector2(offset, 5), Vector2(3, 3)), Color("6a5041"))
-		draw_line(pos + Vector2(12, 11), pos + Vector2(30, 29), Color("d29a68"), 3)
-		draw_rect(Rect2(pos + Vector2(17, 17), Vector2(10, 8)), Color("5e6b53"))
-		draw_rect(Rect2(pos + Vector2(20, 19), Vector2(4, 4)), Color("9fce89"))
+		_rounded(Rect2(pos + Vector2(4, 5), Vector2(36, 37)), Color("c69758"))
+		_rounded(Rect2(pos + Vector2(4, 3), Vector2(36, 12)), Color("f5d699"))
+		draw_line(pos + Vector2(8, 17), pos + Vector2(30, 30), Color("fff0ce"), 2, true)
 
 
 func _draw_bomb(bomb: Dictionary) -> void:
 	var center := ORIGIN + Vector2(bomb.x, bomb.y) * CELL + Vector2(22, 23)
-	var remaining := clampf(float(bomb.explodeAt - snapshot.now) / 2000.0, 0, 1)
-	var pulse := 1.0 + sin(elapsed * (10 + (1 - remaining) * 10)) * 0.055
-	draw_circle(center + Vector2(1, 7), 16, Color(0, 0, 0, 0.22))
-	draw_circle(center, 18 * pulse, Color(1, 0.55, 0.39, 0.12))
-	draw_circle(center, 13 * pulse, Color("101e31"))
-	draw_circle(center - Vector2(3, 3), 9 * pulse, Color("314257"))
-	draw_rect(Rect2(center + Vector2(-8, -5), Vector2(16, 10)), Color("f29074"))
-	draw_rect(Rect2(center + Vector2(-3, -8), Vector2(6, 16)), Color("f29074"))
-	draw_rect(Rect2(center + Vector2(-2, -3), Vector2(4, 6)), Color("ffd39b"))
-	draw_line(center + Vector2(3, -12), center + Vector2(7, -18), Color("d5b986"), 3)
-	var spark := center + Vector2(7, -18)
-	draw_circle(spark, 3 + sin(elapsed * 18), Color("ffe6a8"))
-	for i in range(3):
-		var drift := fmod(elapsed * 2.5 + i * 0.33, 1.0)
-		draw_circle(spark + Vector2(sin(i * 4.0 + elapsed) * drift * 9, -drift * 17), 2 * (1 - drift), Color(1, 0.8, 0.5, 1 - drift))
-	draw_arc(center, 17, -PI / 2, -PI / 2 + TAU * remaining, 28, Color("ffd78a"), 2, true)
+	var pulse := 17.0 + sin(elapsed * 10)
+	draw_circle(center, pulse, Color("69d6ed"))
+	draw_arc(center, pulse, 0, TAU, 48, Color.WHITE, 2, true)
+	draw_circle(center - Vector2(5, 6), 4, Color("f2ffff"))
 
 
 func _draw_flame(cell: Vector2i) -> void:
-	var center := ORIGIN + Vector2(cell) * CELL + Vector2(22, 22)
-	var shimmer := sin(elapsed * 20 + cell.x + cell.y) * 2
-	draw_circle(center, 25, Color(1, 0.52, 0.2, 0.15))
-	# Join only cells that are actually burning; end caps respect blocked blast paths.
-	for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		if previous_flames.has(cell + direction):
-			var endpoint: Vector2 = center + Vector2(direction) * 23
-			draw_line(center, endpoint, Color("f37455"), 27 + shimmer)
-			draw_line(center, endpoint, Color("ffbf69"), 17 + shimmer)
-			draw_line(center, endpoint, Color("fff0b5"), 7)
-	draw_circle(center, 15 + shimmer, Color("ffad60"))
-	draw_circle(center, 10 + shimmer, Color("ffdb86"))
-	draw_rect(Rect2(center - Vector2(5, 5), Vector2(10, 10)), Color("fff6d7"))
+	var pos := ORIGIN + Vector2(cell) * CELL
+	_rounded(Rect2(pos + Vector2.ONE, Vector2(42, 42)), Color("a1e6ed"), 12)
+	draw_circle(pos + Vector2(22, 22), 16, Color("bef6fa"))
 
 
 func _draw_player(player: Dictionary) -> void:
@@ -238,6 +203,6 @@ func _draw_player(player: Dictionary) -> void:
 	draw_set_transform(pos)
 	if player.id == local_id:
 		draw_colored_polygon(PackedVector2Array([Vector2(18, -10), Vector2(26, -10), Vector2(22, -5)]), color)
-	Pilot.paint(self, int(player.slot), elapsed, walking, facings.get(player.id, Vector2.DOWN),
+	Pilot.paint(self, Pilot.selected if player.id == local_id and Pilot.selected >= 0 else int(player.slot), elapsed, walking, facings.get(player.id, Vector2.DOWN),
 		snapshot.get("phase") == "finished" and snapshot.get("winner") == player.id)
 	draw_set_transform(Vector2.ZERO)

@@ -9,6 +9,30 @@ let loadingRooms = false;
 let rooms = [];
 let rosterKey = '';
 let previousPhase;
+let selectedCharacter = null;
+let pendingCharacter = 0;
+const characterNames = ['bong', 'may', 'la', 'nang'];
+$('characters-open').addEventListener('click', () => {
+  pendingCharacter = selectedCharacter ?? 0;
+  for (const button of document.querySelectorAll('[data-character]'))
+    button.setAttribute(
+      'aria-pressed',
+      String(Number(button.dataset.character) === pendingCharacter),
+    );
+  $('characters').showModal();
+});
+for (const button of document.querySelectorAll('[data-character]'))
+  button.addEventListener('click', () => {
+    pendingCharacter = Number(button.dataset.character);
+    for (const other of document.querySelectorAll('[data-character]'))
+      other.setAttribute('aria-pressed', String(other === button));
+  });
+$('characters-confirm').addEventListener('click', () => {
+  selectedCharacter = pendingCharacter;
+  $('characters').close();
+  rosterKey = '';
+  render();
+});
 // Keep touch controls adjacent to the board, including on narrow screens.
 $('board').closest('.arena-panel').append($('touch-controls'));
 const held = new Map();
@@ -96,7 +120,7 @@ function renderRooms() {
       card.dataset.roomId = room.roomId;
       const tag = document.createElement('p');
       tag.className = 'eyebrow';
-      tag.textContent = 'NEON GARDEN';
+      tag.textContent = 'VƯỜN KẸO NGỌT';
       const title = document.createElement('h2');
       title.textContent = `Phòng ${room.roomId}`;
       const count = document.createElement('p');
@@ -228,7 +252,7 @@ function render() {
   const route = nextScreen === 'auth' ? mode : nextScreen;
   if (location.hash !== `#${route}`)
     history.replaceState(null, '', `#${route}`);
-  document.title = `${nextScreen === 'auth' ? (mode === 'register' ? 'Đăng ký' : 'Đăng nhập') : nextScreen === 'rooms' ? 'Chọn phòng' : inGame ? 'Đấu trường' : 'Phòng chờ'} · Suni Bomb Arena`;
+  document.title = `${nextScreen === 'auth' ? (mode === 'register' ? 'Đăng ký' : 'Đăng nhập') : nextScreen === 'rooms' ? 'Chọn phòng' : inGame ? 'Đấu trường' : 'Phòng chờ'} · Bụp Bụp!`;
   if (nextScreen !== screen) {
     screen = nextScreen;
     if (screen === 'rooms') {
@@ -266,7 +290,7 @@ function render() {
       : 'Chưa vào phòng';
   $('connection-dot').classList.toggle('online', client.connected);
   $('round').textContent = s
-    ? `VÁN ${s.round} / ${phase === 'waiting' ? `${players.length}/8 PHI CÔNG` : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`}`
+    ? `VÁN ${s.round} / ${phase === 'waiting' ? `${players.length}/8 NGƯỜI CHƠI` : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`}`
     : '2–8 NGƯỜI CHƠI';
   $('room-id').textContent = `PHÒNG / ${client.roomId || ''}`;
   $('room-title').textContent =
@@ -281,7 +305,7 @@ function render() {
     phase === 'waiting'
       ? `${players.filter((p) => p.ready).length}/${players.length} đã sẵn sàng · Tối thiểu 2 người`
       : phase === 'playing'
-        ? `${players.filter((p) => p.alive).length} phi công còn sống`
+        ? `${players.filter((p) => p.alive).length} người chơi còn sống`
         : phase === 'finished'
           ? `Ván mới sau ${seconds} giây`
           : `Bắt đầu sau ${seconds} giây`;
@@ -307,7 +331,7 @@ function render() {
             'name',
             player
               ? player.name + (player.id === client.id ? ' (bạn)' : '')
-              : 'Chờ phi công…',
+              : 'Chờ người chơi…',
           ],
           [
             'state',
@@ -325,6 +349,19 @@ function render() {
           const span = document.createElement('span');
           span.className = className;
           span.textContent = text;
+          if (className === 'slot' && player) {
+            const avatar = document.createElement('img');
+            avatar.src =
+              '/art/' +
+              characterNames[
+                player.id === client.id && selectedCharacter !== null
+                  ? selectedCharacter
+                  : i % 4
+              ] +
+              '.svg';
+            avatar.alt = '';
+            span.replaceChildren(avatar);
+          }
           li.append(span);
         }
         return li;
@@ -347,10 +384,21 @@ function render() {
         ? 'Một trận hòa!'
         : s.winner === client.id
           ? 'Bạn thắng rồi!'
-          : `${players.find((p) => p.id === s.winner)?.name || 'Phi công'} chiến thắng!`;
+          : `${players.find((p) => p.id === s.winner)?.name || 'Người chơi'} chiến thắng!`;
     detail = `Tự trở về sảnh sau ${seconds} giây.`;
     tag = 'HẸN GẶP Ở VÁN TIẾP THEO';
   }
+  const winner = players.find((p) => p.id === s?.winner);
+  $('result-avatar').hidden = phase !== 'finished' || !winner;
+  if (winner)
+    $('result-avatar').src =
+      '/art/' +
+      characterNames[
+        winner.id === client.id && selectedCharacter !== null
+          ? selectedCharacter
+          : winner.slot % 4
+      ] +
+      '.svg';
   $('overlay-title').textContent = title;
   $('overlay-detail').textContent = detail;
   $('overlay-tag').textContent = tag;
@@ -358,6 +406,7 @@ function render() {
 }
 
 function act(action) {
+  if ($('characters').open) return;
   if (action === 'ready' && !$('ready').disabled) client.send(action);
   else if (client.snapshot?.phase === 'playing') client.send(action);
 }
@@ -400,7 +449,7 @@ setInterval(() => {
 let lastDraw = 0;
 function frame(time) {
   if (screen === 'game' && time - lastDraw > 32) {
-    drawBoard($('board'), client.snapshot, client.id, time);
+    drawBoard($('board'), client.snapshot, client.id, time, selectedCharacter);
     lastDraw = time;
   }
   requestAnimationFrame(frame);

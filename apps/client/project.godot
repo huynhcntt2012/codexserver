@@ -2,7 +2,7 @@
 config_version=5
 
 [application]
-config/name="Suni Bomb Arena"
+config/name="Bụp Bụp!"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 
@@ -14,5 +14,5 @@ window/stretch/mode="canvas_items"
 [rendering]
 renderer/rendering_method="gl_compatibility"
 textures/default_filters/use_nearest_mipmap_filter=false
-textures/canvas_textures/default_texture_filter=0
-environment/defaults/default_clear_color=Color(0.04, 0.06, 0.1, 1)
+textures/canvas_textures/default_texture_filter=1
+environment/defaults/default_clear_color=Color(0.91, 0.98, 0.96, 1)

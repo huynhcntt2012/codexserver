@@ -1,4 +1,4 @@
-# Suni Bomb Arena
+# Bụp Bụp! / Suni Bomb Arena
 
 ## Chơi trên website — hướng phát triển hiện tại
 
@@ -18,9 +18,9 @@ Web dùng `/api/` và `/arena/` cùng origin, chuyển tiếp tới API và WebS
 Không cần đổi CORS hoặc nhập địa chỉ máy chủ trong giao diện. Phiên tài khoản
 chỉ giữ trong tab; tải lại trang cần đăng nhập lại.
 
-Đã dừng đóng gói desktop tự động trong CI; không tiếp tục cập nhật ứng dụng Linux.
-Mã Godot và các thay đổi có sẵn được giữ để tham khảo. Phần mô tả Godot bên dưới
-là tài liệu bản desktop cũ.
+Giao diện web và Windows được cập nhật theo mẫu Bụp Bụp: pastel, nhân vật SVG,
+bóng nước và màn chọn diện mạo cục bộ. Xem [bản UI để verify](docs/BUP_UI.md).
+Desktop được đóng gói thủ công; CI chưa tự xuất bản desktop.
 
 Xem [hướng dẫn web](docs/WEB.md), [danh sách công việc](docs/TASKS.md) và
 [kết quả kiểm thử](docs/VALIDATION.md).
