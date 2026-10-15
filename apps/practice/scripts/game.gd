@@ -178,6 +178,12 @@ func _create_ui() -> void:
 	_button(menu, "CỬA HÀNG / TRANG BỊ", Vector2(451, 808), Vector2(377, 34), Color("34b9dc")).pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/ui_showcase.tscn"))
 	_select_hero(maxi(0, HEROES.find(str(UIState.profile.get("selected_character", "bombo")))))
 	_select_level(0)
+	if not OS.has_feature("web"):
+		for child in menu.get_children():
+			child.hide()
+		var desktop := preload("res://scripts/ui/desktop_lobby.gd").new()
+		desktop.game = self
+		menu.add_child(desktop)
 
 	result = Control.new()
 	result.size = Vector2(1280, 920)

@@ -8,7 +8,8 @@ func _ready() -> void:
 	shop.navigate.connect(open_page)
 	equipment.navigate.connect(open_page)
 	UIState.toast_requested.connect(_show_toast)
-	open_page("shop")
+	open_page(str(UIState.get_meta("desktop_page", "shop")))
+	UIState.remove_meta("desktop_page")
 	print("PRACTICE_UI_READY")
 
 func open_page(page: String) -> void:
@@ -20,7 +21,7 @@ func open_page(page: String) -> void:
 		"battle":
 			get_tree().change_scene_to_file("res://scenes/main.tscn")
 		"home":
-			get_tree().change_scene_to_file("res://scenes/main.tscn")
+			get_tree().change_scene_to_file("res://scenes/main.tscn" if OS.has_feature("web") or AuthSession.has_session() or UIState.get_meta("from_desktop_lobby", false) else "res://scenes/ui/launch/launch_screen.tscn")
 		_:
 			_show_toast("Tính năng đang được phát triển")
 

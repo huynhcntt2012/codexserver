@@ -67,3 +67,15 @@ Hash ZIP và hướng dẫn art nguồn được giữ tại
 `apps/practice/licenses/UI_SPEC_SOURCE.txt`, đi kèm bản Web/Windows.
 Không nhập ảnh mockup phẳng hoặc asset bổ sung chưa xác minh. Giao diện tái sử dụng
 PNG Step 3 hiện có và panel StyleBoxFlat; các giới hạn nguồn art Step 3 vẫn áp dụng.
+
+## Gói giao diện Launch do người dùng cung cấp
+
+Nền đảo nước, Píp, Nốp, logo và bọt nước trong `apps/client/art/launch` và `apps/practice/assets/ui/launch`
+được cung cấp qua `BupBup_Launch_UI_Godot4.zip`. Nguồn mô tả đây là
+đồ họa nguyên bản tạo riêng cho dự án, không sao chép art từ ảnh tham khảo.
+Giữ nguyên tài liệu nguồn tại `apps/client/licenses/LAUNCH_ASSET_PROVENANCE.md`;
+không gán lại giấy phép MIT cho các tài nguyên này.
+
+Scene/script Launch trong `apps/practice` lấy từ cùng ZIP người dùng cung cấp,
+được chỉnh để mở chế độ bot và Cửa hàng/Trang bị. Giữ nguồn tại
+`apps/practice/licenses/LAUNCH_ASSET_PROVENANCE.md`.

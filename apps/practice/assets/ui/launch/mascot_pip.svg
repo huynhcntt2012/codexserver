@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="330" viewBox="0 0 300 330"><defs><linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFDB84"/><stop offset="1" stop-color="#FF9F77"/></linearGradient><linearGradient id="ball" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="#B9FCF2"/><stop offset="1" stop-color="#36BFDF"/></linearGradient></defs>
+<ellipse cx="152" cy="312" rx="100" ry="16" fill="#327EAD" opacity=".18"/>
+<path d="M85 108 Q36 63 50 30 Q91 24 112 89" fill="#71DBD5" stroke="#307FA6" stroke-width="9"/>
+<path d="M216 107 Q268 49 243 24 Q199 34 190 91" fill="#6DD8CF" stroke="#307FA6" stroke-width="9"/>
+<path d="M79 205Q22 181 26 226Q49 263 97 245" fill="#FFB878" stroke="#B66C86" stroke-width="8"/>
+<path d="M213 218Q266 201 272 232Q247 267 205 248" fill="#FFB878" stroke="#B66C86" stroke-width="8"/>
+<ellipse cx="111" cy="272" rx="33" ry="30" fill="#FFD17D" stroke="#A66889" stroke-width="8"/>
+<ellipse cx="204" cy="272" rx="33" ry="30" fill="#FFD17D" stroke="#A66889" stroke-width="8"/>
+<path d="M59 154 Q62 76 148 69 Q245 77 247 169 Q250 267 154 270 Q51 269 59 154Z" fill="url(#body)" stroke="#9D6389" stroke-width="9"/>
+<path d="M68 129Q157 80 233 131" stroke="#FFFFFF" stroke-width="9" stroke-opacity=".68" fill="none"/>
+<path d="M58 153 Q152 87 249 151 Q242 91 166 73 L100 81Z" fill="#44C5CA" stroke="#2D769B" stroke-width="8"/>
+<path d="M108 100L154 48L194 101" fill="#FFFFFF" stroke="#2D769B" stroke-width="8" stroke-linejoin="round"/>
+<ellipse cx="115" cy="167" rx="18" ry="23" fill="#FFFFFF"/><ellipse cx="194" cy="167" rx="18" ry="23" fill="#FFFFFF"/>
+<circle cx="120" cy="171" r="9" fill="#463F71"/><circle cx="190" cy="171" r="9" fill="#463F71"/>
+<circle cx="124" cy="166" r="3.5" fill="#FFFFFF"/><circle cx="194" cy="167" r="3.5" fill="#FFFFFF"/>
+<ellipse cx="81" cy="194" rx="18" ry="10" fill="#FF899B" opacity=".65"/><ellipse cx="225" cy="194" rx="18" ry="10" fill="#FF899B" opacity=".65"/>
+<path d="M140 195 Q155 214 170 195" stroke="#944D73" stroke-width="7" stroke-linecap="round" fill="none"/>
+<circle cx="224" cy="239" r="47" fill="url(#ball)" stroke="#2A88AA" stroke-width="8"/>
+<path d="M201 217 Q219 198 235 209" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" opacity=".8" fill="none"/>
+<circle cx="236" cy="255" r="9" fill="#A1F9F2"/>
+<path d="M210 279 Q240 303 269 277" stroke="#4BD0D7" stroke-width="8" stroke-linecap="round" fill="none"/>
+</svg>

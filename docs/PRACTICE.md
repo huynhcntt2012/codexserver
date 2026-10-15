@@ -70,3 +70,57 @@ không bật `unsafe-eval` hoặc inline script. File export và Windows ZIP kh�
   [gameplay](screenshots/step3/gameplay.png), [tạm dừng](screenshots/step3/paused.png).
 
 Các kết quả này là kiểm thử local, không thay thế kết quả GitHub Actions.
+
+## Launch trên PC
+
+Bản Windows mở màn hình Launch đảo bóng nước trước tiên. Chọn **Chơi thử**
+(1P) để vào sảnh chính PC hoặc **Cửa hàng / Trang bị** để xem bộ UI hiện có.
+Từ sảnh, Cửa hàng/Trang bị mở đúng tab và Trang chủ quay lại sảnh. Nếu mở cửa hàng từ Launch trước khi vào sảnh, Trang chủ quay lại Launch. Đăng nhập/đăng ký gọi API thật; thành công mở sảnh PC.
+Điểm số, tiền và trang bị demo chưa đồng bộ tài khoản trên server.
+Nhớ tên đăng nhập chỉ lưu tên, không lưu mật khẩu/token. 2P chưa hỗ trợ.
+
+Build riêng PC: `GODOT=/path/to/godot python3 scripts/build-practice.py --windows-only`.
+Chạy `build/practice/suni-bot-arena-windows-x86_64/suni-bot-arena.exe`, giữ
+file `.pck` cùng thư mục; ZIP cùng tên nằm tại `build/practice`.
+
+### Tài khoản trên PC
+
+Trong **Cài đặt**, nhập API tài khoản rồi **Áp dụng**. Mặc định loopback
+`http://127.0.0.1:8000`; để dùng máy chủ hiện có, nhập
+`https://api.sunifactory.com`. Có thể đặt `SUNI_API_URL` trước khi mở app.
+Máy chủ từ xa yêu cầu HTTPS; cấu hình được lưu trong thư mục user của Godot.
+
+Chọn **Đăng ký** để tạo tài khoản (tên 3–24 ký tự a-z, 0-9, _;
+mật khẩu 10–128 ký tự và nhập lại). Chọn lại nút này để về Đăng nhập.
+Đăng nhập chỉ chuyển sang sảnh PC sau khi API xác nhận. Trong lúc chờ,
+form bị khóa; lỗi tài khoản/mạng hiển thị thông báo và cho phép thử lại.
+Phiên chỉ nằm trong RAM, hết hạn theo API; đổi server hoặc Đăng xuất xóa phiên.
+Quên mật khẩu chưa được backend hỗ trợ. Chơi thử xóa phiên và chơi offline.
+
+Kiểm thử local: `godot --headless --path apps/practice --script res://tests/auth.gd`.
+Test này tạo tài khoản ngẫu nhiên trên API local, không chạy trên production.
+
+### Nếu đăng nhập báo hết thời gian kết nối
+
+Mở **Cài đặt → Máy chủ tài khoản → Máy chủ Bụp Bụp → Kiểm tra**.
+Khi báo kết nối thành công, nhấn **Áp dụng**, rồi thử đăng nhập/đăng ký.
+`127.0.0.1` trỏ về chính PC đang chạy game, chỉ dùng nếu PC đó có API local.
+Lỗi kết nối hiển thị URL đang gọi. Kiểm tra `/health` không gửi mật khẩu.
+Nếu trình duyệt vào được API nhưng nút Kiểm tra trong game thất bại, gửi lại
+thông báo đó để kiểm tra DNS/TLS hoặc quyền truy cập mạng của ứng dụng.
+
+### Sảnh chính PC mới
+
+Source app trong ảnh “Bụp Bụp! — Chơi với bot” là `apps/practice`,
+khác client multiplayer `apps/client`. Bản PC mới thay menu chọn nhân vật cũ
+bằng sảnh xanh, hồ sơ tài khoản/khách, năm nhân vật, ba thẻ bản đồ,
+tìm bản đồ, Chơi nhanh, Cửa hàng, Trang bị và đăng xuất.
+Thẻ bản đồ là trận bot local; không giả làm phòng online.
+Nhiệm vụ và xếp hạng thông báo chưa hỗ trợ.
+Web giữ scene khởi động riêng và menu chọn nhân vật cũ bằng feature `web`.
+
+![Sảnh của app chơi bot PC](screenshots/practice-main-lobby/practice-main-lobby.png)
+
+Kiểm thử Godot 4.4.1 local: `tests/desktop_lobby.gd`, `tests/auth.gd`,
+`tests/gameplay.gd` (127 checks). Ảnh được chụp trực tiếp bằng Godot/Xvfb.
+Chưa chạy executable trên Windows thật; export Windows không ký số.

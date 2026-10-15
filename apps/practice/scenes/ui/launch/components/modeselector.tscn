@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/launch/mode_selector.gd" id="1"]
+
+[node name="ModeSelector" type="Control"]
+mouse_filter = 2
+
+script = ExtResource("1")
+
+[node name="Solo" type="Button" parent="."]
+offset_left = 266.0
+offset_top = 485.0
+offset_right = 382.0
+offset_bottom = 553.0
+text = "1P
+CHƠI ĐƠN"
+
+
+[node name="Duo" type="Button" parent="."]
+offset_left = 899.0
+offset_top = 485.0
+offset_right = 1015.0
+offset_bottom = 553.0
+text = "2P
+CHƠI ĐÔI"

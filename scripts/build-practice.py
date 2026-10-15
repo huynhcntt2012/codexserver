@@ -25,7 +25,9 @@ def run(args, env):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--web-only", action="store_true", help="Skip Windows packaging")
+    targets = parser.add_mutually_exclusive_group()
+    targets.add_argument("--windows-only", action="store_true", help="Build only the PC app")
+    targets.add_argument("--web-only", action="store_true", help="Skip Windows packaging")
     args = parser.parse_args()
     env = os.environ.copy()
     env.setdefault("XDG_DATA_HOME", str(ROOT / "build/godot-data"))
@@ -43,20 +45,21 @@ def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
     base = [godot, "--headless", "--path", str(PROJECT)]
     run(base + ["--editor", "--quit"], env)
-    run(base + ["--export-release", "Web", str(WEB / "index.html")], env)
-    # Keep the official loader, but externalize its inline code for a strict CSP.
-    html = (WEB / "index.html").read_text()
-    styles = re.findall(r"<style>(.*?)</style>", html, re.S)
-    scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
-    if len(styles) != 1 or len(scripts) != 1:
-        raise SystemExit("Unexpected Godot HTML shell; review CSP extraction")
-    (WEB / "shell.css").write_text(styles[0])
-    (WEB / "boot.js").write_text(scripts[0])
-    html = re.sub(r"<style>.*?</style>", '<link rel="stylesheet" href="shell.css">', html, flags=re.S)
-    html = re.sub(r"<script>.*?</script>", '<script src="boot.js"></script>', html, flags=re.S)
-    (WEB / "index.html").write_text(html)
-    shutil.copytree(PROJECT / "licenses", WEB / "licenses", dirs_exist_ok=True)
-    (WEB / "BUILD.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    if not args.windows_only:
+        run(base + ["--export-release", "Web", str(WEB / "index.html")], env)
+        # Keep the official loader, but externalize its inline code for a strict CSP.
+        html = (WEB / "index.html").read_text()
+        styles = re.findall(r"<style>(.*?)</style>", html, re.S)
+        scripts = re.findall(r"<script>(.*?)</script>", html, re.S)
+        if len(styles) != 1 or len(scripts) != 1:
+            raise SystemExit("Unexpected Godot HTML shell; review CSP extraction")
+        (WEB / "shell.css").write_text(styles[0])
+        (WEB / "boot.js").write_text(scripts[0])
+        html = re.sub(r"<style>.*?</style>", '<link rel="stylesheet" href="shell.css">', html, flags=re.S)
+        html = re.sub(r"<script>.*?</script>", '<script src="boot.js"></script>', html, flags=re.S)
+        (WEB / "index.html").write_text(html)
+        shutil.copytree(PROJECT / "licenses", WEB / "licenses", dirs_exist_ok=True)
+        (WEB / "BUILD.json").write_text(json.dumps(manifest, indent=2) + "\n")
     if args.web_only:
         print(f"Web: {WEB}\nSource: {manifest}")
         return
@@ -73,7 +76,9 @@ def main():
                 bundle.write(path, path.relative_to(OUTPUT))
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     (OUTPUT / "SHA256SUMS.txt").write_text(f"{digest}  {archive.name}\n")
-    print(f"Web: {WEB}\nWindows: {archive}\nSource: {manifest}")
+    print(f"Windows: {archive}\nSource: {manifest}")
+    if not args.windows_only:
+        print(f"Web: {WEB}")
 
 
 if __name__ == "__main__":
