@@ -2,3 +2,8 @@ package-lock.json
 apps/client/
 apps/api/
 THIRD_PARTY_NOTICES.md
+# Preserve imported source documentation and asset hashes.
+apps/practice/README.md
+apps/practice/assets/
+apps/practice/levels/
+apps/web/public/practice/engine/

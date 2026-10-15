@@ -15,3 +15,6 @@ build/
 *.log
 *.db
 .DS_Store
+
+# Godot web export; rebuild with scripts/build-practice.py
+/apps/web/public/practice/engine/

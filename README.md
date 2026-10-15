@@ -23,6 +23,12 @@ Bombo, Mimi, Zin, Lala, Kai cùng nền xanh đậm, sân cỏ và bom nước.
 Xem [bộ nhân vật mới](docs/BOOM_ART.md) và [bản sửa di chuyển](docs/MOVEMENT.md).
 Desktop được đóng gói thủ công; CI chưa tự xuất bản desktop.
 
+**Chơi với bot (Step 3):** mở `/practice/` hoặc nút Chơi với bot trên trang chủ.
+Năm nhân vật với 120 frame di chuyển, 11 WAV, ba bản đồ, ba đối thủ AI,
+3 tim và 180 giây. Đây là chế độ chơi đơn; xem [hướng dẫn và build](docs/PRACTICE.md).
+Khi clone mới, cần export Godot theo hướng dẫn này trước khi build image web
+để đường dẫn `/practice/` tải được game.
+
 Xem [hướng dẫn web](docs/WEB.md), [danh sách công việc](docs/TASKS.md) và
 [kết quả kiểm thử](docs/VALIDATION.md).
 

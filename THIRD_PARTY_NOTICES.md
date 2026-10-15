@@ -47,3 +47,14 @@ phiên bản. Không coi metadata thiếu hoặc asset công khai là bằng ch�
 Trước khi phát hành, kiểm tra mục `REVIEW REQUIRED`, các gói không có file license,
 và thông báo của engine/OS; bổ sung nguồn và notices tương ứng. Asset chưa xác minh
 phải thay bằng hình khối tự tạo. Không có dependency nhạc/ảnh trả phí hay thanh toán thật.
+
+## Gói Step 3 do người dùng cung cấp
+
+`apps/practice` nhập source và tài nguyên từ `Game_Boom_Step3_Godot.zip`.
+README nguồn được giữ trong `apps/practice/README.md` và bản phân phối
+`licenses/STEP3_SOURCE.txt`; PNG/WAV gốc có SHA-256 trong PROVENANCE.json.
+Nguồn mô tả 120 frame biến đổi từ pose gốc và 11 WAV tự tổng hợp bằng toán học,
+không dùng sample/nhạc/source từ Boom Online. Đây là mô tả của nguồn cung cấp,
+không phải xác minh độc lập quyền sở hữu. Không gán lại license MIT cho tài
+nguyên được cung cấp; giữ nguyên lưu ý về art AI và phát hành thương mại.
+Godot web export và Windows đi kèm GODOT_COPYRIGHT.txt và các notices hiện có.
