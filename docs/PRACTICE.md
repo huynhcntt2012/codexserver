@@ -1,6 +1,8 @@
 # Chơi với bot — Step 3
 
 Mở `/practice/` từ nút **Chơi với bot** trên website. Không cần tài khoản.
+Màn đầu là **Cửa hàng** demo; chọn **Trang bị** để thử loadout hoặc **Vào trận**
+để chọn nhân vật/bản đồ. Xem [UI PC/Web](UI_SHOP_EQUIPMENT.md).
 Bản Windows riêng: giải nén ZIP `suni-bot-arena-windows-x86_64.zip`, chạy
 `suni-bot-arena.exe`, không cần cài Godot.
 

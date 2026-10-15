@@ -3,7 +3,7 @@ config_version=5
 
 [application]
 config/name="Bụp Bụp! — Chơi với bot"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/ui/ui_showcase.tscn"
 config/features=PackedStringArray("4.0", "GL Compatibility")
 
 [display]
@@ -18,3 +18,6 @@ window/stretch/aspect="keep"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/default_filters/use_nearest_mipmap_filter=false
+
+[autoload]
+UIState="*res://scripts/ui/ui_state.gd"

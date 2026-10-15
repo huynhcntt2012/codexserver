@@ -1,0 +1,34 @@
+{
+  "player_id": "demo_player",
+  "name": "Bụp Bụp! · DEMO",
+  "level": 12,
+  "xp": 320,
+  "xp_max": 800,
+  "gold": 12560,
+  "gem": 320,
+  "selected_character": "mimi",
+  "owned": [
+    "outfit_mimi",
+    "outfit_bombo",
+    "outfit_kai",
+    "bomb_skin_classic",
+    "bomb_skin_black",
+    "bomb_skin_water",
+    "effect_fire",
+    "effect_ice",
+    "effect_star",
+    "pet_bunny",
+    "accessory_heart"
+  ],
+  "loadout": {
+    "outfit": "outfit_mimi",
+    "bomb_skin": "bomb_skin_black",
+    "effect": "effect_star",
+    "pet": "pet_bunny",
+    "accessory": "accessory_heart",
+    "hat": ""
+  },
+  "consumables": {
+    "bomb_basic_pack": 5
+  }
+}

@@ -43,7 +43,7 @@ test('Step 3 loads its real Godot game, starts maps and accepts keyboard control
   ).toBeVisible();
   await page.getByRole('button', { name: 'Bắt đầu chơi với bot' }).click();
   await expect
-    .poll(() => messages.some((s) => s.includes('PRACTICE_READY')), {
+    .poll(() => messages.some((s) => s.includes('PRACTICE_UI_READY')), {
       timeout: 90000,
     })
     .toBe(true);
@@ -58,6 +58,15 @@ test('Step 3 loads its real Godot game, starts maps and accepts keyboard control
       box.y + (box.height - 920 * scale) / 2 + y * scale,
     );
   };
+  await mkdir('docs/screenshots/ui', { recursive: true });
+  await page.screenshot({ path: 'docs/screenshots/ui/shop.png' });
+  await clickGame(735, 850); // Equipment
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'docs/screenshots/ui/equipment.png' });
+  await clickGame(920, 850); // Battle / map selection
+  await expect
+    .poll(() => messages.some((s) => s.includes('PRACTICE_READY')))
+    .toBe(true);
   await mkdir('docs/screenshots/step3', { recursive: true });
   await page.screenshot({ path: 'docs/screenshots/step3/menu.png' });
   await clickGame(1025, 420); // Kai

@@ -58,3 +58,12 @@ không dùng sample/nhạc/source từ Boom Online. Đây là mô tả của ngu
 không phải xác minh độc lập quyền sở hữu. Không gán lại license MIT cho tài
 nguyên được cung cấp; giữ nguyên lưu ý về art AI và phát hành thương mại.
 Godot web export và Windows đi kèm GODOT_COPYRIGHT.txt và các notices hiện có.
+
+## Gói UI Spec do người dùng cung cấp
+
+Scene, script và dữ liệu demo Shop/Equipment lấy từ
+`Game_Boom_UI_Spec_Godot4.zip` (Drive `1l44rdo5tILvBtT3W0qeVskXa2Miw9F-x`).
+Hash ZIP và hướng dẫn art nguồn được giữ tại
+`apps/practice/licenses/UI_SPEC_SOURCE.txt`, đi kèm bản Web/Windows.
+Không nhập ảnh mockup phẳng hoặc asset bổ sung chưa xác minh. Giao diện tái sử dụng
+PNG Step 3 hiện có và panel StyleBoxFlat; các giới hạn nguồn art Step 3 vẫn áp dụng.

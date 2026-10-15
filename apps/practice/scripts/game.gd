@@ -175,7 +175,8 @@ func _create_ui() -> void:
 		level_cards.append({"button": b})
 	_button(menu, "BẮT ĐẦU CHƠI", Vector2(451, 676), Vector2(377, 74), Color("ffac2f")).pressed.connect(_new_round)
 	_label(menu, "5 NHÂN VẬT  •  3 BẢN ĐỒ  •  ÂM THANH TỰ TẠO  •  BOT NÉ BOM", Vector2(163, 770), Vector2(953, 29), 16, Color("a7cee4"), true)
-	_select_hero(0)
+	_button(menu, "CỬA HÀNG / TRANG BỊ", Vector2(451, 808), Vector2(377, 34), Color("34b9dc")).pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/ui_showcase.tscn"))
+	_select_hero(maxi(0, HEROES.find(str(UIState.profile.get("selected_character", "bombo")))))
 	_select_level(0)
 
 	result = Control.new()
@@ -197,6 +198,7 @@ func _create_ui() -> void:
 
 func _select_hero(index: int) -> void:
 	selected_hero = index
+	UIState.choose_hero(HEROES[index])
 	for i in range(menu_cards.size()):
 		var button: Button = menu_cards[i]["button"]
 		button.text = "ĐÃ CHỌN" if i == index else "CHỌN"

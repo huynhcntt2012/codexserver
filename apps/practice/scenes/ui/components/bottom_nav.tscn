@@ -1,0 +1,29 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/bottom_nav.gd" id="1_script"]
+
+[node name="BottomNav" type="PanelContainer"]
+script = ExtResource("1_script")
+custom_minimum_size = Vector2(0, 72)
+
+[node name="Margin" type="MarginContainer" parent="."]
+
+[node name="Buttons" type="HBoxContainer" parent="Margin"]
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Home" type="Button" parent="Margin/Buttons"]
+text = "Trang chủ"
+custom_minimum_size = Vector2(175, 52)
+
+[node name="Shop" type="Button" parent="Margin/Buttons"]
+text = "Cửa hàng"
+custom_minimum_size = Vector2(175, 52)
+
+[node name="Equipment" type="Button" parent="Margin/Buttons"]
+text = "Trang bị"
+custom_minimum_size = Vector2(175, 52)
+
+[node name="Battle" type="Button" parent="Margin/Buttons"]
+text = "Vào trận"
+custom_minimum_size = Vector2(175, 52)
