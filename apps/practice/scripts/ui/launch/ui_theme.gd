@@ -20,7 +20,13 @@ static func box(fill: Color, border: Color, radius: int = 22, shadow: int = 0, b
 	style.shadow_offset = Vector2(0, 6)
 	return style
 
+## Busy/disabled look: same shape and palette, washed toward a pale mist.
+static func faded(color: Color) -> Color:
+	return color.lerp(Color("#EEF2F6"), 0.6)
+
 static func apply_button(button: Button, fill: Color, border: Color, font_size: int = 18, radius: int = 22) -> void:
+	button.add_theme_stylebox_override("disabled", box(faded(fill), faded(border), radius, 0))
+	button.add_theme_color_override("font_disabled_color", Color(INK, 0.42))
 	button.add_theme_stylebox_override("normal", box(fill, border, radius, 3))
 	button.add_theme_stylebox_override("hover", box(fill.lightened(0.12), border.lightened(0.15), radius, 5))
 	button.add_theme_stylebox_override("pressed", box(fill.darkened(0.11), border, radius, 1))
@@ -36,7 +42,19 @@ static func apply_link(button: Button, color: Color = INK, font_size: int = 16) 
 	button.add_theme_color_override("font_color", color)
 	button.add_theme_color_override("font_hover_color", CORAL)
 	button.add_theme_color_override("font_pressed_color", AQUA_DARK)
+	button.add_theme_color_override("font_disabled_color", Color(color, 0.4))
 	button.add_theme_font_size_override("font_size", font_size)
+
+## Text fields keep their rounded frame while read-only during server calls.
+static func apply_input(field: LineEdit, border: Color, focus: Color, font_size: int = 17, border_width: int = 2) -> void:
+	field.add_theme_stylebox_override("normal", box(WHITE, border, 15, 0, border_width))
+	field.add_theme_stylebox_override("focus", box(WHITE, focus, 15, 0, border_width + 1))
+	field.add_theme_stylebox_override("read_only", box(Color("#F4F2F9"), faded(border), 15, 0, border_width))
+	field.add_theme_color_override("font_color", INK)
+	field.add_theme_color_override("font_uneditable_color", Color(INK, 0.5))
+	field.add_theme_color_override("font_placeholder_color", Color("#9B96B4"))
+	field.add_theme_color_override("caret_color", AQUA_DARK)
+	field.add_theme_font_size_override("font_size", font_size)
 
 static func apply_label(label: Label, font_size: int = 18, color: Color = INK) -> void:
 	label.add_theme_font_size_override("font_size", font_size)

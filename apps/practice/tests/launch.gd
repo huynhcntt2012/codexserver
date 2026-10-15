@@ -5,6 +5,9 @@ func _initialize() -> void:
 
 func _run() -> void:
 	assert(ProjectSettings.get_setting("application/run/main_scene") == "res://scenes/ui/launch/launch_screen.tscn")
+	# PC opens fullscreen; the browser build keeps a normal window.
+	assert(ProjectSettings.get_setting("display/window/size/mode") == DisplayServer.WINDOW_MODE_FULLSCREEN)
+	assert(ProjectSettings.get_setting("display/window/size/mode.web") == DisplayServer.WINDOW_MODE_WINDOWED)
 	change_scene_to_file("res://scenes/ui/launch/launch_screen.tscn")
 	await process_frame
 	await process_frame

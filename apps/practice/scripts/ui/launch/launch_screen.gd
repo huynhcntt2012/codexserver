@@ -15,6 +15,7 @@ const BASE_SIZE := Vector2(1280.0, 720.0)
 @onready var settings_dialog: Control = $CanvasRoot/SettingsDialog
 
 func _ready() -> void:
+	preload("res://scripts/ui/screen_fill.gd").set_fill(get_tree(), true)
 	var shop := Button.new()
 	shop.name = "ShopEquipment"
 	shop.text = "CỬA HÀNG / TRANG BỊ"
@@ -46,6 +47,9 @@ func _ready() -> void:
 	$CanvasRoot/FooterNav.register_requested.connect(_on_register)
 	$CanvasRoot/FooterNav.exit_requested.connect(func(): get_tree().quit())
 
+func _exit_tree() -> void:
+	preload("res://scripts/ui/screen_fill.gd").set_fill(get_tree(), false)
+
 func _update_layout() -> void:
 	if not is_instance_valid(canvas_root):
 		return
@@ -59,21 +63,23 @@ func _on_login(username: String, password: String) -> void:
 	if mode_selector.get_selected_mode() != "solo":
 		info_dialog.show_info("CHƠI CÙNG BẠN", "Chọn 1P để chơi với bot. 2P chưa hỗ trợ trong bản này.")
 		return
-	auth_panel.set_busy(true)
-	$CanvasRoot/ShopEquipment.disabled = true
-	$CanvasRoot/FooterNav/Register.disabled = true
-	$CanvasRoot/TopActions/Settings.disabled = true
+	_set_busy(true)
 	var success: bool = await AuthSession.authenticate(username, password, auth_panel.registering)
 	auth_panel.reset_password_field()
-	auth_panel.set_busy(false)
-	$CanvasRoot/ShopEquipment.disabled = false
-	$CanvasRoot/FooterNav/Register.disabled = false
-	$CanvasRoot/TopActions/Settings.disabled = false
+	_set_busy(false)
 	if success:
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 	else:
 		info_dialog.show_info("KHÔNG THỂ ĐĂNG NHẬP", AuthSession.last_error)
 		$CanvasRoot/ServerStatus.update_connection(false)
+
+## Locks every control that would start another flow while the server answers.
+func _set_busy(value: bool) -> void:
+	auth_panel.set_busy(value)
+	for path in ["ShopEquipment", "FooterNav/Register", "TopActions/Settings", "ModeSelector/Solo", "ModeSelector/Duo"]:
+		var node: Button = get_node("CanvasRoot/" + path)
+		node.disabled = value
+		node.mouse_default_cursor_shape = Control.CURSOR_WAIT if value else Control.CURSOR_POINTING_HAND
 
 func _on_guest() -> void:
 	if AuthSession.busy:

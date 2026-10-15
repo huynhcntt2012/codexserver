@@ -36,10 +36,14 @@ func _ready() -> void:
 	_style_input(username_field)
 	_style_input(password_field)
 	$Remember.add_theme_color_override("font_color", Ui.INK)
+	$Remember.add_theme_color_override("font_disabled_color", Color(Ui.INK, 0.4))
 	$Remember.add_theme_font_size_override("font_size", 14)
 	Ui.apply_link($Forgot, Ui.AQUA_DARK, 15)
 	Ui.apply_button($Login, Color("#FFC868"), Color("#F28B76"), 24, 24)
 	Ui.apply_button($Guest, Color("#99E9DF"), Color("#36BAC5"), 17, 24)
+	# The main action stays warm while waiting so it reads as "working", not "off".
+	$Login.add_theme_stylebox_override("disabled", Ui.box(Color("#FFDFA0"), Color("#F6B3A4"), 24, 0))
+	$Login.add_theme_color_override("font_disabled_color", Color(Ui.INK, 0.75))
 	$Login.pressed.connect(_submit)
 	$Guest.pressed.connect(func(): guest_requested.emit())
 	$Forgot.pressed.connect(func(): forgot_password_requested.emit())
@@ -47,12 +51,7 @@ func _ready() -> void:
 	password_field.text_submitted.connect(func(_txt: String): _submit())
 
 func _style_input(field: LineEdit) -> void:
-	field.add_theme_stylebox_override("normal", Ui.box(Color("#FFFFFF"), Color("#E0DDF1"), 15, 0, 2))
-	field.add_theme_stylebox_override("focus", Ui.box(Color("#FFFFFF"), Ui.AQUA, 15, 0, 3))
-	field.add_theme_color_override("font_color", Ui.INK)
-	field.add_theme_color_override("font_placeholder_color", Color("#9B96B4"))
-	field.add_theme_color_override("caret_color", Ui.AQUA_DARK)
-	field.add_theme_font_size_override("font_size", 17)
+	Ui.apply_input(field, Color("#E0DDF1"), Ui.AQUA)
 
 func _submit() -> void:
 	if AuthSession.busy:
@@ -94,9 +93,24 @@ func set_registration(enabled: bool) -> void:
 	$Title.text = "ĐĂNG KÝ" if enabled else "ĐĂNG NHẬP"
 	$Login.text = "TẠO TÀI KHOẢN" if enabled else "VÀO TRẬN"
 
+var busy_time := -1.0
+
 func set_busy(value: bool) -> void:
+	# Drop focus first so no focus ring is drawn over locked controls.
+	var focused := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	if value and focused and is_ancestor_of(focused):
+		focused.release_focus()
 	for node in [$Login, $Guest, $Forgot, $Remember]:
 		node.disabled = value
+		node.mouse_default_cursor_shape = Control.CURSOR_WAIT if value else Control.CURSOR_POINTING_HAND
 	for field in [username_field, password_field, confirm_field]:
 		field.editable = not value
+		field.selecting_enabled = not value
+	busy_time = 0.0 if value else -1.0
 	$Login.text = "ĐANG KẾT NỐI…" if value else ("TẠO TÀI KHOẢN" if registering else "VÀO TRẬN")
+
+func _process(delta: float) -> void:
+	if busy_time < 0.0:
+		return
+	busy_time += delta
+	$Login.text = "ĐANG KẾT NỐI" + ".".repeat(1 + int(busy_time * 3.0) % 3)

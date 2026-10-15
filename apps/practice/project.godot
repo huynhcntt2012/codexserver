@@ -12,6 +12,8 @@ window/size/viewport_width=1280
 window/size/viewport_height=920
 window/size/window_width_override=1280
 window/size/window_height_override=920
+window/size/mode=3
+window/size/mode.web=0
 window/stretch/mode="canvas_items"
 window/stretch/aspect="keep"
 

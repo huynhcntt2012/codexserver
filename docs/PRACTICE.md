@@ -73,6 +73,8 @@ Các kết quả này là kiểm thử local, không thay thế kết quả GitH
 
 ## Launch trên PC
 
+Bản Windows mở toàn màn hình (`display/window/size/mode=3`; web giữ cửa sổ
+qua `mode.web=0`). Tắt toàn màn hình trong Cài đặt của màn hình Launch.
 Bản Windows mở màn hình Launch đảo bóng nước trước tiên. Chọn **Chơi thử**
 (1P) để vào sảnh chính PC hoặc **Cửa hàng / Trang bị** để xem bộ UI hiện có.
 Từ sảnh, Cửa hàng/Trang bị mở đúng tab và Trang chủ quay lại sảnh. Nếu mở cửa hàng từ Launch trước khi vào sảnh, Trang chủ quay lại Launch. Đăng nhập/đăng ký gọi API thật; thành công mở sảnh PC.
@@ -112,11 +114,30 @@ thông báo đó để kiểm tra DNS/TLS hoặc quyền truy cập mạng của
 ### Sảnh chính PC mới
 
 Source app trong ảnh “Bụp Bụp! — Chơi với bot” là `apps/practice`,
-khác client multiplayer `apps/client`. Bản PC mới thay menu chọn nhân vật cũ
-bằng sảnh xanh, hồ sơ tài khoản/khách, năm nhân vật, ba thẻ bản đồ,
-tìm bản đồ, Chơi nhanh, Cửa hàng, Trang bị và đăng xuất.
-Thẻ bản đồ là trận bot local; không giả làm phòng online.
-Nhiệm vụ và xếp hạng thông báo chưa hỗ trợ.
+khác client multiplayer `apps/client`. Sảnh PC dựng theo mockup 1920×1080
+bằng container co giãn, phủ kín mọi tỉ lệ màn hình:
+
+- Thanh trên: logo, Sảnh chính/Cửa hàng/Trang bị/Nhiệm vụ/Xếp hạng, ví vàng
+  và kim cương (ví demo của Cửa hàng, nút + mở Cửa hàng), Bạn bè, Thư, Cài đặt
+  (toàn màn hình, âm thanh, đăng xuất).
+- Cột trái: hồ sơ tài khoản/khách với Lv/XP demo, tab Nhân vật (năm nhân vật)
+  và tab Bạn bè (thông báo chưa có hệ thống bạn bè).
+- Tìm trận nhanh (vào trận với bản đồ đã chọn), Tạo phòng (mở danh sách bản
+  đồ), Đấu xếp hạng (báo cần online).
+- Bộ lọc độ khó, bộ lọc bản đồ, ô tìm kiếm; lưới hai cột 6 thẻ/trang có phân
+  trang. Mỗi thẻ là một trận bot local, không giả làm phòng online.
+- Thanh chat: chỉ hiện thông báo hệ thống; chat người chơi chưa hỗ trợ.
+
+Bộ lọc đọc thẻ từ `LEVEL_FILES` trong `game.gd` (tên, mô tả, theme của
+JSON), nên thêm bản đồ chỉ cần thêm file level và ảnh
+`assets/level_previews/<id>.png`. Độ khó lấy từ phần trước dấu `•` của
+`subtitle`. Ô tìm kiếm không phân biệt dấu, mọi từ phải khớp; Enter chọn bản
+đồ đầu tiên. Thẻ không khớp bị ẩn, kèm đếm `N/M bản đồ` và thông báo khi
+không có kết quả.
+
+Launch và sảnh dùng stretch `expand` để phủ màn hình
+(`scripts/ui/screen_fill.gd`); trong trận trở lại khung 1280×920 `keep`, nên
+màn hình rộng có viền hai bên khi chơi.
 Web giữ scene khởi động riêng và menu chọn nhân vật cũ bằng feature `web`.
 
 ![Sảnh của app chơi bot PC](screenshots/practice-main-lobby/practice-main-lobby.png)

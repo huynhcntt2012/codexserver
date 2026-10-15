@@ -26,11 +26,7 @@ func _ready() -> void:
 	api_field.position = Vector2(370, 325)
 	api_field.size = Vector2(540, 44)
 	api_field.placeholder_text = "https://api.sunifactory.com"
-	api_field.add_theme_color_override("font_color", Ui.INK)
-	api_field.add_theme_color_override("caret_color", Ui.INK)
-	api_field.add_theme_font_size_override("font_size", 18)
-	api_field.add_theme_stylebox_override("normal", Ui.box(Color.WHITE, Ui.AQUA))
-	api_field.add_theme_stylebox_override("focus", Ui.box(Color.WHITE, Ui.AQUA_DARK))
+	Ui.apply_input(api_field, Ui.AQUA, Ui.AQUA_DARK, 18, 3)
 	add_child(api_field)
 	public_button.text = "MÁY CHỦ BỤP BỤP"
 	public_button.position = Vector2(370, 382)

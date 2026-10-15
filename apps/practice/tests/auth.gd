@@ -38,6 +38,10 @@ func _run() -> void:
 	screen.auth_panel.confirm_field.text = password
 	screen.auth_panel._submit()
 	check(account.busy and screen.auth_panel.get_node("Login").disabled, "Submitting must disable form")
+	for path in ["ShopEquipment", "FooterNav/Register", "TopActions/Settings", "ModeSelector/Solo", "ModeSelector/Duo"]:
+		check(screen.get_node("CanvasRoot/" + path).disabled, "Busy locks " + path)
+	check(not screen.auth_panel.username_field.editable and screen.auth_panel.username_field.has_theme_stylebox_override("read_only"), "Busy inputs keep themed read-only frame")
+	check(screen.auth_panel.get_node("Guest").has_theme_stylebox_override("disabled"), "Busy buttons keep themed disabled style")
 	await settle()
 	check(account.has_session(), "Registration establishes account session")
 	check(current_scene.scene_file_path == "res://scenes/main.tscn", "Successful auth opens game menu")
@@ -68,6 +72,7 @@ func _run() -> void:
 	screen.auth_panel._submit()
 	await settle()
 	check(not account.has_session() and current_scene == screen and not screen.auth_panel.get_node("Login").disabled, "Connection failure allows retry")
+	check(not screen.get_node("CanvasRoot/ModeSelector/Solo").disabled and screen.auth_panel.username_field.editable, "Failure unlocks every control")
 	check(not account.configure("http://example.com"), "Remote HTTP credentials forbidden")
 	# Restore the local test endpoint, never persist secrets.
 	account.configure("http://127.0.0.1:8000")
