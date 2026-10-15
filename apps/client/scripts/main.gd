@@ -53,6 +53,9 @@ var readiness_label: Label
 var last_overlay_key := ""
 var character_dialog: AcceptDialog
 var result_avatar: TextureRect
+var room_browser = preload("res://scripts/room_browser.gd").new()
+var room_poll := 0.0
+var launch_view: Control
 
 
 func _ready() -> void:
@@ -61,11 +64,22 @@ func _ready() -> void:
 	add_child(lobby_view)
 	_build_ui()
 	_build_characters()
+	add_child(room_browser)
+	room_browser.hide()
+	room_browser.join_requested.connect(_enter_room)
+	room_browser.create_requested.connect(func(): _enter_room("", true))
+	room_browser.refresh_requested.connect(func(): net.list_rooms(arena_input.text))
+	room_browser.back_requested.connect(func(): net.logout(); room_browser.hide(); _refresh_lobby())
+	net.rooms_opened.connect(func(): room_browser.profile.text = net.account_name if not net.account_name.is_empty() else "Khách"; room_browser.show(); _refresh_lobby())
+	net.rooms_received.connect(room_browser.render_rooms)
 	_setup_inputs()
 	net.snapshot_received.connect(_on_snapshot)
 	net.status_changed.connect(_on_status)
 	net.account_changed.connect(_on_account_changed)
-	_set_login_mode(false)
+	_set_login_mode(true)
+	launch_view = preload("res://scripts/launch_view.gd").new()
+	launch_view.setup(self)
+	add_child(launch_view)
 	_refresh_lobby()
 
 
@@ -168,7 +182,7 @@ func _build_ui() -> void:
 	_field(arena_input, "Arena URL", _env("SUNI_ARENA_URL", "https://arena.sunifactory.com"), 498)
 	api_input.tooltip_text = "API: đăng nhập và tài khoản"
 	arena_input.tooltip_text = "Arena: kết nối trận đấu"
-	join_button = _button(form, "Vào chơi ngay  →", Rect2(784, 550, 440, 52), true)
+	join_button = _button(form, "Chọn phòng  →", Rect2(784, 550, 440, 52), true)
 	join_button.pressed.connect(_join)
 	account_hint = _label(form, "", Rect2(784, 608, 440, 36), 13, MUTED)
 	account_hint.clip_text = true
@@ -235,7 +249,7 @@ func _build_ui() -> void:
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		overlay_title.clip_text = true
 	_panel(self, Rect2(28, 764, 1224, 40), Color("0e365d"))
-	status_label = _label(self, "Chào người chơi! Chọn Chơi khách để bắt đầu.", Rect2(44, 768, 770, 32), 13, MUTED)
+	status_label = _label(self, "Chào bạn! Đăng nhập hoặc chọn Chơi thử để bắt đầu.", Rect2(44, 768, 770, 32), 13, MUTED)
 	status_label.clip_text = true
 	status_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	_label(self, "WASD / ↑↓←→   Di chuyển      SPACE   Đặt bóng", Rect2(830, 774, 412, 24), 13, MINT)
@@ -282,6 +296,9 @@ func _set_auth_mode(mode: String) -> void:
 
 
 func _on_account_changed() -> void:
+	if net._access_token.is_empty():
+		room_browser.hide()
+		_refresh_lobby()
 	# Registration may succeed even if the arena is offline. Retrying joins with
 	# the issued session instead of accidentally registering the same name twice.
 	if not net.account_name.is_empty() and register_mode:
@@ -298,17 +315,17 @@ func _refresh_account() -> void:
 	logout_button.disabled = net.busy
 	account_hint.text = "2–8 người / 3 phút mỗi ván / Chơi trực tuyến"
 	if register_mode:
-		account_hint.text = "Tạo tài khoản xong sẽ tự đăng nhập và vào phòng."
+		account_hint.text = "Tạo tài khoản xong sẽ chọn phòng hoặc tạo phòng mới."
 	elif signed_in:
 		account_hint.text = "Đã đăng nhập: %s · Phiên chỉ lưu khi mở game." % net.account_name
 	elif login_mode:
 		account_hint.text = "Chưa có tài khoản? Chọn Đăng ký để tạo mới."
 	account_hint.tooltip_text = account_hint.text
-	join_button.text = "Vào chơi ngay  →"
+	join_button.text = "Chọn phòng  →"
 	if register_mode:
-		join_button.text = "Đăng ký & vào phòng"
+		join_button.text = "Đăng ký & chọn phòng"
 	elif login_mode:
-		join_button.text = "Vào phòng  →" if signed_in else "Đăng nhập & vào phòng"
+		join_button.text = "Chọn phòng  →" if signed_in else "Đăng nhập & chọn phòng"
 
 
 func _join() -> void:
@@ -336,15 +353,21 @@ func _join() -> void:
 	arena_view.clear()
 	var username := username_input.text if login_mode else ""
 	var password := password_input.text if login_mode else ""
-	net.join_game(api_input.text, arena_input.text, username, password, register_mode)
+	net.join_game(api_input.text, arena_input.text, username, password, register_mode, true)
 	password_input.clear()
 	confirm_input.clear()
+
+
+func _enter_room(room_id: String, create := false) -> void:
+	net.join_selected(arena_input.text, room_id, create)
 
 
 func _leave() -> void:
 	net.disconnect_game()
 	_clear_match()
-	_on_status("Đã rời phòng. Bạn có thể vào lại một phòng mới.")
+	room_browser.show()
+	_refresh_lobby()
+	net.list_rooms(arena_input.text)
 
 
 func _clear_match() -> void:
@@ -357,6 +380,7 @@ func _clear_match() -> void:
 
 func _on_status(message: String) -> void:
 	status_label.text = message
+	room_browser.status.text = message
 	status_label.tooltip_text = message
 	if not net.connected and was_connected:
 		_clear_match()
@@ -370,7 +394,9 @@ func _on_snapshot(value: Dictionary) -> void:
 
 func _refresh_lobby() -> void:
 	var connected: bool = net.connected
-	form.visible = not connected
+	if connected:
+		room_browser.hide()
+	form.visible = not connected and not room_browser.visible
 	lobby.visible = connected
 	var phase: String = snapshot.get("phase", "waiting")
 	var players: Array = snapshot.get("players", [])
@@ -476,6 +502,11 @@ func _refresh_lobby() -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
+	room_browser.set_busy(net.busy)
+	room_poll += delta
+	if room_poll >= 5.0 and room_browser.visible and not net.busy and not net.connected:
+		room_poll = 0.0
+		net.list_rooms(arena_input.text)
 	if was_connected != net.connected:
 		was_connected = net.connected
 		_refresh_lobby()
