@@ -121,22 +121,30 @@ function renderRooms() {
       const card = document.createElement('article');
       card.className = 'room-card';
       card.dataset.roomId = room.roomId;
-      const tag = document.createElement('p');
-      tag.className = 'eyebrow';
-      tag.textContent = 'VƯỜN KẸO NGỌT';
-      const title = document.createElement('h2');
-      title.textContent = `Phòng ${room.roomId}`;
-      const count = document.createElement('p');
-      count.className = 'muted';
-      count.textContent = `${room.players}/${room.maxPlayers} người · ${room.ready} đã sẵn sàng`;
       const button = document.createElement('button');
-      button.className = 'primary';
-      button.textContent = room.joinable ? 'Vào phòng →' : 'Phòng đã đầy';
+      button.className = 'room-tile';
+      button.setAttribute(
+        'aria-label',
+        `${room.joinable ? 'Vào phòng' : 'Phòng đã đầy'} ${room.roomId}`,
+      );
       button.disabled = !room.joinable || client.busy;
+      const thumb = document.createElement('img');
+      thumb.className = 'room-thumb';
+      thumb.src = '/art/room-garden.svg';
+      thumb.alt = '';
+      thumb.width = 480;
+      thumb.height = 288;
+      const title = document.createElement('span');
+      title.className = 'room-name';
+      title.textContent = `Phòng ${room.roomId}`;
+      const count = document.createElement('span');
+      count.className = 'room-count';
+      count.textContent = `${room.players}/${room.maxPlayers} người${room.joinable ? '' : ' · Đầy'}`;
+      button.append(thumb, title, count);
       button.addEventListener('click', () =>
         enterRoom({ roomId: room.roomId }),
       );
-      card.append(tag, title, count, button);
+      card.append(button);
       return card;
     }),
   );
