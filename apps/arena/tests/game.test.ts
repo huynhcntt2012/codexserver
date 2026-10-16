@@ -8,7 +8,10 @@ import {
   FUSE_MS,
   FLAME_MS,
   ROUND_MS,
+  createLayoutMap,
+  type RoundResult,
 } from '../src/game.js';
+import { MAPS } from '../src/maps.js';
 
 function playing() {
   const g = new Arena();
@@ -209,4 +212,69 @@ test('buffer does not move disconnected players or survive a finished round', ()
   g.tick(3000);
   g.tick(500);
   assert.equal(g.players.get('a')!.x, 1);
+});
+test('round stats credit bombs and knockouts outside the snapshot', () => {
+  const g = playing();
+  let result: RoundResult | null = null;
+  g.onRoundEnd = (value) => (result = value);
+  const a = g.players.get('a')!;
+  const b = g.players.get('b')!;
+  // Mochi stands beside Suni's bomb; Suni is moved out of the blast.
+  [b.x, b.y] = [a.x + 1, a.y];
+  act(g, 'a', 'bomb', 50);
+  [a.x, a.y] = SPAWNS[1];
+  g.tick(FUSE_MS);
+  assert.equal(g.phase, 'finished');
+  const done = result as RoundResult | null;
+  assert.ok(done);
+  assert.equal(done.winner, 'a');
+  assert.deepEqual(
+    done.players.map((p) => [p.name, p.placement, p.bombs, p.kills, p.winner]),
+    [
+      ['Suni', 1, 1, 1, true],
+      ['Mochi', 2, 0, 0, false],
+    ],
+  );
+  const snapshot = g.snapshot();
+  assert.ok(snapshot.players.every((p) => !('kills' in p)));
+  assert.ok(snapshot.flames.every((f) => !('owner' in f)));
+});
+
+test('v2 maps match the PC level files and keep every spawn safe', async () => {
+  const { readFileSync } = await import('node:fs');
+  for (const map of Object.values(MAPS)) {
+    const level = JSON.parse(
+      readFileSync(
+        new URL(`../../practice/levels/${map.id}.json`, import.meta.url),
+        'utf8',
+      ),
+    ) as { layout: string[]; name: string; columns: number; rows: number };
+    assert.deepEqual([...map.layout], level.layout);
+    assert.equal(map.name, level.name);
+    assert.deepEqual([map.width, map.height], [level.columns, level.rows]);
+    const grid = createLayoutMap(map);
+    assert.equal(grid.length, 11);
+    assert.equal(new Set(map.spawns.map((s) => s.join(','))).size, 8);
+    for (const [x, y] of map.spawns) {
+      assert.equal(grid[y]![x], Tile.Floor);
+      // Escape corridor: at least two walkable neighbours.
+      const open = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ].filter(([dx, dy]) => grid[y + dy!]![x + dx!] === Tile.Floor);
+      assert.ok(open.length >= 1, `${map.id} spawn ${x},${y}`);
+    }
+    const g = new Arena(map);
+    for (let i = 0; i < 8; i++) assert.ok(g.addPlayer(`p${i}`, `P${i}`, 'kai'));
+    assert.equal(g.addPlayer('p9', 'P9'), false);
+    const snap = g.snapshot();
+    assert.deepEqual([snap.width, snap.height], [15, 11]);
+    assert.equal((snap.players[0] as { hero?: string }).hero, 'kai');
+  }
+  // v1 snapshots keep their exact shape (no hero field).
+  const v1 = new Arena();
+  v1.addPlayer('a', 'A', 'kai');
+  assert.equal('hero' in v1.snapshot().players[0]!, false);
 });

@@ -82,6 +82,18 @@ Arena dùng hostname riêng, không có URL path prefix.
 qua FastAPI/PostgreSQL/Redis/Colyseus. Khi nâng Colyseus phải chạy cả hai.
 Nguồn: package đã cài và [Colyseus room messages](https://docs.colyseus.io/room).
 
+## Protocol v2: phòng online của app PC
+
+App Windows (`apps/practice`) chơi online qua room `arena2`
+([ARENA.md](ARENA.md#phong-v2-app-pc-room-arena2-va-snapshot-version-2)).
+Room v1 `arena` và snapshot v1 không đổi. Client PC vẫn chỉ gửi intent
+`up/down/left/right/bomb/ready`; vị trí, bom, lửa, timer, người thắng đều lấy
+từ snapshot v2 (thêm `map`, `number`, `roomKey`, `players[].hero`). Danh sách
+phòng PC đọc `GET /rooms/v2`. Arena URL suy ra từ API URL: `.../api` thành
+`.../arena` (proxy nginx), `:8000` thành `:2567`; có thể đặt `SUNI_ARENA_URL`.
+Kiểm chứng: `network.test.ts` (WebSocket thật, room v2) và
+`apps/practice/tests/online.gd` (hai người chơi Godot thật qua stack Docker).
+
 ## Backend
 
 Username chữ thường 3–24 ký tự (`a-z0-9_`), password 10–128 ký tự, Argon2id qua pwdlib.
