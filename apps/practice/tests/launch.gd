@@ -21,19 +21,14 @@ func _run() -> void:
 	assert(launch.info_dialog.visible)
 	assert(current_scene == launch)
 	launch.info_dialog.hide_dialog()
-	launch.get_node("CanvasRoot/ShopEquipment").pressed.emit()
 	await process_frame
-	await process_frame
-	assert(current_scene.scene_file_path == "res://scenes/ui/ui_showcase.tscn")
-	current_scene.open_page("home")
-	await process_frame
-	await process_frame
-	assert(current_scene.scene_file_path == "res://scenes/ui/launch/launch_screen.tscn")
+	assert(not launch.get_node("CanvasRoot/ShopEquipment").visible)
+	launch.mode_selector.select_mode("solo")
 	current_scene.auth_panel.get_node("Guest").pressed.emit()
 	await process_frame
 	await process_frame
 	assert(current_scene.scene_file_path == "res://scenes/main.tscn")
-	print("PRACTICE_LAUNCH_OK: startup, validation, unsupported duo, shop, home, guest")
+	print("PRACTICE_LAUNCH_OK: startup, validation, unsupported duo, no shop before login, guest")
 	if current_scene.music_enabled:
 		current_scene._toggle_audio()
 	current_scene.queue_free()

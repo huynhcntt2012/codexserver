@@ -52,11 +52,19 @@ var remaining_bots: int = 0
 var status_message: String = ""
 var status_timeout: float = 0.0
 var explosion_depth: int = 0
+var last_won: bool = false
+var reporter: Node = preload("res://scripts/practice_report.gd").new()
+## Arena placement in viewport pixels; the PC HUD resizes it to fill the window.
+var arena_layout := Rect2(ARENA_POS, Vector2(COLUMNS * TILE, ROWS * TILE))
+var background: Sprite2D
+var pc_screens: Dictionary = {}  # PC menus inside `menu`: lobby, matchmaking, room
 
 
 func _ready() -> void:
 	rng.seed = 20261015
-	var background = Sprite2D.new()
+	reporter.game = self
+	add_child(reporter)
+	background = Sprite2D.new()
 	background.texture = load("res://assets/backdrop.png")
 	background.position = Vector2(640, 460)
 	background.z_index = -20
@@ -184,6 +192,13 @@ func _create_ui() -> void:
 		var desktop := preload("res://scripts/ui/desktop_lobby.gd").new()
 		desktop.game = self
 		menu.add_child(desktop)
+		pc_screens["lobby"] = desktop
+		for entry in [["matchmaking", "res://scripts/ui/pc/pc_matchmaking.gd"], ["room", "res://scripts/ui/pc/pc_room.gd"], ["online", "res://scripts/ui/pc/pc_online.gd"]]:
+			var screen: Control = load(entry[1]).new()
+			screen.game = self
+			screen.hide()
+			menu.add_child(screen)
+			pc_screens[entry[0]] = screen
 
 	result = Control.new()
 	result.size = Vector2(1280, 920)
@@ -200,6 +215,17 @@ func _create_ui() -> void:
 	continue_button = _button(result, "TIẾP TỤC", Vector2(509, 624), Vector2(263, 45), Color("89df9a"))
 	continue_button.pressed.connect(_resume_game)
 	result.hide()
+	if not OS.has_feature("web"):
+		# PC replaces the HUD and result overlay with the kit-styled screens.
+		for layer in [hud, result]:
+			for child in layer.get_children():
+				child.hide()
+		var pc_hud: Control = load("res://scripts/ui/pc/pc_battle_hud.gd").new()
+		pc_hud.game = self
+		hud.add_child(pc_hud)
+		var pc_result: Control = load("res://scripts/ui/pc/pc_result.gd").new()
+		pc_result.game = self
+		result.add_child(pc_result)
 
 
 func _select_hero(index: int) -> void:
@@ -220,13 +246,65 @@ func _select_level(index: int) -> void:
 	_sound("ui_select")
 
 
+## Called by the PC battle HUD with the arena rect and window size (viewport pixels).
+func layout_arena(rect: Rect2, viewport: Vector2) -> void:
+	arena_layout = rect
+	_apply_arena_layout()
+	if is_instance_valid(background) and background.texture:
+		var art: Vector2 = background.texture.get_size()
+		background.position = viewport / 2.0
+		background.scale = Vector2.ONE * maxf(viewport.x / art.x, viewport.y / art.y)
+
+
+func _apply_arena_layout() -> void:
+	if is_instance_valid(world):
+		world.position = arena_layout.position
+		world.scale = Vector2.ONE * (arena_layout.size.x / float(COLUMNS * TILE))
+
+
+## Catalog icon downloads wait while a round runs so they never compete with play.
+func _pause_catalog(value: bool) -> void:
+	var sync := get_node_or_null("/root/CatalogSync")
+	if sync:
+		sync.paused = value
+
+
 func _show_menu() -> void:
+	_pause_catalog(false)
 	game_state = "menu"
 	if is_instance_valid(world):
 		world.hide()
 	hud.hide()
 	result.hide()
+	# Hide before showing so the lobby's screen-fill switch runs last.
+	for key in pc_screens:
+		if key != "lobby":
+			pc_screens[key].hide()
+	if pc_screens.has("lobby"):
+		pc_screens["lobby"].show()
 	menu.show()
+
+
+## PC only: shows one menu screen (lobby, matchmaking or room).
+func show_pc_screen(id: String) -> void:
+	_show_menu()
+	for key in pc_screens:
+		if key != id:
+			pc_screens[key].hide()
+	pc_screens[id].show()
+	if id == "room":
+		reporter.room_opened()
+	elif id == "lobby":
+		reporter.room_closed()
+		if pc_screens.has("room"):
+			pc_screens["room"].reset_chat()
+
+
+## The three heroes the bots play this round, in spawn order.
+func bot_heroes() -> Array:
+	var others: Array = HEROES.duplicate()
+	others.erase(HEROES[selected_hero])
+	return others.slice(0, 3)
 
 
 func _load_level() -> bool:
@@ -269,17 +347,19 @@ func _new_round() -> void:
 	world = Node2D.new()
 	world.name = "Arena_%s" % current_level["id"]
 	world.position = ARENA_POS
+	_apply_arena_layout()
 	add_child(world)
 	_build_map()
 	player = _spawn_fighter(HEROES[selected_hero], Vector2i(1, 1), false)
-	var enemy_names: Array = HEROES.duplicate()
-	enemy_names.erase(HEROES[selected_hero])
+	var enemy_names: Array = bot_heroes()
 	_spawn_fighter(enemy_names[0], Vector2i(13, 1), true)
 	_spawn_fighter(enemy_names[1], Vector2i(13, 9), true)
 	_spawn_fighter(enemy_names[2], Vector2i(1, 9), true)
 	remaining_bots = 3
 	_update_hud()
 	game_state = "playing"
+	reporter.round_started()
+	_pause_catalog(true)
 	menu.hide()
 	result.hide()
 	hud.show()
@@ -358,6 +438,7 @@ func _spawn_fighter(hero_id: String, start_cell: Vector2i, is_bot: bool) -> Dict
 		"speed":1.0,"invulnerable":0.0,"action_time":0.0,"walk_time":0.0,
 		"bomb_clock":1.7 + rng.randf_range(0.0, 1.8),
 		"ai_clock":rng.randf_range(0.2, 0.8),
+		"kills":0,"items":0,
 		"root":holder,"sprite":visual
 	}
 	fighters.append(fighter)
@@ -393,11 +474,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if key.keycode == KEY_ESCAPE:
 		if game_state == "playing":
-			game_state = "paused"
-			result_title.text = "TẠM DỪNG"
-			result_detail.text = "Nhấn ESC hoặc TIẾP TỤC để chơi tiếp."
-			continue_button.show()
-			result.show()
+			_pause_game()
 		elif game_state == "paused":
 			_resume_game()
 		return
@@ -408,6 +485,16 @@ func _input(event: InputEvent) -> void:
 		return
 	if key.keycode == KEY_SPACE:
 		_place_bomb(player)
+
+
+func _pause_game() -> void:
+	if game_state != "playing":
+		return
+	game_state = "paused"
+	result_title.text = "TẠM DỪNG"
+	result_detail.text = "Nhấn ESC hoặc TIẾP TỤC để chơi tiếp."
+	continue_button.show()
+	result.show()
 
 
 func _resume_game() -> void:
@@ -670,7 +757,7 @@ func _move_fighter(actor: Dictionary, direction: Vector2i) -> bool:
 	_collect_item(actor)
 	for burst in bursts:
 		if target in burst["cells"]:
-			_hit_fighter(actor)
+			_hit_fighter(actor, burst.get("owner", {}))
 			break
 	return true
 
@@ -778,11 +865,11 @@ func _explode_bomb(bomb: Dictionary) -> void:
 		world.add_child(splash)
 		splash.play("blast")
 		vfx.append(splash)
-	bursts.append({"cells":affected,"visuals":vfx,"duration":0.52})
+	bursts.append({"cells":affected,"visuals":vfx,"duration":0.52,"owner":bomb["owner"]})
 	_sound("explosion")
 	for actor in fighters:
 		if actor["alive"] and actor["cell"] in affected:
-			_hit_fighter(actor)
+			_hit_fighter(actor, bomb["owner"])
 	for other in chained:
 		if bombs.has(other):
 			_explode_bomb(other)
@@ -801,7 +888,8 @@ func _update_bursts(delta: float) -> void:
 					visual.queue_free()
 
 
-func _hit_fighter(actor: Dictionary) -> void:
+## `attacker` is the bomb owner, credited with the knockout for the result table.
+func _hit_fighter(actor: Dictionary, attacker: Dictionary = {}) -> void:
 	if not actor["alive"] or actor["invulnerable"] > 0.0:
 		return
 	actor["lives"] -= 1
@@ -813,6 +901,8 @@ func _hit_fighter(actor: Dictionary) -> void:
 		actor["alive"] = false
 		actor["sprite"].action("lose")
 		actor["root"].modulate = Color(1.0, 1.0, 1.0, 0.72)
+		if not attacker.is_empty() and not is_same(attacker, actor):
+			attacker["kills"] = int(attacker.get("kills", 0)) + 1
 		if actor["bot"]:
 			remaining_bots -= 1
 			score += 100
@@ -839,7 +929,8 @@ func _drop_item(cell: Vector2i) -> void:
 	var sprite = Sprite2D.new()
 	sprite.texture = load("res://assets/items/%s.png" % kind)
 	sprite.position = _cell_center(cell)
-	sprite.scale = Vector2(0.67, 0.67)
+	# About 48 px on the 64 px tile, whatever the icon's source size.
+	sprite.scale = Vector2.ONE * (48.0 / float(sprite.texture.get_width()))
 	sprite.z_index = 5
 	world.add_child(sprite)
 	items[cell] = {"node":sprite,"kind":kind}
@@ -864,6 +955,7 @@ func _collect_item(actor: Dictionary) -> void:
 				_flash_status("Tăng tốc độ di chuyển!")
 	drop["node"].queue_free()
 	items.erase(actor["cell"])
+	actor["items"] = int(actor.get("items", 0)) + 1
 	_sound("collect")
 	if not actor["bot"]:
 		score += 25
@@ -894,6 +986,9 @@ func _finish(won: bool) -> void:
 	if game_state != "playing":
 		return
 	game_state = "ended"
+	last_won = won
+	reporter.round_finished()
+	_pause_catalog(false)
 	result.show()
 	continue_button.hide()
 	result_title.text = "CHIẾN THẮNG!" if won else "THUA RỒI!"

@@ -1,5 +1,6 @@
 extends Node
-## Demo-only single source of truth. Real commerce must be server-authoritative.
+## UI state. Guests use the local demo fixture; signed-in players use the server
+## wallet and inventory (prices, balances and purchases are decided by the API).
 signal wallet_changed
 signal inventory_changed
 signal loadout_changed
@@ -15,6 +16,9 @@ var characters: Array = []
 var profile: Dictionary = {}
 var catalog_by_id: Dictionary = {}
 var hero_loadouts: Dictionary = {}
+var online_wallet := false
+var _signed_in := false
+var _buying := false
 
 func _ready() -> void:
 	items = _load_array(ITEM_PATH)
@@ -53,7 +57,74 @@ func owned(item_id: String) -> bool:
 func equipped(item_id: String) -> bool:
 	return item_id in profile.get("loadout", {}).values()
 
+func _process(_delta: float) -> void:
+	# Follow sign-in/out: server wallet while signed in, demo fixture otherwise.
+	var signed_in: bool = AuthSession.has_session()
+	if signed_in == _signed_in:
+		return
+	_signed_in = signed_in
+	if signed_in:
+		sync_wallet()
+		var catalog := get_node_or_null("/root/CatalogSync")
+		if catalog:
+			catalog.sync()
+	elif online_wallet:
+		online_wallet = false
+		reset_demo(false)
+
+func sync_wallet() -> void:
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/wallet")
+	if reply.status == 200 and reply.data is Dictionary:
+		apply_wallet(reply.data)
+
+func apply_wallet(data: Dictionary) -> void:
+	online_wallet = true
+	profile["gold"] = int(data.get("gold", 0))
+	profile["gem"] = int(data.get("gem", 0))
+	profile["owned"] = Array(data.get("owned", []))
+	profile["consumables"] = Dictionary(data.get("stock", {}))
+	var loadout: Dictionary = profile.get("loadout", {})
+	for slot in loadout.keys():
+		if str(loadout[slot]) != "" and not owned(str(loadout[slot])):
+			loadout[slot] = ""
+	wallet_changed.emit()
+	inventory_changed.emit()
+	loadout_changed.emit()
+
+static func request_id() -> String:
+	return Crypto.new().generate_random_bytes(12).hex_encode()
+
+func buy_online(item_id: String) -> bool:
+	if _buying:
+		return false
+	_buying = true
+	var item := get_item(item_id)
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_POST, "/v1/shop/purchase", {"item_id": item_id, "request_id": request_id()})
+	_buying = false
+	if reply.status == 200 and reply.data is Dictionary:
+		apply_wallet(reply.data)
+		toast_requested.emit("Đã mua: " + str(item.get("name", "")))
+		return true
+	var message := str(reply.error)
+	if reply.status == 409:
+		message = "Không đủ " + ("kim cương" if str(item.get("currency", "gold")) == "gem" else "vàng") + " hoặc đã sở hữu"
+	elif reply.status == 404:
+		message = "Vật phẩm đã ngừng bán"
+	toast_requested.emit(message)
+	return false
+
+func topup(pack_id: String) -> bool:
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_POST, "/v1/topup", {"pack_id": pack_id, "request_id": request_id()})
+	if reply.status == 200 and reply.data is Dictionary:
+		apply_wallet(reply.data)
+		return true
+	toast_requested.emit("Không đủ kim cương để đổi" if reply.status == 409 else str(reply.error))
+	return false
+
 func buy(item_id: String) -> bool:
+	if online_wallet and AuthSession.has_session():
+		buy_online(item_id)
+		return true
 	var item = get_item(item_id)
 	if item.is_empty() or not bool(item.get("shop_enabled", false)):
 		toast_requested.emit("Vật phẩm không có trong cửa hàng")
@@ -113,7 +184,7 @@ func choose_hero(hero_id: String) -> void:
 	profile_changed.emit()
 	loadout_changed.emit()
 
-func reset_demo() -> void:
+func reset_demo(announce := true) -> void:
 	hero_loadouts.clear()
 	var d = _load_json(PROFILE_PATH)
 	if d is Dictionary:
@@ -122,4 +193,5 @@ func reset_demo() -> void:
 	inventory_changed.emit()
 	loadout_changed.emit()
 	profile_changed.emit()
-	toast_requested.emit("Đã đặt lại dữ liệu demo")
+	if announce:
+		toast_requested.emit("Đã đặt lại dữ liệu demo")

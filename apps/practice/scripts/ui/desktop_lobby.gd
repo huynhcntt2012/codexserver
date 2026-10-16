@@ -1,22 +1,38 @@
 extends Control
-## PC-only home for the practice game. Cards are real local bot matches (one per
-## level file), not online rooms; social, chat and ranked show honest empty states.
+## PC-only home. The room list shows real ONLINE rooms from the arena server
+## (protocol v2, GET /rooms/v2): live x/8 counts, "Vào" joins, "Đầy" when 8/8.
+## Bot practice stays available offline from its own button; friends and chat use
+## the account API, ranked shows an honest empty state.
 const DESIGN := Vector2(1920, 1080)
-const PAGE_SIZE := 6
+const PAGE_SIZE := 8
 const INK := Color("345581")
 const SKY := Color("1569b3")
 const LINE := Color("8fe3f3")
+## One palette for every top-menu tab, so all five light up the same way.
+## Icon tabs: no box when idle; the open tab gets a soft glow and a yellow caption.
+## [fill, border, sparkle tint, caption]
+const NAV_ON := [Color(1, 1, 1, 0.16), Color(1, 1, 1, 0.55), Color("ffe17b"), Color("ffe17b")]
+const NAV_OFF := [Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color.WHITE]
+const NAV_HOME := 0
+const NAV_SHOP := 1
+const NAV_EQUIPMENT := 2
 const TIER_COLORS := {"Dễ": Color("4fa8ef"), "Trung bình": Color("ffaa45"), "Khó": Color("f4738d")}
 const FOLD := {
 	"a": "àáạảãâầấậẩẫăằắặẳẵ", "e": "èéẹẻẽêềếệểễ", "i": "ìíịỉĩ", "o": "òóọỏõôồốộổỗơờớợởỡ",
 	"u": "ùúụủũưừứựửữ", "y": "ỳýỵỷỹ", "d": "đ",
 }
 const ScreenFill := preload("res://scripts/ui/screen_fill.gd")
+const SocialClient := preload("res://scripts/ui/social/social_client.gd")
+const FriendsPanel := preload("res://scripts/ui/social/friends_panel.gd")
+const ChatPanel := preload("res://scripts/ui/social/chat_panel.gd")
 
 ## Small vector icons so the lobby needs no unverified icon assets.
 class Glyph extends Control:
 	var kind := ""
-	var tint := Color.WHITE
+	var tint := Color.WHITE:
+		set(value):
+			tint = value
+			queue_redraw()
 	var _o := Vector2.ZERO
 	var _s := 1.0
 
@@ -39,6 +55,22 @@ class Glyph extends Control:
 		for p in points:
 			out.append(pt(p[0], p[1]))
 		draw_colored_polygon(out, color)
+
+	## Dark rim that gives the colour icons their sticker look.
+	func outline(points: Array) -> void:
+		var out := PackedVector2Array()
+		for p in points:
+			out.append(pt(p[0], p[1]))
+		out.append(out[0])
+		draw_polyline(out, Color("0d2f5c", 0.55), 0.035 * _s, true)
+
+	## Small twinkle in the tint colour (transparent on idle tabs).
+	func sparkle() -> void:
+		if tint.a <= 0.01:
+			return
+		var c := pt(0.9, 0.12)
+		var r := 0.1 * _s
+		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r * 0.3, -r * 0.3), c + Vector2(r, 0), c + Vector2(r * 0.3, r * 0.3), c + Vector2(0, r), c + Vector2(-r * 0.3, r * 0.3), c + Vector2(-r, 0), c + Vector2(-r * 0.3, -r * 0.3)]), tint)
 
 	func line(a: Array, b: Array, width := 0.12) -> void:
 		draw_line(pt(a[0], a[1]), pt(b[0], b[1]), tint, width * _s, true)
@@ -132,6 +164,79 @@ class Glyph extends Control:
 				poly([[0.34, 0.12], [0.66, 0.12], [0.58, 0.36], [0.42, 0.36]], Color("b5f1ff"))
 			"dot":
 				draw_circle(pt(0.5, 0.5), 0.36 * _s, tint)
+			"nav_home":
+				draw_rect(Rect2(pt(0.66, 0.1), Vector2(0.12, 0.24) * _s), Color("e2405f"))
+				var walls := [[0.18, 0.42], [0.82, 0.42], [0.82, 0.94], [0.18, 0.94]]
+				poly(walls, Color("fff3d6"))
+				outline(walls)
+				var roof := [[0.5, 0.06], [0.98, 0.48], [0.86, 0.53], [0.5, 0.22], [0.14, 0.53], [0.02, 0.48]]
+				poly(roof, Color("ff8a3d"))
+				outline(roof)
+				poly([[0.5, 0.22], [0.86, 0.53], [0.14, 0.53]], Color("ffb36b"))
+				draw_rect(Rect2(pt(0.42, 0.62), Vector2(0.18, 0.32) * _s), Color("b5651d"))
+				draw_rect(Rect2(pt(0.24, 0.56), Vector2(0.13, 0.13) * _s), Color("7fd3ff"))
+				sparkle()
+			"nav_shop":
+				var body := [[0.13, 0.44], [0.87, 0.44], [0.87, 0.94], [0.13, 0.94]]
+				poly(body, Color("4fb7f5"))
+				outline(body)
+				draw_rect(Rect2(pt(0.4, 0.62), Vector2(0.2, 0.32) * _s), Color.WHITE)
+				draw_rect(Rect2(pt(0.08, 0.12), Vector2(0.84, 0.12) * _s), Color("e2405f"))
+				for i in 5:
+					var x0 := 0.08 + i * 0.168
+					var stripe := [[x0, 0.24], [x0 + 0.168, 0.24], [x0 + 0.168, 0.4], [x0, 0.4]]
+					poly(stripe, Color("f4627d") if i % 2 == 0 else Color("fff6f0"))
+					draw_circle(pt(x0 + 0.084, 0.4), 0.084 * _s, Color("f4627d") if i % 2 == 0 else Color("fff6f0"))
+				outline([[0.08, 0.12], [0.92, 0.12], [0.92, 0.4], [0.08, 0.4]])
+				sparkle()
+			"nav_bag":
+				draw_arc(pt(0.5, 0.24), 0.16 * _s, PI, TAU, 16, Color("1d4f8a"), 0.07 * _s, true)
+				var bag := [[0.18, 0.3], [0.82, 0.3], [0.88, 0.42], [0.88, 0.9], [0.8, 0.96], [0.2, 0.96], [0.12, 0.9], [0.12, 0.42]]
+				poly(bag, Color("3d8ff0"))
+				outline(bag)
+				poly([[0.18, 0.3], [0.82, 0.3], [0.88, 0.42], [0.88, 0.52], [0.12, 0.52], [0.12, 0.42]], Color("5aa8ff"))
+				var pocket := [[0.28, 0.62], [0.72, 0.62], [0.72, 0.86], [0.28, 0.86]]
+				poly(pocket, Color("8fd0ff"))
+				outline(pocket)
+				draw_rect(Rect2(pt(0.45, 0.58), Vector2(0.1, 0.1) * _s), Color("ffc93c"))
+				sparkle()
+			"nav_trophy":
+				draw_arc(pt(0.2, 0.3), 0.13 * _s, PI / 2, PI * 1.5, 12, Color("e39b14"), 0.07 * _s, true)
+				draw_arc(pt(0.8, 0.3), 0.13 * _s, -PI / 2, PI / 2, 12, Color("e39b14"), 0.07 * _s, true)
+				var cup := [[0.2, 0.1], [0.8, 0.1], [0.74, 0.46], [0.6, 0.6], [0.4, 0.6], [0.26, 0.46]]
+				poly(cup, Color("ffc93c"))
+				outline(cup)
+				poly([[0.3, 0.14], [0.42, 0.14], [0.38, 0.48], [0.3, 0.4]], Color("ffe7a0"))
+				draw_rect(Rect2(pt(0.44, 0.58), Vector2(0.12, 0.16) * _s), Color("e39b14"))
+				var base := [[0.26, 0.74], [0.74, 0.74], [0.78, 0.94], [0.22, 0.94]]
+				poly(base, Color("b5651d"))
+				outline(base)
+				sparkle()
+			"nav_star":
+				var points := []
+				for i in 10:
+					var r := 0.48 if i % 2 == 0 else 0.24
+					var a := -PI / 2 + i * PI / 5
+					points.append([0.5 + cos(a) * r, 0.54 + sin(a) * r])
+				poly(points, Color("ffc93c"))
+				outline(points)
+				draw_circle(pt(0.5, 0.56), 0.15 * _s, Color("3d8ff0"))
+				draw_circle(pt(0.5, 0.56), 0.15 * _s, Color("1d4f8a"), false, 0.03 * _s, true)
+				draw_circle(pt(0.45, 0.51), 0.04 * _s, Color(1, 1, 1, 0.8))
+				sparkle()
+			"edit":
+				poly([[0.2, 0.68], [0.62, 0.26], [0.78, 0.42], [0.36, 0.84]])
+				poly([[0.66, 0.22], [0.74, 0.14], [0.9, 0.3], [0.82, 0.38]], tint.darkened(0.15))
+				poly([[0.2, 0.68], [0.36, 0.84], [0.12, 0.92]], Color("ffd257"))
+			"add_user":
+				draw_circle(pt(0.38, 0.3), 0.17 * _s, tint)
+				var body := []
+				for i in 13:
+					var a := PI + i * PI / 12
+					body.append([0.38 + cos(a) * 0.3, 0.92 + sin(a) * 0.34])
+				poly(body)
+				line([0.82, 0.3], [0.82, 0.62], 0.11)
+				line([0.66, 0.46], [0.98, 0.46], 0.11)
 
 ## Soft ocean gradient with bubbles and stars, sized to the whole screen.
 class Backdrop extends Control:
@@ -148,21 +253,38 @@ var game: Node
 var canvas := Control.new()
 var backdrop := Backdrop.new()
 var modal := Control.new()
+var modal_nav := -1
+var top_bar: Control
+var nav_tabs: Array[Dictionary] = []
+var nav_index := -1
+var store := Control.new()
+var store_title: Label
+var store_area: Control
+var store_pages: Dictionary = {}
+var toast: Label
+var toast_tween: Tween
 var modal_title: Label
 var modal_icon: Glyph
 var modal_message: Label
 var modal_settings: VBoxContainer
+var modal_packs: VBoxContainer
 var modal_ok: Button
+var modal_extra: Button
+var modal_extra_action := Callable()
+var social: Node = SocialClient.new()
+var chat: Control
+var friends_panel: VBoxContainer
 var search := LineEdit.new()
 var tier_select := OptionButton.new()
 var map_select := OptionButton.new()
 var profile: Label
 var level: Label
 var xp: ProgressBar
+var xp_percent: Label
+var name_input: LineEdit
 var hero_line: Label
 var portrait: TextureRect
 var presence: Label
-var status: Label
 var summary: Label
 var empty: Label
 var page_label: Label
@@ -172,20 +294,34 @@ var speaker: Glyph
 var gold: Label
 var gem: Label
 var hero_list: VBoxContainer
-var friend_list: VBoxContainer
 var hero_scroll: ScrollContainer
-var friend_scroll: ScrollContainer
 var fullscreen_toggle: Button
 var audio_toggle: Button
 var hero_buttons: Array[Button] = []
 var hero_states: Array[Label] = []
-var map_buttons: Array[Button] = []
-var map_cards: Array[PanelContainer] = []
+## Eight reusable room cards (one page); filled from `rooms` on every refresh.
+var room_cards: Array[Dictionary] = []
+var room_buttons: Array[Button] = []
+## Raw v2 listings: roomId, number, map, phase, players, maxPlayers, joinable, accountIds.
+var rooms: Array = []
+var friend_ids: Array = []
+## signed_out | loading | ok | error
+var rooms_state := "loading"
+var rooms_error := ""
+var rooms_clock := 0.0
+var rooms_busy := false
+var friends_clock := 0.0
+const ROOMS_SECONDS := 5.0
+const FRIENDS_SECONDS := 20.0
+var joining := false
+var only_open := false
+var only_friends := false
+var open_toggle: Button
+var friends_toggle: Button
 var maps: Array[Dictionary] = []
 var tier_filter := ""
 var map_filter := -1
 var page := 0
-var chat_channel := "Tất cả"
 var signed_in_on_entry := false
 
 func box(fill: Color, border := Color.TRANSPARENT, radius := 18, width := 0, pad := 0) -> StyleBoxFlat:
@@ -295,6 +431,9 @@ func _ready() -> void:
 	name = "DesktopMainLobby"
 	signed_in_on_entry = AuthSession.has_session()
 	load_maps()
+	add_child(social)
+	social.friend_request_arrived.connect(func(who): show_toast("%s muốn kết bạn với bạn" % who))
+	chat = ChatPanel.new(self, social)
 	add_child(backdrop)
 	add_child(canvas)
 	var font := SystemFont.new()
@@ -313,8 +452,13 @@ func _ready() -> void:
 	var body := row(22, body_margin)
 	build_left(body)
 	build_right(body)
-	build_chat(page_root)
+	chat.build_bar(page_root)
+	canvas.add_child(chat)
+	build_store()
 	build_modal()
+	build_toast()
+	UIState.toast_requested.connect(show_toast)
+	UIState.wallet_changed.connect(refresh)
 	# Menus fill the monitor; the arena keeps its fixed 1280×920 frame while playing.
 	visibility_changed.connect(func(): ScreenFill.set_fill(get_tree(), is_visible_in_tree()))
 	ScreenFill.set_fill(get_tree(), is_visible_in_tree())
@@ -326,6 +470,7 @@ func build_top_bar(parent: Control) -> void:
 	bar.get_theme_stylebox("panel").content_margin_left = 20
 	bar.get_theme_stylebox("panel").content_margin_right = 20
 	parent.add_child(bar)
+	top_bar = bar
 	var line := row(14, bar)
 	var logo := card(Color("2a8fd8"), Color("bff2ff"), 30, 5, 6)
 	logo.custom_minimum_size = Vector2(350, 92)
@@ -339,26 +484,30 @@ func build_top_bar(parent: Control) -> void:
 	var tagline := text("ĐẤU TRƯỜNG BÓNG NƯỚC", 14, Color.WHITE, brand)
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var nav := [
-		["home", "Sảnh chính", refresh],
-		["shop", "Cửa hàng", func(): open_shop("shop")],
-		["lock", "Trang bị", func(): open_shop("equipment")],
-		["star", "Nhiệm vụ", func(): notice("Nhiệm vụ hằng ngày đang được phát triển.", "NHIỆM VỤ", "star")],
-		["trophy", "Xếp hạng", func(): notice("Chế độ chơi bot chưa có bảng xếp hạng online.", "XẾP HẠNG", "trophy")],
+		["nav_home", "Sảnh chính", go_home],
+		["nav_shop", "Cửa hàng", func(): open_shop("shop")],
+		["nav_bag", "Trang bị", func(): open_shop("equipment")],
+		["nav_trophy", "Nhiệm vụ", func(): notice("Nhiệm vụ hằng ngày đang được phát triển.", "NHIỆM VỤ", "star", 3)],
+		["nav_star", "Xếp hạng", func(): notice("Chế độ chơi bot chưa có bảng xếp hạng online.", "XẾP HẠNG", "trophy", 4)],
 	]
 	for i in nav.size():
-		var active := i == 0
-		var tab := button("", nav[i][2], Color("e9fbff") if active else Color("1d6fb5"), INK, 20, 18, Color("ffffff") if active else Color("3f97d3"))
-		tab.custom_minimum_size = Vector2(152, 92)
+		var tab := button("", nav[i][2], NAV_OFF[0], INK, 20, 18, NAV_OFF[1])
+		tab.name = "Nav_" + nav[i][0]
+		tab.custom_minimum_size = Vector2(128, 104)
 		line.add_child(tab)
 		var stack := column(2, tab)
 		stack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		stack.alignment = BoxContainer.ALIGNMENT_CENTER
 		stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var glyph := Glyph.new(nav[i][0], Color("ff9f43") if active else Color("ffe17b"), 34)
+		var glyph := Glyph.new(nav[i][0], NAV_OFF[2], 60)
 		glyph.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		stack.add_child(glyph)
-		var caption := text(nav[i][1], 19, INK if active else Color.WHITE, stack)
+		var caption := text(nav[i][1], 18, NAV_OFF[3], stack)
+		caption.add_theme_color_override("font_outline_color", Color("0d3f78"))
+		caption.add_theme_constant_override("outline_size", 6)
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nav_tabs.append({"button": tab, "glyph": glyph, "caption": caption})
+	set_nav(NAV_HOME)
 	spacer(line)
 	gold = wallet(line, "coin", 250)
 	gem = wallet(line, "gem", 210)
@@ -375,43 +524,75 @@ func wallet(parent: Control, icon: String, width: float) -> Label:
 	line.add_child(Glyph.new(icon, Color.WHITE, 46))
 	var amount := text("", 28, Color.WHITE, line)
 	amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	line.add_child(icon_button("plus", func(): open_shop("shop"), 40, Color("2fa8ec"), 20))
+	line.add_child(icon_button("plus", open_topup, 40, Color("2fa8ec"), 20))
 	return amount
 
 func build_left(parent: Control) -> void:
 	var side := column(20, parent)
 	side.custom_minimum_size = Vector2(380, 0)
-	var me := card(Color("e8fbff"), Color.WHITE, 26, 5, 16)
+	# Profile card: hero art on the lagoon scene, then rank badge, name (editable),
+	# level and XP percentage.
+	var me := card(Color("1567ae"), LINE, 26, 4, 10)
+	me.name = "ProfileCard"
 	side.add_child(me)
-	var me_stack := column(14, me)
-	var top := row(16, me_stack)
-	var frame := card(Color("ffe9b0"), Color.WHITE, 80, 5, 6)
-	frame.custom_minimum_size = Vector2(150, 150)
-	top.add_child(frame)
-	portrait = picture("", Vector2(130, 130))
-	frame.add_child(portrait)
-	var facts := column(6, top)
+	var me_stack := column(10, me)
+	var art := card(Color("8fd3f5"), Color.WHITE, 20, 3, 0)
+	art.custom_minimum_size = Vector2(0, 236)
+	art.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	me_stack.add_child(art)
+	var stage := Control.new()
+	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.add_child(stage)
+	var scene := picture("res://assets/ui/launch/bg_lagoon.png", Vector2.ZERO)
+	scene.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	scene.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	stage.add_child(scene)
+	portrait = picture("", Vector2.ZERO)
+	portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	portrait.offset_top = 10
+	stage.add_child(portrait)
+	hero_line = pill("", Color(0.05, 0.18, 0.36, 0.72), Color.WHITE, 15)
+	var hero_tag := hero_line.get_parent() as Control
+	hero_tag.position = Vector2(10, 10)
+	stage.add_child(hero_tag)
+	presence = pill("", Color("3fd39a"), Color("0d4b3a"), 14)
+	var presence_tag := presence.get_parent() as Control
+	presence_tag.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	presence_tag.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	presence_tag.offset_left = -10
+	presence_tag.offset_top = 10
+	presence_tag.offset_right = -10
+	stage.add_child(presence_tag)
+	var info := card(Color("0f4f8f"), Color("2f7fc0"), 18, 2, 10)
+	me_stack.add_child(info)
+	var info_line := row(12, info)
+	var badge := Glyph.new("nav_star", Color(1, 1, 1, 0), 58)
+	badge.tooltip_text = "Hạng"
+	info_line.add_child(badge)
+	var facts := column(4, info_line)
 	facts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	facts.alignment = BoxContainer.ALIGNMENT_CENTER
-	profile = stretch(text("", 32, INK, facts))
-	level = pill("", Color("ffe9a8"), Color("8a5a12"), 18, facts)
-	level.get_parent().size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	hero_line = stretch(text("", 18, Color("4b6a8a"), facts))
+	var name_line := row(6, facts)
+	profile = stretch(text("", 26, Color.WHITE, name_line))
+	profile.name = "ProfileName"
+	var rename := icon_button("edit", open_rename, 40, Color("2fa8ec"), 12)
+	rename.name = "RenameButton"
+	rename.tooltip_text = "Đổi tên hiển thị"
+	name_line.add_child(rename)
+	var level_line := row(8, facts)
+	level = text("", 18, Color("ffd257"), level_line)
 	xp = ProgressBar.new()
 	xp.show_percentage = false
-	xp.custom_minimum_size = Vector2(0, 14)
-	xp.add_theme_stylebox_override("background", box(Color("c9dcef"), Color.TRANSPARENT, 7))
-	xp.add_theme_stylebox_override("fill", box(Color("ffab4c"), Color.TRANSPARENT, 7))
-	facts.add_child(xp)
-	var place_card := card(SKY, LINE, 20, 3, 12)
-	me_stack.add_child(place_card)
-	var place_line := row(10, place_card)
-	stretch(text("Đang ở Sảnh chính", 20, Color.WHITE, place_line))
-	presence = pill("", Color("3fd39a"), Color("0d4b3a"), 15, place_line)
-	var social := card(Color("1567ae"), LINE, 26, 4, 14)
-	social.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	side.add_child(social)
-	var social_stack := column(12, social)
+	xp.custom_minimum_size = Vector2(0, 16)
+	xp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	xp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	xp.add_theme_stylebox_override("background", box(Color("0a3566"), Color.TRANSPARENT, 8))
+	xp.add_theme_stylebox_override("fill", box(Color("ffc93c"), Color.TRANSPARENT, 8))
+	level_line.add_child(xp)
+	xp_percent = text("", 15, Color("d5f3ff"), level_line)
+	var social_box := card(Color("1567ae"), LINE, 26, 4, 14)
+	social_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	side.add_child(social_box)
+	var social_stack := column(12, social_box)
 	var tabs := row(8, social_stack)
 	var group := ButtonGroup.new()
 	for i in 2:
@@ -445,16 +626,9 @@ func build_left(parent: Control) -> void:
 		pick.tooltip_text = "Chọn " + game.HERO_NAMES[i]
 		line.add_child(pick)
 		hero_buttons.append(pick)
-	friend_scroll = scroll_list(social_stack)
-	friend_list = friend_scroll.get_child(0).get_child(0)
-	friend_list.alignment = BoxContainer.ALIGNMENT_CENTER
-	var friends_icon := Glyph.new("people", Color("8fd7f5"), 70)
-	friends_icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	friend_list.add_child(friends_icon)
-	var none := text("Bản chơi bot chưa có hệ thống bạn bè.\nBạn bè và bang hội sẽ có ở chế độ online.", 18, Color("d5f3ff"), friend_list)
-	none.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	friend_scroll.hide()
+	friends_panel = FriendsPanel.new(self, social)
+	social_stack.add_child(friends_panel)
+	friends_panel.hide()
 	var all := button("DANH SÁCH BẠN BÈ", func(): show_social(1), Color("4fc3f0"), Color.WHITE, 20, 22)
 	all.custom_minimum_size = Vector2(0, 54)
 	social_stack.add_child(all)
@@ -486,13 +660,14 @@ func build_right(parent: Control) -> void:
 	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var modes := row(22, main)
 	var mode_specs := [
-		["TÌM TRẬN NHANH", "Vào trận ngay với bản đồ đã chọn", Color("ffd56b"), "res://assets/ui/launch/mascot_pip.png", start],
-		["TẠO PHÒNG", "Tự chọn bản đồ, độ khó", Color("8fdcf5"), "res://assets/ui/launch/mascot_nop.png", func(): map_select.grab_focus(); map_select.show_popup()],
-		["ĐẤU XẾP HẠNG", "Cần chế độ online", Color("d4bdf7"), "", func(): notice("Đấu xếp hạng cần chế độ online, chưa có trong bản chơi bot.", "ĐẤU XẾP HẠNG", "trophy")],
+		["TÌM TRẬN NHANH", "Vào phòng online còn chỗ", Color("ffd56b"), "res://assets/ui/launch/mascot_pip.png", quick_play],
+		["TẠO PHÒNG", "Mở phòng online, tối đa 8 người", Color("8fdcf5"), "res://assets/ui/launch/mascot_nop.png", open_create],
+		["LUYỆN TẬP", "Chơi offline trên máy này", Color("d4bdf7"), "", practice],
 	]
 	for spec in mode_specs:
 		var big := button("", spec[4], spec[2], INK, 20, 26)
-		big.custom_minimum_size = Vector2(0, 132)
+		big.name = "Mode_" + fold(spec[0]).replace(" ", "_")
+		big.custom_minimum_size = Vector2(0, 112)
 		big.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		modes.add_child(big)
 		var inner := row(18, big)
@@ -500,17 +675,17 @@ func build_right(parent: Control) -> void:
 		inner.offset_left = 26
 		inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if spec[3] != "":
-			inner.add_child(picture(spec[3], Vector2(96, 96)))
+			inner.add_child(picture(spec[3], Vector2(84, 84)))
 		else:
-			inner.add_child(Glyph.new("star", Color("ffd84d"), 90))
+			inner.add_child(Glyph.new("star", Color("ffd84d"), 78))
 		var words := column(4, inner)
 		words.alignment = BoxContainer.ALIGNMENT_CENTER
 		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		text(spec[0], 30, Color("8a4b1f") if spec[0] == "TÌM TRẬN NHANH" else INK, words)
-		text(spec[1], 18, Color("6a5a7a"), words)
+		stretch(text(spec[1], 17, Color("6a5a7a"), words))
 	var filters := card(Color("1660a6"), LINE, 30, 4, 12)
 	main.add_child(filters)
-	var bar := row(16, filters)
+	var bar := row(14, filters)
 	style_select(tier_select, "Tất cả độ khó", tiers())
 	tier_select.item_selected.connect(func(index): set_tier(tier_select.get_item_text(index) if index > 0 else ""))
 	bar.add_child(tier_select)
@@ -520,13 +695,19 @@ func build_right(parent: Control) -> void:
 	style_select(map_select, "Tất cả bản đồ", names)
 	map_select.item_selected.connect(func(index): set_map(index - 1))
 	bar.add_child(map_select)
-	text("Bot · 1 người + 3 bot", 20, Color.WHITE, bar)
-	spacer(bar)
+	open_toggle = check_toggle("Chỉ phòng trống", "Chỉ hiện phòng còn ghế và đang chờ, vào được ngay", func(on): only_open = on; page = 0; refresh())
+	open_toggle.name = "OnlyOpen"
+	bar.add_child(open_toggle)
+	friends_toggle = check_toggle("Chỉ bạn bè", "Chỉ hiện phòng có ít nhất một người trong danh sách bạn bè", func(on): only_friends = on; page = 0; refresh())
+	friends_toggle.name = "OnlyFriends"
+	bar.add_child(friends_toggle)
 	var field := card(Color("0f4f8f"), LINE, 26, 3, 4)
-	field.custom_minimum_size = Vector2(470, 56)
+	field.custom_minimum_size = Vector2(300, 56)
+	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(field)
 	var field_line := row(8, field)
-	search.placeholder_text = "Tìm bản đồ (không cần dấu)…"
+	search.placeholder_text = "Tìm phòng…"
+	search.tooltip_text = "Số phòng hoặc tên bản đồ (không cần dấu)"
 	search.clear_button_enabled = true
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search.add_theme_stylebox_override("normal", box(Color.TRANSPARENT, Color.TRANSPARENT, 0, 0, 14))
@@ -535,43 +716,77 @@ func build_right(parent: Control) -> void:
 	search.add_theme_color_override("font_color", Color.WHITE)
 	search.add_theme_color_override("font_placeholder_color", Color("b9dcf3"))
 	search.text_changed.connect(func(_value): page = 0; refresh())
-	search.text_submitted.connect(func(_value): pick_first_match())
+	search.text_submitted.connect(func(_value): join_first_match())
 	field_line.add_child(search)
 	field_line.add_child(Glyph.new("search", Color.WHITE, 34))
 	var list := column(12, main)
 	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var grid := GridContainer.new()
+	grid.name = "RoomGrid"
 	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 22)
-	grid.add_theme_constant_override("v_separation", 18)
+	grid.add_theme_constant_override("h_separation", 18)
+	grid.add_theme_constant_override("v_separation", 12)
 	list.add_child(grid)
-	for i in maps.size():
-		grid.add_child(map_card(i))
-	empty = text("Không tìm thấy bản đồ phù hợp. Thử từ khóa khác hoặc chọn \"Tất cả\".", 22, Color("ffe17b"), list)
+	for i in PAGE_SIZE:
+		grid.add_child(room_card())
+	empty = text("", 22, Color("ffe17b"), list)
+	empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	empty.custom_minimum_size = Vector2(0, 120)
 	var footer := row(16, main)
 	summary = stretch(text("", 20, Color.WHITE, footer))
 	summary.size_flags_stretch_ratio = 1.0
 	var pager := card(Color("1660a6"), LINE, 34, 3, 6)
-	pager.custom_minimum_size = Vector2(470, 0)
+	pager.custom_minimum_size = Vector2(300, 0)
 	footer.add_child(pager)
 	var pager_line := row(10, pager)
-	prev_page = icon_button("left", func(): page -= 1; refresh(), 56, Color("3aa6e6"), 28)
+	prev_page = icon_button("left", func(): page -= 1; refresh(), 52, Color("3aa6e6"), 26)
 	pager_line.add_child(prev_page)
 	page_label = text("", 24, Color.WHITE, pager_line)
 	page_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	next_page = icon_button("right", func(): page += 1; refresh(), 56, Color("3aa6e6"), 28)
+	next_page = icon_button("right", func(): page += 1; refresh(), 52, Color("3aa6e6"), 26)
 	pager_line.add_child(next_page)
 	var balance := spacer(footer)
-	balance.size_flags_stretch_ratio = 0.6
+	balance.size_flags_stretch_ratio = 1.0
+
+## Checkbox in the filter bar: white rounded box with a tick, then the label.
+func check_toggle(label_text: String, hint: String, action: Callable) -> Button:
+	var node := Button.new()
+	node.toggle_mode = true
+	node.focus_mode = Control.FOCUS_ALL
+	node.tooltip_text = hint
+	node.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	for state in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		var hover: bool = state.begins_with("hover")
+		node.add_theme_stylebox_override(state, box(Color(1, 1, 1, 0.08) if hover else Color.TRANSPARENT, Color("ffe17b") if state == "focus" else Color.TRANSPARENT, 12, 2 if state == "focus" else 0, 6))
+	var line := row(10, node)
+	line.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	line.offset_left = 6
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tick_box := card(Color("0f4f8f"), Color.WHITE, 8, 3, 0)
+	tick_box.custom_minimum_size = Vector2(32, 32)
+	tick_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tick_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.add_child(tick_box)
+	var tick := Glyph.new("check", Color("ffe17b"), 24)
+	tick.hide()
+	tick_box.add_child(tick)
+	var label := text(label_text, 21, Color.WHITE, line)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.size_flags_vertical = Control.SIZE_FILL
+	# Width follows the label once the lobby font applies (bolder on Windows).
+	node.custom_minimum_size = Vector2(0, 56)
+	line.minimum_size_changed.connect(func(): node.custom_minimum_size.x = line.get_combined_minimum_size().x + 18)
+	node.toggled.connect(func(on): tick.visible = on)
+	node.toggled.connect(action)
+	return node
 
 func style_select(select: OptionButton, all: String, entries: Array[String]) -> void:
 	select.add_item(all)
 	for entry in entries:
 		select.add_item(entry)
-	select.custom_minimum_size = Vector2(290, 56)
+	select.custom_minimum_size = Vector2(250, 56)
 	select.add_theme_font_size_override("font_size", 21)
 	select.add_theme_stylebox_override("normal", box(Color("2a86d0"), LINE, 16, 3, 14))
 	select.add_theme_stylebox_override("hover", box(Color("3596df"), LINE, 16, 3, 14))
@@ -581,66 +796,46 @@ func style_select(select: OptionButton, all: String, entries: Array[String]) -> 
 		select.add_theme_color_override(state, Color.WHITE)
 	select.get_popup().add_theme_font_size_override("font_size", 20)
 
-func map_card(index: int) -> PanelContainer:
-	var map: Dictionary = maps[index]
-	var holder := card(Color("e9fbff"), Color("b8e9f7"), 24, 4, 14)
-	holder.custom_minimum_size = Vector2(0, 162)
+## One reusable slot of the room grid: thumbnail, number, map name, difficulty
+## pill, x/8 players, lock, and "Vào" / "Đầy" / "Đang chơi".
+func room_card() -> PanelContainer:
+	var slot := room_cards.size()
+	var holder := card(Color("e9fbff"), Color("b8e9f7"), 22, 4, 10)
+	holder.name = "Room%d" % slot
+	holder.custom_minimum_size = Vector2(0, 118)
 	holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	holder.mouse_filter = Control.MOUSE_FILTER_STOP
-	holder.gui_input.connect(_on_card_input.bind(index))
-	var line := row(18, holder)
-	var thumb := card(Color("bfeeff"), Color("2f8fd0"), 14, 3, 3)
-	thumb.custom_minimum_size = Vector2(150, 120)
+	var line := row(14, holder)
+	var thumb := card(Color("bfeeff"), Color("2f8fd0"), 12, 3, 2)
+	thumb.custom_minimum_size = Vector2(132, 92)
 	thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	line.add_child(thumb)
-	thumb.add_child(picture("res://assets/level_previews/%s.png" % map.id, Vector2(140, 110)))
+	var art := picture("res://assets/level_previews/park.png", Vector2(126, 86))
+	thumb.add_child(art)
 	var facts := column(8, line)
 	facts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	facts.alignment = BoxContainer.ALIGNMENT_CENTER
-	var head := row(12, facts)
-	pill("%03d" % (index + 1), Color("1d78bd"), Color.WHITE, 17, head)
-	stretch(text(str(map.name).capitalize(), 28, INK, head))
+	var head := row(10, facts)
+	var number := pill("000", Color("1d78bd"), Color.WHITE, 17, head)
+	var title := stretch(text("", 24, INK, head))
 	var meta := row(12, facts)
-	pill(map.tier if map.tier != "" else "Đấu bot", TIER_COLORS.get(map.tier, Color("4fa8ef")), Color.WHITE, 17, meta)
-	meta.add_child(Glyph.new("people", Color("2f7fc0"), 30))
-	text("1 + 3 bot", 22, INK, meta)
-	var detail := stretch(text("Sẵn sàng · %s" % str(map.subtitle).get_slice("•", 1).strip_edges(), 16, Color("6a8aa6"), facts))
-	detail.name = "Detail"
-	var choice := button("CHỌN", func(): choose(index), Color("ffcb52"), Color("8a4b1f"), 21, 18)
-	choice.custom_minimum_size = Vector2(160, 62)
+	var mode := pill("", Color("4fa8ef"), Color.WHITE, 16, meta)
+	meta.add_child(Glyph.new("people", Color("2f7fc0"), 24))
+	var count := text("0/8", 21, INK, meta)
+	count.name = "Players"
+	var lock := Glyph.new("lock", Color("2f7fc0"), 24)
+	lock.mouse_filter = Control.MOUSE_FILTER_PASS
+	meta.add_child(lock)
+	var choice := button("Vào", func(): enter_slot(slot), Color("ffcb52"), Color("8a4b1f"), 22, 16)
+	choice.name = "Join"
+	choice.custom_minimum_size = Vector2(124, 58)
 	choice.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	choice.set_meta("map_name", map.name)
+	choice.add_theme_stylebox_override("disabled", box(Color("9fc6e3"), Color("d6ecfa"), 16, 3, 8))
+	choice.add_theme_color_override("font_disabled_color", Color.WHITE)
 	line.add_child(choice)
-	map_cards.append(holder)
-	map_buttons.append(choice)
+	room_cards.append({"holder": holder, "art": art, "number": number, "title": title, "mode": mode, "count": count, "lock": lock, "button": choice, "room": {}})
+	room_buttons.append(choice)
 	return holder
-
-func build_chat(parent: Control) -> void:
-	var bar := card(Color("1572bd"), Color("74d3f0"), 0, 0, 10)
-	bar.get_theme_stylebox("panel").border_width_top = 4
-	bar.get_theme_stylebox("panel").content_margin_left = 20
-	bar.get_theme_stylebox("panel").content_margin_right = 20
-	parent.add_child(bar)
-	var line := row(12, bar)
-	var group := ButtonGroup.new()
-	for channel in ["Tất cả", "Thế giới", "Bang hội", "Riêng"]:
-		var name_of: String = channel
-		var tab := button(channel, func(): chat_channel = name_of; refresh(), Color("56d2c9"), INK, 20, 14, Color("9be9f0"))
-		tab.toggle_mode = true
-		tab.button_group = group
-		tab.button_pressed = channel == "Tất cả"
-		tab.add_theme_stylebox_override("normal", box(Color("1d5f9e"), Color("4f9fd8"), 14, 3, 8))
-		tab.add_theme_color_override("font_color", Color.WHITE)
-		tab.custom_minimum_size = Vector2(118, 58)
-		line.add_child(tab)
-	var sound := icon_button("speaker", func(): game._toggle_audio(); refresh(), 58, Color("2a86d0"), 14)
-	speaker = sound.get_child(0) as Glyph
-	line.add_child(sound)
-	var message := card(Color("0f5a9c"), Color("4f9fd8"), 14, 3, 10)
-	message.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	line.add_child(message)
-	status = stretch(text("", 20, Color.WHITE, message))
-	line.add_child(icon_button("send", func(): notice("Chat chưa hỗ trợ trong bản chơi bot.", "TRÒ CHUYỆN", "send"), 62, Color("4fc3f0"), 16))
 
 ## In-canvas popup in the lobby's own style, shared by notices and settings.
 func build_modal() -> void:
@@ -684,16 +879,33 @@ func build_modal() -> void:
 	modal_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	modal_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	modal_message.custom_minimum_size = Vector2(600, 0)
+	modal_packs = column(10, stack)
+	name_input = LineEdit.new()
+	name_input.name = "NameInput"
+	name_input.max_length = 24
+	name_input.custom_minimum_size = Vector2(600, 60)
+	name_input.add_theme_font_size_override("font_size", 24)
+	name_input.add_theme_color_override("font_color", INK)
+	name_input.add_theme_stylebox_override("normal", box(Color.WHITE, Color("b8e9f7"), 16, 3, 14))
+	name_input.add_theme_stylebox_override("focus", box(Color.WHITE, SKY, 16, 3, 14))
+	name_input.text_submitted.connect(func(_value): save_name())
+	name_input.hide()
+	stack.add_child(name_input)
 	modal_settings = column(12, stack)
 	fullscreen_toggle = setting_row("Toàn màn hình", func(on): DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED))
 	audio_toggle = setting_row("Âm thanh", _on_audio_toggled)
 	var out := button("ĐĂNG XUẤT" if signed_in_on_entry else "VỀ MÀN HÌNH ĐĂNG NHẬP", leave, Color("f4738d"), Color.WHITE, 22, 20)
 	out.custom_minimum_size = Vector2(0, 62)
 	modal_settings.add_child(out)
+	var actions := row(16, stack)
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	modal_extra = button("", func(): var action := modal_extra_action; close_modal(); action.call(), Color("3fd39a"), Color("0d4b3a"), 24, 22)
+	modal_extra.name = "ModalAction"
+	modal_extra.custom_minimum_size = Vector2(300, 66)
+	actions.add_child(modal_extra)
 	modal_ok = button("ĐÃ HIỂU", close_modal, Color("ffcb52"), Color("8a4b1f"), 24, 22)
 	modal_ok.custom_minimum_size = Vector2(260, 66)
-	modal_ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	stack.add_child(modal_ok)
+	actions.add_child(modal_ok)
 
 func setting_row(label_text: String, action: Callable) -> Button:
 	var holder := card(Color("e4f7ff"), Color("b8e9f7"), 20, 3, 14)
@@ -712,32 +924,259 @@ func setting_row(label_text: String, action: Callable) -> Button:
 	line.add_child(toggle)
 	return toggle
 
-func open_modal(title: String, icon: String, message: String, with_settings := false) -> void:
+func open_modal(title: String, icon: String, message: String, with_settings := false, nav := -1) -> void:
+	modal_nav = nav
 	modal_title.text = title
 	modal_icon.set_kind(icon)
 	modal_message.text = message
 	modal_message.visible = message != ""
 	modal_settings.visible = with_settings
+	modal_packs.hide()
+	name_input.hide()
 	modal_ok.text = "ĐÓNG" if with_settings else "ĐÃ HIỂU"
+	modal_extra.hide()
+	modal_extra_action = Callable()
 	modal.show()
 	modal_ok.grab_focus()
+	sync_nav()
+
+## Second, highlighted button on the open popup (e.g. "KẾT BẠN" on a profile).
+func modal_action(label: String, action: Callable) -> void:
+	modal_extra.text = label
+	modal_extra_action = action
+	modal_extra.show()
+	modal_ok.text = "ĐÓNG"
+	modal_extra.grab_focus()
 
 func close_modal() -> void:
 	modal.hide()
+	sync_nav()
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if modal.visible and event.is_action_pressed("ui_cancel"):
+	if not event.is_action_pressed("ui_cancel"):
+		return
+	if modal.visible:
 		close_modal()
 		get_viewport().set_input_as_handled()
+	elif store.visible:
+		close_store()
+		get_viewport().set_input_as_handled()
+	elif chat.visible:
+		chat.close()
+		get_viewport().set_input_as_handled()
 
-func _on_card_input(event: InputEvent, index: int) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		choose(index)
+## Lights the tab for whatever is open: a notice's own tab, the store page, else home.
+func sync_nav() -> void:
+	if modal.visible and modal_nav >= 0:
+		set_nav(modal_nav)
+	elif store.visible:
+		set_nav(NAV_EQUIPMENT if store_pages.has("equipment") and store_pages.equipment.visible else NAV_SHOP)
+	else:
+		set_nav(NAV_HOME)
+
+## Fades the old tab out and the new one in, with a small bounce on its icon.
+func set_nav(index: int) -> void:
+	if index == nav_index:
+		return
+	var first := nav_index < 0
+	nav_index = index
+	for i in nav_tabs.size():
+		var tab: Dictionary = nav_tabs[i]
+		var colors: Array = NAV_ON if i == index else NAV_OFF
+		var tween := create_tween().set_parallel().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		var time := 0.0 if first else 0.22
+		for state in ["normal", "hover", "pressed"]:
+			var style := (tab.button as Button).get_theme_stylebox(state) as StyleBoxFlat
+			var fill: Color = colors[0]
+			if state == "hover":
+				fill = Color(1, 1, 1, maxf(fill.a, 0.1))
+			elif state == "pressed":
+				fill = fill.darkened(0.12)
+			tween.tween_property(style, "bg_color", fill, time)
+			tween.tween_property(style, "border_color", colors[1], time)
+		tween.tween_property(tab.glyph, "tint", colors[2], time)
+		tween.tween_property(tab.caption, "theme_override_colors/font_color", colors[3], time)
+		var glyph: Glyph = tab.glyph
+		glyph.pivot_offset = glyph.custom_minimum_size / 2
+		if i == index and not first:
+			glyph.scale = Vector2.ONE * 1.3
+			tween.set_trans(Tween.TRANS_BACK).tween_property(glyph, "scale", Vector2.ONE, 0.32)
+		else:
+			glyph.scale = Vector2.ONE
+
+func go_home() -> void:
+	close_modal()
+	close_store()
+	refresh()
+
+## Shop and equipment open as a popup over the lobby, framed like the notices.
+func build_store() -> void:
+	store.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	store.mouse_filter = Control.MOUSE_FILTER_STOP
+	store.hide()
+	canvas.add_child(store)
+	var dim := ColorRect.new()
+	dim.color = Color(0.03, 0.16, 0.36, 0.62)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.gui_input.connect(func(event): if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT: close_store())
+	store.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	store.add_child(center)
+	var sheet := card(Color("fff9e9"), Color.WHITE, 34, 6, 22)
+	var frame := sheet.get_theme_stylebox("panel") as StyleBoxFlat
+	frame.shadow_color = Color(0.02, 0.12, 0.3, 0.45)
+	frame.shadow_size = 18
+	frame.shadow_offset = Vector2(0, 10)
+	center.add_child(sheet)
+	var stack := column(14, sheet)
+	var head := row(12, stack)
+	var balance := Control.new()
+	balance.custom_minimum_size = Vector2(54, 0)
+	head.add_child(balance)
+	store_title = pill("", Color("2a86d0"), Color.WHITE, 26, head)
+	store_title.get_parent().size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
+	(store_title.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).set_content_margin_all(10)
+	(store_title.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).content_margin_left = 40
+	(store_title.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).content_margin_right = 40
+	head.add_child(icon_button("close", close_store, 54, Color("f4738d"), 27))
+	store_area = Control.new()
+	store_area.custom_minimum_size = Vector2(1700, 760)
+	stack.add_child(store_area)
+
+## Pages are built on first use; the kit scales them to the popup's rect.
+func store_page(target: String) -> Control:
+	if not store_pages.has(target):
+		var page_node = (preload("res://scripts/ui/pc/pc_shop.gd") if target == "shop" else preload("res://scripts/ui/pc/pc_equipment.gd")).new()
+		page_node.embedded = true
+		page_node.navigate.connect(_on_store_navigate)
+		store_area.add_child(page_node)
+		store_pages[target] = page_node
+	return store_pages[target]
+
+func _on_store_navigate(destination: String) -> void:
+	if destination == "home":
+		close_store()
+	else:
+		open_shop(destination)
+
+func open_shop(target: String) -> void:
+	modal.hide()
+	var shown := store_page(target)
+	for key in store_pages:
+		store_pages[key].visible = store_pages[key] == shown
+	store_title.text = "CỬA HÀNG" if target == "shop" else "TRANG BỊ"
+	store.show()
+	sync_nav()
+
+func close_store() -> void:
+	store.hide()
+	sync_nav()
+	refresh()
+
+func build_toast() -> void:
+	toast = pill("", Color("2d4a7a", 0.92), Color.WHITE, 22)
+	var holder := toast.get_parent() as Control
+	holder.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	holder.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	holder.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	holder.offset_bottom = -120
+	holder.hide()
+	canvas.add_child(holder)
+
+func show_toast(message: String) -> void:
+	if is_instance_valid(toast_tween):
+		toast_tween.kill()
+	var holder := toast.get_parent() as Control
+	toast.text = message
+	holder.modulate.a = 1.0
+	holder.reset_size()
+	holder.show()
+	toast_tween = create_tween()
+	toast_tween.tween_interval(2.0)
+	toast_tween.tween_property(holder, "modulate:a", 0.0, 0.4)
+	toast_tween.tween_callback(holder.hide)
 
 func _on_audio_toggled(on: bool) -> void:
 	if on != game.music_enabled:
 		game._toggle_audio()
 	refresh()
+
+func guest_name() -> String:
+	var prefs := ConfigFile.new()
+	prefs.load("user://launch_preferences.cfg")
+	return str(prefs.get_value("profile", "guest_name", "Khách"))
+
+## Pencil next to the name: signed-in players rename on the server (others see it);
+## guests keep a nickname on this computer only.
+func open_rename() -> void:
+	var signed_in := AuthSession.has_session()
+	open_modal("ĐỔI TÊN HIỂN THỊ", "edit", "2–24 ký tự: chữ, số, khoảng trắng, dấu . _ -" + ("" if signed_in else "\nChế độ khách: chỉ lưu trên máy này."))
+	name_input.text = profile.text
+	name_input.show()
+	modal_action("LƯU TÊN", save_name)
+	name_input.grab_focus()
+	name_input.select_all()
+
+func save_name() -> void:
+	var value := " ".join(name_input.text.strip_edges().split(" ", false))
+	# Length only here (Godot regex \\w is ASCII); the API checks the characters.
+	if value.length() < 2 or value.length() > 24 or Array("<>{}\"'`\\/".split("")).any(func(c): return value.contains(c)):
+		open_rename()
+		modal_message.text = "Tên chưa hợp lệ: cần 2–24 ký tự gồm chữ, số, khoảng trắng hoặc . _ -"
+		name_input.text = value
+		return
+	close_modal()
+	if AuthSession.has_session():
+		var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_PATCH, "/v1/me", {"display_name": value})
+		if reply.status != 200 or not reply.data is Dictionary:
+			show_toast("Chưa đổi được tên: " + str(reply.error))
+			return
+		AuthSession.account_name = str(reply.data.get("name", value))
+	else:
+		var prefs := ConfigFile.new()
+		prefs.load("user://launch_preferences.cfg")
+		prefs.set_value("profile", "guest_name", value)
+		prefs.save("user://launch_preferences.cfg")
+	show_toast("Đã đổi tên thành " + value)
+	refresh()
+
+## Wallet "+": sandbox packs from the API (no payment provider, nothing charged).
+func open_topup() -> void:
+	if not AuthSession.has_session():
+		notice("Đăng nhập tài khoản để nạp kim cương và đổi vàng. Chế độ khách dùng ví demo trên máy.", "NẠP", "gem")
+		return
+	open_modal("NẠP KIM CƯƠNG / ĐỔI VÀNG", "gem", "Đang tải gói nạp…")
+	modal_ok.text = "ĐÓNG"
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/topup/packs")
+	if not modal.visible:
+		return
+	if reply.status != 200 or not reply.data is Dictionary:
+		modal_message.text = "Chưa tải được gói nạp: " + str(reply.error)
+		return
+	modal_message.text = "Bản thử nghiệm: không có thanh toán thật, không thu tiền. Giao dịch được ghi vào lịch sử tài khoản."
+	for child in modal_packs.get_children():
+		modal_packs.remove_child(child)
+		child.queue_free()
+	for pack in reply.data.get("packs", []):
+		var id := str(pack.id)
+		var price := ("%s đ" % grouped(int(pack.vnd))) if pack.has("vnd") else ("%d kim cương" % int(pack.gem_cost))
+		var option := button("%s  —  %s" % [pack.name, price], func(): buy_pack(id, str(pack.name)), Color("e4f7ff"), INK, 22, 18, Color("b8e9f7"))
+		option.name = "Pack_" + id
+		option.custom_minimum_size = Vector2(600, 60)
+		modal_packs.add_child(option)
+	modal_packs.show()
+
+func buy_pack(pack_id: String, pack_name: String) -> void:
+	for option in modal_packs.get_children():
+		(option as Button).disabled = true
+	var ok: bool = await UIState.topup(pack_id)
+	for option in modal_packs.get_children():
+		(option as Button).disabled = false
+	if ok:
+		show_toast("Đã nạp " + pack_name)
+		refresh()
 
 func open_settings() -> void:
 	for pair in [[fullscreen_toggle, DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]], [audio_toggle, game.music_enabled]]:
@@ -747,7 +1186,7 @@ func open_settings() -> void:
 
 func show_social(tab: int) -> void:
 	hero_scroll.visible = tab == 0
-	friend_scroll.visible = tab == 1
+	friends_panel.visible = tab == 1
 
 ## Lowercases and strips Vietnamese diacritics so "lau dai" matches "LÂU ĐÀI".
 static func fold(value: String) -> String:
@@ -796,45 +1235,87 @@ func set_map(index: int) -> void:
 	page = 0
 	refresh()
 
-func matches(index: int) -> bool:
+func map_index(map_id: String) -> int:
+	for i in maps.size():
+		if maps[i].id == map_id:
+			return i
+	return -1
+
+## Filters, all combined: difficulty, map, "Chỉ phòng trống" (a free seat and still
+## waiting, so "Vào" works now), "Chỉ bạn bè" (at least one accepted friend seated),
+## and the search words (room number or map name, diacritics ignored).
+func room_matches(room: Dictionary) -> bool:
+	var index := map_index(str(room.get("map", "")))
+	if index < 0:
+		return false
 	var map: Dictionary = maps[index]
 	if tier_filter != "" and map.tier != tier_filter:
 		return false
 	if map_filter >= 0 and map_filter != index:
 		return false
+	if only_open and not bool(room.get("joinable", false)):
+		return false
+	if only_friends and not has_friend(room):
+		return false
+	var haystack := "%03d %d %s" % [int(room.get("number", 0)), int(room.get("number", 0)), map.keywords]
 	for word in fold(search.text).split(" ", false):
-		if not map.keywords.contains(word):
+		if not haystack.contains(word):
 			return false
 	return true
 
-func visible_maps() -> Array[int]:
-	var found: Array[int] = []
-	for i in maps.size():
-		if matches(i):
-			found.append(i)
-	return found
+func has_friend(room: Dictionary) -> bool:
+	for id in room.get("accountIds", []):
+		if friend_ids.has(str(id)):
+			return true
+	return false
 
-func choose(index: int) -> void:
-	game._select_level(index)
-	refresh()
+func visible_rooms() -> Array:
+	return rooms.filter(func(room): return room is Dictionary and room_matches(room))
 
-func pick_first_match() -> void:
-	var found := visible_maps()
-	if not found.is_empty():
-		choose(found[0])
-		map_buttons[found[0]].grab_focus()
+## Enter in the search box joins the first open room that matches.
+func join_first_match() -> void:
+	for room in visible_rooms():
+		if bool(room.get("joinable", false)):
+			enter_room(str(room.roomId))
+			return
 
 func page_count() -> int:
-	return maxi(1, ceili(visible_maps().size() / float(PAGE_SIZE)))
+	return maxi(1, ceili(visible_rooms().size() / float(PAGE_SIZE)))
+
+func fill_card(slot: Dictionary, room: Dictionary) -> void:
+	slot.room = room
+	var map: Dictionary = maps[map_index(str(room.map))]
+	slot.art.texture = load("res://assets/level_previews/%s.png" % map.id)
+	slot.number.text = "%03d" % int(room.get("number", 0))
+	slot.title.text = str(map.name).capitalize()
+	slot.title.tooltip_text = slot.title.text
+	slot.mode.text = map.tier if map.tier != "" else "Đấu thường"
+	(slot.mode.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).bg_color = TIER_COLORS.get(map.tier, Color("4fa8ef"))
+	var players := int(room.get("players", 0))
+	var most := int(room.get("maxPlayers", 8))
+	slot.count.text = "%d/%d" % [players, most]
+	var joinable := bool(room.get("joinable", false))
+	var full := players >= most
+	var button: Button = slot.button
+	button.text = "Vào" if joinable else ("Đầy" if full else "Đang chơi")
+	button.disabled = not joinable or joining
+	button.tooltip_text = "Vào phòng " + slot.number.text if joinable else ("Phòng đã đủ %d người" % most if full else "Trận đang diễn ra, chờ ván sau")
+	var lock: Glyph = slot.lock
+	lock.tint = Color("2f7fc0") if joinable else Color("e0566f")
+	lock.queue_redraw()
+	lock.tooltip_text = "Phòng mở" if joinable else ("Phòng đầy" if full else "Đang chơi, chưa vào được")
+	var frame := slot.holder.get_theme_stylebox("panel") as StyleBoxFlat
+	frame.border_color = Color("ffc93c") if has_friend(room) else Color("b8e9f7")
 
 func refresh() -> void:
 	var hero: int = game.selected_hero
-	profile.text = AuthSession.account_name if AuthSession.has_session() else "Khách"
+	profile.text = AuthSession.account_name if AuthSession.has_session() else guest_name()
 	profile.tooltip_text = profile.text
 	level.text = "Lv. %d" % int(UIState.profile.get("level", 1))
 	xp.max_value = maxf(1.0, float(UIState.profile.get("xp_max", 1)))
 	xp.value = float(UIState.profile.get("xp", 0))
-	hero_line.text = "Nhân vật: " + game.HERO_NAMES[hero].capitalize()
+	xp_percent.text = "%d%%" % int(round(100.0 * xp.value / xp.max_value))
+	hero_line.text = game.HERO_NAMES[hero].capitalize()
 	portrait.texture = load("res://assets/characters/portraits/%s.png" % game.HEROES[hero])
 	presence.text = "ONLINE" if AuthSession.has_session() else "KHÁCH"
 	gold.text = grouped(int(UIState.profile.get("gold", 0)))
@@ -844,27 +1325,28 @@ func refresh() -> void:
 		hero_states[i].text = "Đang chọn" if picked else "Sẵn sàng"
 		hero_states[i].add_theme_color_override("font_color", Color("ffe17b") if picked else Color("aef5c8"))
 		(hero_buttons[i].get_child(0) as Glyph).set_kind("check" if picked else "plus")
-	var found := visible_maps()
+	var found := visible_rooms()
 	page = clampi(page, 0, page_count() - 1)
 	var shown := found.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-	for i in map_buttons.size():
-		var picked: bool = game.selected_level == i
-		map_buttons[i].text = "ĐÃ CHỌN" if picked else "CHỌN"
-		map_cards[i].visible = shown.has(i)
-		var frame := map_cards[i].get_theme_stylebox("panel") as StyleBoxFlat
-		frame.border_color = Color("ffc93c") if picked else Color("b8e9f7")
-		frame.set_border_width_all(6 if picked else 4)
-	empty.visible = found.is_empty()
-	summary.text = "%d/%d bản đồ · Enter để chọn bản đồ đầu tiên" % [found.size(), maps.size()]
-	page_label.text = "TRANG %d / %d" % [page + 1, page_count()]
+	for i in room_cards.size():
+		room_cards[i].holder.visible = i < shown.size()
+		if i < shown.size():
+			fill_card(room_cards[i], shown[i])
+	empty.visible = shown.is_empty()
+	match rooms_state:
+		"signed_out": empty.text = "Đăng nhập tài khoản để xem và vào phòng online. Chế độ khách vẫn chơi LUYỆN TẬP được."
+		"error": empty.text = rooms_error + " Đang thử lại…"
+		"loading": empty.text = "Đang tải danh sách phòng…"
+		_: empty.text = "Chưa có phòng online nào đang mở. Bấm TẠO PHÒNG để mở phòng đầu tiên!" if rooms.is_empty() else "Không có phòng khớp bộ lọc. Bỏ bớt bộ lọc hoặc đổi từ khóa."
+	var people := 0
+	for room in rooms:
+		people += int(room.get("players", 0))
+	summary.text = "%d/%d phòng · %d người trong phòng" % [found.size(), rooms.size(), people]
+	page_label.text = "%d / %d" % [page + 1, page_count()]
 	prev_page.disabled = page == 0
 	next_page.disabled = page >= page_count() - 1
 	speaker.set_kind("speaker" if game.music_enabled else "mute")
-	var selected: String = str(maps[game.selected_level].name).capitalize() if game.selected_level < maps.size() else "?"
-	if chat_channel == "Tất cả":
-		status.text = "[Hệ thống] Chào mừng bạn đến với BỤP BỤP! • Bản đồ: %s • Nhân vật: %s • Âm thanh: %s" % [selected, game.HERO_NAMES[hero].capitalize(), "Bật" if game.music_enabled else "Tắt"]
-	else:
-		status.text = "[%s] Chat chưa hỗ trợ trong bản chơi bot." % chat_channel
+	chat.set_system("[Hệ thống] Chào mừng bạn đến với BỤP BỤP! • Nhân vật: %s • Âm thanh: %s" % [game.HERO_NAMES[hero].capitalize(), "Bật" if game.music_enabled else "Tắt"])
 
 static func grouped(value: int) -> String:
 	var digits := str(absi(value))
@@ -875,32 +1357,132 @@ static func grouped(value: int) -> String:
 		out += digits[i]
 	return ("-" if value < 0 else "") + out
 
-func start() -> void:
-	game._new_round()
+## Offline practice: matchmaking seats three bots, then the bot room opens.
+func practice() -> void:
+	game.show_pc_screen("matchmaking")
 
-func notice(message: String, title := "THÔNG BÁO", icon := "star") -> void:
-	open_modal(title, icon, message)
+func hero_id() -> String:
+	return game.HEROES[game.selected_hero]
+
+func can_play_online() -> bool:
+	if AuthSession.has_session():
+		return true
+	notice("Đăng nhập tài khoản để chơi phòng online với người khác. Chế độ khách chơi LUYỆN TẬP trên máy được.", "PHÒNG ONLINE", "people")
+	return false
+
+func enter_slot(slot: int) -> void:
+	var room: Dictionary = room_cards[slot].room
+	if bool(room.get("joinable", false)):
+		enter_room(str(room.roomId))
+
+func enter_room(room_id: String) -> void:
+	await go_online(func(): return await OnlineArena.join_room(room_id, hero_id()), "Đang vào phòng…")
+
+## Quick play: the first open room (on the map filter, if one is set), else the
+## server's joinOrCreate on that map (or the last chosen map).
+func quick_play() -> void:
+	for room in rooms:
+		if bool(room.get("joinable", false)) and map_index(str(room.map)) >= 0 and (map_filter < 0 or map_index(str(room.map)) == map_filter):
+			enter_room(str(room.roomId))
+			return
+	var map_id: String = maps[map_filter if map_filter >= 0 else clampi(game.selected_level, 0, maps.size() - 1)].id
+	await go_online(func(): return await OnlineArena.quick_join(map_id, hero_id()), "Đang tìm phòng…")
+
+func open_create() -> void:
+	if not can_play_online():
+		return
+	open_modal("TẠO PHÒNG ONLINE", "people", "Chọn bản đồ. Phòng mở cho tối đa 8 người; ván bắt đầu khi mọi người đã Sẵn sàng (ít nhất 2 người).")
+	modal_ok.text = "ĐÓNG"
+	for child in modal_packs.get_children():
+		modal_packs.remove_child(child)
+		child.queue_free()
+	for map in maps:
+		var map_id: String = map.id
+		var option := button("%s  ·  %s" % [str(map.name).capitalize(), map.tier], func(): close_modal(); create_room(map_id), Color("e4f7ff"), INK, 22, 18, Color("b8e9f7"))
+		option.name = "Create_" + map_id
+		option.custom_minimum_size = Vector2(600, 60)
+		modal_packs.add_child(option)
+	modal_packs.show()
+
+func create_room(map_id: String) -> void:
+	await go_online(func(): return await OnlineArena.create_room(map_id, hero_id()), "Đang tạo phòng…")
+
+func go_online(attempt: Callable, message: String) -> void:
+	if joining or not can_play_online():
+		return
+	joining = true
+	refresh()
+	show_toast(message)
+	var ok: bool = await attempt.call()
+	joining = false
+	if ok:
+		game.show_pc_screen("online")
+	else:
+		notice(OnlineArena.last_error, "PHÒNG ONLINE", "people")
+		rooms_clock = 0.0
+	refresh()
+
+
+func notice(message: String, title := "THÔNG BÁO", icon := "star", nav := -1) -> void:
+	open_modal(title, icon, message, false, nav)
 
 func leave() -> void:
 	UIState.remove_meta("from_desktop_lobby")
 	AuthSession.logout()
 	get_tree().change_scene_to_file("res://scenes/ui/launch/launch_screen.tscn")
 
-func open_shop(target: String) -> void:
-	UIState.set_meta("desktop_page", target)
-	UIState.set_meta("from_desktop_lobby", true)
-	get_tree().change_scene_to_file("res://scenes/ui/ui_showcase.tscn")
-
 func _exit_tree() -> void:
 	ScreenFill.set_fill(get_tree(), false)
 
-func _process(_delta: float) -> void:
+## Live room list from the arena (every 5 s while the lobby shows) plus the
+## accepted friends list for "Chỉ bạn bè" (every 20 s).
+func fetch_rooms() -> void:
+	if rooms_busy:
+		return
+	if not AuthSession.has_session():
+		apply_rooms({"ok": false})
+		return
+	rooms_busy = true
+	if friends_clock <= 0.0:
+		friends_clock = FRIENDS_SECONDS
+		friend_ids = await OnlineArena.friend_ids()
+	var reply: Dictionary = await OnlineArena.list_rooms()
+	rooms_busy = false
+	apply_rooms(reply)
+
+func apply_rooms(reply: Dictionary) -> void:
+	if reply.get("ok", false):
+		rooms = reply.rooms
+		rooms_state = "ok"
+	else:
+		rooms = []
+		rooms_state = "error" if AuthSession.has_session() else "signed_out"
+		rooms_error = str(reply.get("error", ""))
+	if is_inside_tree():
+		refresh()
+
+func _process(delta: float) -> void:
+	if is_visible_in_tree() and not store.visible:
+		friends_clock -= delta
+		rooms_clock -= delta
+		if rooms_clock <= 0.0:
+			rooms_clock = ROOMS_SECONDS
+			fetch_rooms()
 	var viewport := get_viewport_rect().size
 	backdrop.position = Vector2.ZERO
 	backdrop.size = viewport
-	var ratio := minf(viewport.x / DESIGN.x, viewport.y / DESIGN.y)
+	# Fit the design size, or the content's minimum size when it is larger (wider
+	# system fonts, long names), so the page is never cut off at the edges.
+	var need := DESIGN
+	for child in canvas.get_children():
+		if child is Control and child.visible:
+			need = need.max((child as Control).get_combined_minimum_size())
+	var ratio := minf(viewport.x / need.x, viewport.y / need.y)
 	canvas.scale = Vector2.ONE * ratio
 	canvas.position = Vector2.ZERO
 	canvas.size = viewport / ratio
+	# Popups dim the page but leave the top menu lit and clickable.
+	for overlay in [modal, store]:
+		overlay.offset_top = top_bar.size.y
 	if is_visible_in_tree() and signed_in_on_entry and not AuthSession.has_session():
 		leave()

@@ -32,6 +32,8 @@ Phiên bản chính xác nằm trong `package-lock.json`, `apps/api/uv.lock` và
 | Redis 7.2 | [BSD-3-Clause](https://github.com/redis/redis/blob/7.2/COPYING); không tự ý đổi sang nhánh có license khác |
 | Node.js / Python / Debian images | Giữ notices của runtime và các gói hệ điều hành trong image |
 | Nginx (web proxy) | [BSD-2-Clause, Igor Sysoev và Nginx, Inc.](https://nginx.org/LICENSE); giữ notices trong image và `apps/web/licenses/NGINX_LICENSE.txt` |
+| Next.js 16.3.8, React / React DOM 19.3.0 (admin portal) | MIT; chỉ JS đã bundle của Next/React (kèm `@swc/helpers`, Apache-2.0) được gửi xuống trình duyệt quản trị |
+| Công cụ build admin (TypeScript, sharp/libvips, caniuse-lite, PostCSS…) | Apache-2.0, LGPL-3.0-or-later (libvips), CC-BY-4.0 (caniuse-lite), MIT/ISC/BSD; chỉ dùng lúc build trong stage Node, không nằm trong image nginx |
 | Playwright (chỉ kiểm thử) | Apache-2.0; license từ package `@playwright/test` đã khóa, không gửi xuống trình duyệt người chơi |
 
 ## Tạo gói notices
@@ -79,3 +81,12 @@ không gán lại giấy phép MIT cho các tài nguyên này.
 Scene/script Launch trong `apps/practice` lấy từ cùng ZIP người dùng cung cấp,
 được chỉnh để mở chế độ bot và Cửa hàng/Trang bị. Giữ nguồn tại
 `apps/practice/licenses/LAUNCH_ASSET_PROVENANCE.md`.
+
+## Bộ giao diện PC "Bubble Isles" do người dùng cung cấp
+
+Màn Tìm trận, Phòng, HUD, Kết quả, Cửa hàng và Trang bị của app PC
+(`apps/practice/scripts/ui/pc`) viết lại bố cục, bảng màu và kiểu nút/panel từ
+`bubble_isles_client.zip` và ảnh mockup trong Drive `1E0FY5LnrCso2Ny4MSHZOP5ElAR1wyYcl`.
+Tài liệu ZIP ghi UI vẽ bằng code, thuộc dự án. Không sao chép file, avatar
+chibi, tên, logo hoặc ảnh mockup; dùng lại PNG Step 3 hiện có. Hash và ghi chú
+nguồn tại `apps/practice/licenses/PC_UI_KIT_SOURCE.txt`.

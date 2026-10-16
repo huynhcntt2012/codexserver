@@ -8,21 +8,34 @@ signal validation_failed(message: String)
 const Ui = preload("res://scripts/ui/launch/ui_theme.gd")
 var registering := false
 var confirm_field := LineEdit.new()
+var email_field := LineEdit.new()
 var preferences := ConfigFile.new()
 @onready var username_field: LineEdit = $Username
 @onready var password_field: LineEdit = $Password
 
 func _ready() -> void:
 	confirm_field.name = "ConfirmPassword"
+	# Registration shares the row: confirm password left, recovery email right.
 	confirm_field.position = Vector2(34, 198)
-	confirm_field.size = Vector2(416, 36)
+	confirm_field.size = Vector2(204, 36)
 	confirm_field.secret = true
 	confirm_field.max_length = 128
 	confirm_field.placeholder_text = "Nhập lại mật khẩu"
 	add_child(confirm_field)
 	_style_input(confirm_field)
 	confirm_field.hide()
-	confirm_field.text_submitted.connect(func(_text): _submit())
+	confirm_field.text_submitted.connect(func(_text): email_field.grab_focus())
+	email_field.name = "Email"
+	email_field.position = Vector2(246, 198)
+	email_field.size = Vector2(204, 36)
+	email_field.max_length = 254
+	email_field.placeholder_text = "Email (lấy lại mật khẩu)"
+	add_child(email_field)
+	_style_input(email_field)
+	email_field.add_theme_font_size_override("font_size", 15)
+	confirm_field.add_theme_font_size_override("font_size", 15)
+	email_field.hide()
+	email_field.text_submitted.connect(func(_text): _submit())
 	username_field.max_length = 24
 	preferences.load("user://launch_preferences.cfg")
 	$Remember.button_pressed = preferences.get_value("login", "remember", false)
@@ -69,6 +82,10 @@ func _submit() -> void:
 		validation_failed.emit("Bạn chưa nhập mật khẩu.")
 		password_field.grab_focus()
 		return
+	if registering and email_field.text.strip_edges().is_empty():
+		validation_failed.emit("Bạn chưa nhập email. Email dùng để nhận mã khi quên mật khẩu.")
+		email_field.grab_focus()
+		return
 	login_requested.emit(username, password_field.text)
 
 func should_remember_username() -> bool:
@@ -88,6 +105,7 @@ func set_registration(enabled: bool) -> void:
 	registering = enabled
 	reset_password_field()
 	confirm_field.visible = enabled
+	email_field.visible = enabled
 	$Remember.visible = not enabled
 	$Forgot.visible = not enabled
 	$Title.text = "ĐĂNG KÝ" if enabled else "ĐĂNG NHẬP"
@@ -103,7 +121,7 @@ func set_busy(value: bool) -> void:
 	for node in [$Login, $Guest, $Forgot, $Remember]:
 		node.disabled = value
 		node.mouse_default_cursor_shape = Control.CURSOR_WAIT if value else Control.CURSOR_POINTING_HAND
-	for field in [username_field, password_field, confirm_field]:
+	for field in [username_field, password_field, confirm_field, email_field]:
 		field.editable = not value
 		field.selecting_enabled = not value
 	busy_time = 0.0 if value else -1.0
