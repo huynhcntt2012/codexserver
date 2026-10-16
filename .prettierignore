@@ -7,3 +7,6 @@ apps/practice/README.md
 apps/practice/assets/
 apps/practice/levels/
 apps/web/public/practice/engine/
+/apps/admin/.next/
+/apps/admin/out/
+/apps/admin/public/game/

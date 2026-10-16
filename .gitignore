@@ -18,3 +18,9 @@ build/
 
 # Godot web export; rebuild with scripts/build-practice.py
 /apps/web/public/practice/engine/
+
+# Admin portal build output; built inside the web image.
+/apps/admin/.next/
+/apps/admin/out/
+/apps/admin/public/game/
+/apps/admin/next-env.d.ts

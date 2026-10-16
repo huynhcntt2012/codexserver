@@ -1,0 +1,23 @@
+{
+  "name": "@suni/admin",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Bụp Bụp admin portal, exported as static files under /admin.",
+  "scripts": {
+    "dev": "node scripts/copy-game-art.mjs && next dev",
+    "prebuild": "node scripts/copy-game-art.mjs",
+    "build": "next build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.3.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}
