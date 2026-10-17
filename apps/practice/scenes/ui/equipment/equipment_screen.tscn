@@ -1,0 +1,128 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/equipment_screen.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/top_bar.tscn" id="2_top"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/bottom_nav.tscn" id="3_nav"]
+
+[node name="EquipmentScreen" type="Control"]
+script = ExtResource("1_script")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.14, 0.39, 1)
+
+[node name="ScreenFrame" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 34
+
+[node name="VBox" type="VBoxContainer" parent="ScreenFrame"]
+theme_override_constants/separation = 12
+
+[node name="TopBar" parent="ScreenFrame/VBox" instance=ExtResource("2_top")]
+
+[node name="Body" type="HBoxContainer" parent="ScreenFrame/VBox"]
+size_flags_vertical = 3
+theme_override_constants/separation = 11
+
+[node name="LeftMenu" type="PanelContainer" parent="ScreenFrame/VBox/Body"]
+custom_minimum_size = Vector2(140, 0)
+
+[node name="LeftSideVBox" type="VBoxContainer" parent="ScreenFrame/VBox/Body/LeftMenu"]
+theme_override_constants/separation = 10
+
+[node name="LeftTitle" type="Label" parent="ScreenFrame/VBox/Body/LeftMenu/LeftSideVBox"]
+text = "NHÂN VẬT"
+horizontal_alignment = 1
+
+[node name="LeftTabs" type="VBoxContainer" parent="ScreenFrame/VBox/Body/LeftMenu/LeftSideVBox"]
+theme_override_constants/separation = 8
+
+[node name="HeroPanel" type="PanelContainer" parent="ScreenFrame/VBox/Body"]
+custom_minimum_size = Vector2(338, 0)
+
+[node name="HeroVBox" type="VBoxContainer" parent="ScreenFrame/VBox/Body/HeroPanel"]
+theme_override_constants/separation = 9
+
+[node name="HeroName" type="Label" parent="ScreenFrame/VBox/Body/HeroPanel/HeroVBox"]
+text = "MIMI"
+horizontal_alignment = 1
+
+[node name="HeroDescription" type="Label" parent="ScreenFrame/VBox/Body/HeroPanel/HeroVBox"]
+text = "Nhanh nhẹn và đáng yêu"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="HeroArt" type="TextureRect" parent="ScreenFrame/VBox/Body/HeroPanel/HeroVBox"]
+custom_minimum_size = Vector2(0, 250)
+expand_mode = 1
+stretch_mode = 5
+size_flags_vertical = 3
+
+[node name="HeroSwitch" type="HBoxContainer" parent="ScreenFrame/VBox/Body/HeroPanel/HeroVBox"]
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="Prev" type="Button" parent="ScreenFrame/VBox/Body/HeroPanel/HeroVBox/HeroSwitch"]
+text = "<"
+
+[node name="HeroHint" type="Label" parent="ScreenFrame/VBox/Body/HeroPanel/HeroVBox/HeroSwitch"]
+text = "CHỌN NHÂN VẬT"
+
+[node name="Next" type="Button" parent="ScreenFrame/VBox/Body/HeroPanel/HeroVBox/HeroSwitch"]
+text = ">"
+
+[node name="StatsTitle" type="Label" parent="ScreenFrame/VBox/Body/HeroPanel/HeroVBox"]
+text = "CHỈ SỐ CƠ BẢN"
+
+[node name="Stats" type="VBoxContainer" parent="ScreenFrame/VBox/Body/HeroPanel/HeroVBox"]
+theme_override_constants/separation = 6
+
+[node name="InventoryPanel" type="VBoxContainer" parent="ScreenFrame/VBox/Body"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 9
+
+[node name="CategoryRow" type="HBoxContainer" parent="ScreenFrame/VBox/Body/InventoryPanel"]
+theme_override_constants/separation = 6
+
+[node name="ListTitle" type="Label" parent="ScreenFrame/VBox/Body/InventoryPanel"]
+text = "KHO TRANG BỊ"
+
+[node name="Scroll" type="ScrollContainer" parent="ScreenFrame/VBox/Body/InventoryPanel"]
+size_flags_vertical = 3
+
+[node name="Items" type="GridContainer" parent="ScreenFrame/VBox/Body/InventoryPanel/Scroll"]
+columns = 3
+theme_override_constants/h_separation = 9
+theme_override_constants/v_separation = 9
+
+[node name="LoadoutPanel" type="PanelContainer" parent="ScreenFrame/VBox/Body/InventoryPanel"]
+custom_minimum_size = Vector2(0, 144)
+
+[node name="LoadoutVBox" type="VBoxContainer" parent="ScreenFrame/VBox/Body/InventoryPanel/LoadoutPanel"]
+
+[node name="LoadoutTitle" type="Label" parent="ScreenFrame/VBox/Body/InventoryPanel/LoadoutPanel/LoadoutVBox"]
+text = "TRANG BỊ ĐANG DÙNG"
+
+[node name="SlotRow" type="HBoxContainer" parent="ScreenFrame/VBox/Body/InventoryPanel/LoadoutPanel/LoadoutVBox"]
+theme_override_constants/separation = 8
+
+[node name="BottomNav" parent="ScreenFrame/VBox" instance=ExtResource("3_nav")]

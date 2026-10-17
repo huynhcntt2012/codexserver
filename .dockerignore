@@ -11,3 +11,6 @@ node_modules
 .env
 .env.*
 !.env.example
+**/.next
+apps/admin/out
+apps/admin/public/game

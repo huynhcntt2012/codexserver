@@ -1,0 +1,50 @@
+{
+  "id": "market",
+  "name": "CHỢ ĐÊM ĐÈN LỒNG",
+  "subtitle": "Trung bình • Phố chợ đêm",
+  "theme": "market",
+  "crate": "barrel",
+  "wall": "stone_wall",
+  "bomb": "pink",
+  "fx": "heart",
+  "bot_step": 0.34,
+  "bot_bomb": 2.6,
+  "bg": "#2D2B5D",
+  "columns": 17,
+  "rows": 13,
+  "layout": [
+    "#################",
+    "#....C.....C....#",
+    "#.#C#C#.#.#C#C#.#",
+    "#..C..CC.CC..C..#",
+    "#C#C#C#.#.#C#C#C#",
+    "#...............#",
+    "#.#.#.#.#.#.#.#.#",
+    "#...............#",
+    "#C#C#C#.#.#C#C#C#",
+    "#..C..CC.CC..C..#",
+    "#.#C#C#.#.#C#C#.#",
+    "#....C.....C....#",
+    "#################"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      15,
+      1
+    ],
+    [
+      15,
+      11
+    ],
+    [
+      1,
+      11
+    ]
+  ],
+  "pack_id": "010",
+  "story": "Một đêm hội bắt đầu nhưng không ai nhìn thấy bóng của mình. Người bán đèn lồng nhờ đội bạn thắp lại đủ bốn góc quảng trường để đẩy lùi màn sương tím."
+}

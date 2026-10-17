@@ -21,7 +21,7 @@ async function until(predicate, timeout = 15000) {
 try {
   const response = await fetch(base);
   assert.equal(response.status, 200);
-  assert.match(await response.text(), /Suni · Bomb Arena/);
+  assert.match(await response.text(), /Bụp Bụp! · Đấu trường bóng nước/);
   assert.match(
     response.headers.get('content-security-policy'),
     /connect-src 'self'/,

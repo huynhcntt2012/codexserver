@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/product_card.gd" id="1_script"]
+
+[node name="ProductCard" type="PanelContainer"]
+script = ExtResource("1_script")
+custom_minimum_size = Vector2(174, 228)
+
+[node name="Padding" type="MarginContainer" parent="."]
+
+[node name="Body" type="VBoxContainer" parent="Padding"]
+theme_override_constants/separation = 5
+
+[node name="Rarity" type="Label" parent="Padding/Body"]
+text = "COMMON"
+
+[node name="Art" type="TextureRect" parent="Padding/Body"]
+custom_minimum_size = Vector2(0, 82)
+expand_mode = 1
+stretch_mode = 5
+size_flags_vertical = 3
+
+[node name="Title" type="Label" parent="Padding/Body"]
+text = "Product Name"
+horizontal_alignment = 1
+autowrap_mode = 3
+custom_minimum_size = Vector2(0, 36)
+
+[node name="PriceRow" type="HBoxContainer" parent="Padding/Body"]
+
+[node name="Price" type="Label" parent="Padding/Body/PriceRow"]
+text = "● 500"
+size_flags_horizontal = 3
+horizontal_alignment = 1
+
+[node name="Action" type="Button" parent="Padding/Body"]
+text = "MUA"

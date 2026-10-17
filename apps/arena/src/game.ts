@@ -1,3 +1,5 @@
+import { HEROES, type MapDef } from './maps.js';
+
 export const WIDTH = 15;
 export const HEIGHT = 13;
 export const TICK_MS = 50;
@@ -32,6 +34,26 @@ export interface Player {
   ready: boolean;
   nextMove: number;
 }
+/** Per-round counters kept outside the snapshot, so protocol v1 is unchanged. */
+export interface RoundStats {
+  bombs: number;
+  kills: number;
+  diedAt: number | null;
+}
+export interface RoundResult {
+  round: number;
+  durationMs: number;
+  winner: string | null;
+  players: {
+    id: string;
+    name: string;
+    placement: number;
+    bombs: number;
+    kills: number;
+    survivedMs: number;
+    winner: boolean;
+  }[];
+}
 export interface Bomb {
   id: number;
   owner: string;
@@ -51,6 +73,21 @@ const directions = {
   right: [1, 0],
 } as const;
 const key = (x: number, y: number) => `${x},${y}`;
+
+/** v2 grid from a shared layout; crates within two steps of a spawn are cleared. */
+export function createLayoutMap(map: MapDef): Tile[][] {
+  return map.layout.map((line, y) =>
+    [...line].map((cell, x) => {
+      if (cell === '#') return Tile.Wall;
+      if (
+        cell === 'C' &&
+        !map.spawns.some(([sx, sy]) => Math.abs(x - sx) + Math.abs(y - sy) <= 2)
+      )
+        return Tile.Crate;
+      return Tile.Floor;
+    }),
+  );
+}
 
 /** Original deterministic layout. Every spawn has an escape corridor. */
 export function createMap(): Tile[][] {
@@ -73,7 +110,13 @@ export function createMap(): Tile[][] {
 
 /** Pure authoritative simulation: time advances only through server ticks. */
 export class Arena {
-  grid = createMap();
+  /** Protocol v1 keeps the original map; v2 rooms pass a shared layout. */
+  constructor(readonly map: MapDef | null = null) {
+    this.grid = this.build();
+  }
+  grid: Tile[][];
+  /** v2 only: cosmetic hero id per player, validated against HEROES. */
+  heroes = new Map<string, string>();
   players = new Map<string, Player>();
   bombs = new Map<number, Bomb>();
   flames = new Map<string, Flame>();
@@ -82,20 +125,39 @@ export class Arena {
   deadline = 0;
   winner: string | null = null;
   round = 1;
+  stats = new Map<string, RoundStats>();
+  startedAt = 0;
+  /** Called after a round becomes finished; must not block the tick. */
+  onRoundEnd: ((result: RoundResult) => void) | null = null;
+  private flameOwners = new Map<string, string>();
   private nextBomb = 1;
   private inputs = new Map<string, Action>();
 
-  addPlayer(id: string, name: string): boolean {
+  get spawns(): readonly (readonly [number, number])[] {
+    return this.map?.spawns ?? SPAWNS;
+  }
+
+  private build(): Tile[][] {
+    return this.map ? createLayoutMap(this.map) : createMap();
+  }
+
+  addPlayer(id: string, name: string, hero?: unknown): boolean {
     if (
       this.phase !== 'waiting' ||
       this.players.size >= 8 ||
       this.players.has(id)
     )
       return false;
-    const slot = SPAWNS.findIndex(
+    const slot = this.spawns.findIndex(
       (_, i) => ![...this.players.values()].some((p) => p.slot === i),
     );
-    const [x, y] = SPAWNS[slot]!;
+    const [x, y] = this.spawns[slot]!;
+    this.heroes.set(
+      id,
+      HEROES.includes(hero as (typeof HEROES)[number])
+        ? (hero as string)
+        : HEROES[slot % HEROES.length]!,
+    );
     this.players.set(id, {
       id,
       name: name.slice(0, 24),
@@ -111,6 +173,7 @@ export class Arena {
 
   removePlayer(id: string): void {
     this.players.delete(id);
+    this.heroes.delete(id);
     this.inputs.delete(id);
     if (this.phase === 'countdown') {
       this.phase = 'waiting';
@@ -139,7 +202,8 @@ export class Arena {
       !['up', 'down', 'left', 'right', 'bomb'].includes(value)
     )
       return false;
-    // One pending action per player/tick; packets cannot accelerate the clock.
+    // One pending action per player; an early move waits for the next legal step.
+    // New directions replace the buffered direction; packets cannot accelerate time.
     // A bomb has priority over held movement, so a key press is not lost.
     if (this.inputs.get(id) !== 'bomb') this.inputs.set(id, value as Action);
     return true;
@@ -152,6 +216,13 @@ export class Arena {
     if (this.phase === 'countdown' && this.now >= this.deadline) {
       this.phase = 'playing';
       this.deadline = this.now + ROUND_MS;
+      this.startedAt = this.now;
+      this.stats = new Map(
+        [...this.players.keys()].map((id) => [
+          id,
+          { bombs: 0, kills: 0, diedAt: null },
+        ]),
+      );
     }
     if (this.phase === 'finished' && this.now >= this.deadline) this.reset();
     if (this.phase !== 'playing') {
@@ -159,7 +230,10 @@ export class Arena {
       return;
     }
     for (const [k, flame] of this.flames)
-      if (flame.expiresAt <= this.now) this.flames.delete(k);
+      if (flame.expiresAt <= this.now) {
+        this.flames.delete(k);
+        this.flameOwners.delete(k);
+      }
     // Flames and all due bombs resolve before movement and before winner selection.
     for (const bomb of [...this.bombs.values()]) {
       if (bomb.explodeAt <= this.now) this.explode(bomb.id);
@@ -167,7 +241,12 @@ export class Arena {
     this.killInFlames();
     for (const [id, action] of this.inputs) {
       const p = this.players.get(id);
-      if (!p?.alive) continue;
+      if (!p?.alive) {
+        this.inputs.delete(id);
+        continue;
+      }
+      if (action !== 'bomb' && this.now < p.nextMove) continue;
+      this.inputs.delete(id);
       if (action === 'bomb') this.placeBomb(p);
       else if (action in directions && this.now >= p.nextMove) {
         const [dx, dy] = directions[action as keyof typeof directions];
@@ -189,7 +268,6 @@ export class Arena {
         }
       }
     }
-    this.inputs.clear();
     this.killInFlames();
     this.resolveWinner();
     if (this.phase === 'playing' && this.now >= this.deadline)
@@ -210,6 +288,8 @@ export class Arena {
     )
       return;
     const id = this.nextBomb++;
+    const stats = this.stats.get(p.id);
+    if (stats) stats.bombs++;
     this.bombs.set(id, {
       id,
       owner: p.id,
@@ -223,14 +303,14 @@ export class Arena {
     const bomb = this.bombs.get(id);
     if (!bomb) return;
     this.bombs.delete(id); // Remove before chaining to prevent cycles.
-    this.ignite(bomb.x, bomb.y);
+    this.ignite(bomb.x, bomb.y, bomb.owner);
     for (const [dx, dy] of Object.values(directions)) {
       for (let distance = 1; distance <= 2; distance++) {
         const x = bomb.x + dx * distance,
           y = bomb.y + dy * distance;
         const tile = this.grid[y]?.[x];
         if (tile === undefined || tile === Tile.Wall) break;
-        this.ignite(x, y);
+        this.ignite(x, y, bomb.owner);
         if (tile === Tile.Crate) {
           this.grid[y]![x] = Tile.Floor;
           break;
@@ -246,12 +326,21 @@ export class Arena {
     }
   }
 
-  private ignite(x: number, y: number): void {
+  private ignite(x: number, y: number, owner: string): void {
     this.flames.set(key(x, y), { x, y, expiresAt: this.now + FLAME_MS });
+    this.flameOwners.set(key(x, y), owner);
   }
   private killInFlames(): void {
-    for (const p of this.players.values())
-      if (this.flames.has(key(p.x, p.y))) p.alive = false;
+    for (const p of this.players.values()) {
+      if (!p.alive || !this.flames.has(key(p.x, p.y))) continue;
+      p.alive = false;
+      const stats = this.stats.get(p.id);
+      if (stats) stats.diedAt = this.now - this.startedAt;
+      // Knockouts are credited to the bomb owner; self-knockouts do not count.
+      const owner = this.flameOwners.get(key(p.x, p.y));
+      const credit = owner && owner !== p.id ? this.stats.get(owner) : null;
+      if (credit) credit.kills++;
+    }
   }
   private resolveWinner(): void {
     const alive = [...this.players.values()].filter((p) => p.alive);
@@ -262,16 +351,51 @@ export class Arena {
     this.winner = winner;
     this.deadline = this.now + 8000;
     this.inputs.clear();
+    this.onRoundEnd?.(this.result());
+  }
+  /** Survivors first (winner on top), then later knockouts before earlier ones. */
+  result(): RoundResult {
+    const durationMs = this.now - this.startedAt;
+    const ranked = [...this.players.values()]
+      .map((p) => {
+        const stats = this.stats.get(p.id) ?? {
+          bombs: 0,
+          kills: 0,
+          diedAt: null,
+        };
+        return { p, stats, survived: stats.diedAt ?? durationMs };
+      })
+      .sort(
+        (a, b) =>
+          Number(b.p.id === this.winner) - Number(a.p.id === this.winner) ||
+          b.survived - a.survived,
+      );
+    return {
+      round: this.round,
+      durationMs,
+      winner: this.winner,
+      players: ranked.map(({ p, stats, survived }, i) => ({
+        id: p.id,
+        name: p.name,
+        placement: i + 1,
+        bombs: stats.bombs,
+        kills: stats.kills,
+        survivedMs: survived,
+        winner: p.id === this.winner,
+      })),
+    };
   }
   private reset(): void {
-    this.grid = createMap();
+    this.grid = this.build();
     this.bombs.clear();
     this.flames.clear();
+    this.flameOwners.clear();
+    this.stats.clear();
     this.winner = null;
     this.phase = 'waiting';
     this.round++;
     for (const p of this.players.values()) {
-      [p.x, p.y] = SPAWNS[p.slot]!;
+      [p.x, p.y] = this.spawns[p.slot]!;
       p.alive = true;
       p.ready = false;
       p.nextMove = 0;
@@ -280,8 +404,8 @@ export class Arena {
   snapshot() {
     return {
       version: 1,
-      width: WIDTH,
-      height: HEIGHT,
+      width: this.map?.width ?? WIDTH,
+      height: this.map?.height ?? HEIGHT,
       phase: this.phase,
       now: this.now,
       deadline: this.deadline,
@@ -296,6 +420,7 @@ export class Arena {
         y: p.y,
         alive: p.alive,
         ready: p.ready,
+        ...(this.map ? { hero: this.heroes.get(p.id) } : {}),
       })),
       bombs: [...this.bombs.values()],
       flames: [...this.flames.values()],

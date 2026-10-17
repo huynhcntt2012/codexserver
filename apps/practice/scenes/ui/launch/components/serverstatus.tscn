@@ -1,0 +1,49 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/launch/server_status.gd" id="1"]
+
+[node name="ServerStatus" type="Control"]
+mouse_filter = 1
+
+script = ExtResource("1")
+
+[node name="Background" type="Panel" parent="."]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 229.0
+offset_bottom = 63.0
+mouse_filter = 2
+
+
+[node name="Dot" type="ColorRect" parent="."]
+offset_left = 13.0
+offset_top = 17.0
+offset_right = 26.0
+offset_bottom = 30.0
+color = Color(0.97, 0.46, 0.56, 1.0)
+mouse_filter = 2
+
+
+[node name="ServerName" type="Label" parent="."]
+offset_left = 35.0
+offset_top = 7.0
+offset_right = 220.0
+offset_bottom = 32.0
+text = "MÁY CHỦ BỤP BỤP"
+
+
+[node name="Connection" type="Label" parent="."]
+offset_left = 35.0
+offset_top = 30.0
+offset_right = 220.0
+offset_bottom = 54.0
+text = "Chưa kết nối"
+
+
+[node name="Select" type="Button" parent="."]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 229.0
+offset_bottom = 63.0
+flat = true
+text = ""

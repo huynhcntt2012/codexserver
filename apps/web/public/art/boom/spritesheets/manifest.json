@@ -1,0 +1,21 @@
+{
+  "format": "2 columns x 10 rows, cell=64x64 RGBA",
+  "fps_walk": 6,
+  "fps_action": 6,
+  "columns": 2,
+  "rows": [
+    "idle",
+    "walk_down",
+    "walk_up",
+    "walk_left",
+    "walk_right",
+    "place_bomb",
+    "throw_item",
+    "hit",
+    "win",
+    "lose"
+  ],
+  "characters": ["bombo", "mimi", "zin", "lala", "kai"],
+  "engine": "Godot 4",
+  "note": "Rows are isolated two-frame poses taken from generative artwork; inspect visually for production polish."
+}

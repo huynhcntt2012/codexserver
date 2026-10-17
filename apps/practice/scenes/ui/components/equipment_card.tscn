@@ -1,0 +1,34 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/equipment_card.gd" id="1_script"]
+
+[node name="EquipmentCard" type="PanelContainer"]
+script = ExtResource("1_script")
+custom_minimum_size = Vector2(170, 224)
+
+[node name="Padding" type="MarginContainer" parent="."]
+
+[node name="Body" type="VBoxContainer" parent="Padding"]
+theme_override_constants/separation = 4
+
+[node name="Rarity" type="Label" parent="Padding/Body"]
+text = "RARITY"
+
+[node name="Art" type="TextureRect" parent="Padding/Body"]
+custom_minimum_size = Vector2(0, 80)
+expand_mode = 1
+stretch_mode = 5
+size_flags_vertical = 3
+
+[node name="Title" type="Label" parent="Padding/Body"]
+text = "Tên vật phẩm"
+horizontal_alignment = 1
+autowrap_mode = 3
+custom_minimum_size = Vector2(0, 34)
+
+[node name="Status" type="Label" parent="Padding/Body"]
+text = "SỞ HỮU"
+horizontal_alignment = 1
+
+[node name="Action" type="Button" parent="Padding/Body"]
+text = "TRANG BỊ"

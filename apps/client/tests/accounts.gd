@@ -67,6 +67,9 @@ func _run() -> void:
 	scene.arena_input.text = arena
 	scene._join()
 	await _settle()
+	_check(scene.room_browser.visible and not scene.net.connected, "Authentication opens room picker")
+	scene._enter_room("", true)
+	await _settle()
 	_check(scene.net.connected, "Registered account must join arena with retained session")
 	while scene.snapshot.get("players", []).is_empty() and scene.net.connected:
 		await process_frame
@@ -76,6 +79,7 @@ func _run() -> void:
 			found_name = true
 	_check(found_name, "Arena must use the authenticated account name")
 	scene._leave()
+	await _settle()
 	_check(scene.net.has_account_session(scene.api_input.text, username), "Leaving room must preserve account session")
 	await _capture("account-session")
 	scene.logout_button.pressed.emit()
@@ -88,8 +92,12 @@ func _run() -> void:
 	scene.password_input.text = password
 	scene.password_input.text_submitted.emit(password)
 	await _settle()
+	_check(scene.room_browser.visible and not scene.net.connected, "Authentication opens room picker")
+	scene._enter_room("", true)
+	await _settle()
 	_check(scene.net.connected and scene.net.account_name == username, "Enter must log into the registered account")
 	scene._leave()
+	await _settle()
 	scene.logout_button.pressed.emit()
 	scene.register_button.pressed.emit()
 	scene.password_input.text = password
@@ -101,8 +109,12 @@ func _run() -> void:
 	scene.password_input.text = password
 	scene._join()
 	await _settle()
+	_check(scene.room_browser.visible and not scene.net.connected, "Authentication opens room picker")
+	scene._enter_room("", true)
+	await _settle()
 	_check(scene.net.connected, "Login must recover after duplicate registration")
 	scene._leave()
+	await _settle()
 	scene.net._token_deadline = 0
 	scene._join()
 	_check(not scene.net.busy and "Mật khẩu" in scene.status_label.text, "Expired session must require password")

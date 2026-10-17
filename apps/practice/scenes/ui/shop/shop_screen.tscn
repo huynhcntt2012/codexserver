@@ -1,0 +1,124 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/shop_screen.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/top_bar.tscn" id="2_top"]
+[ext_resource type="PackedScene" path="res://scenes/ui/components/bottom_nav.tscn" id="3_nav"]
+
+[node name="ShopScreen" type="Control"]
+script = ExtResource("1_script")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.14, 0.39, 1)
+
+[node name="ScreenFrame" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 34
+
+[node name="VBox" type="VBoxContainer" parent="ScreenFrame"]
+theme_override_constants/separation = 12
+
+[node name="TopBar" parent="ScreenFrame/VBox" instance=ExtResource("2_top")]
+
+[node name="Body" type="HBoxContainer" parent="ScreenFrame/VBox"]
+size_flags_vertical = 3
+theme_override_constants/separation = 11
+
+[node name="LeftMenu" type="PanelContainer" parent="ScreenFrame/VBox/Body"]
+custom_minimum_size = Vector2(176, 0)
+
+[node name="SidebarPad" type="MarginContainer" parent="ScreenFrame/VBox/Body/LeftMenu"]
+
+[node name="SideBox" type="VBoxContainer" parent="ScreenFrame/VBox/Body/LeftMenu/SidebarPad"]
+theme_override_constants/separation = 9
+
+[node name="SideTitle" type="Label" parent="ScreenFrame/VBox/Body/LeftMenu/SidebarPad/SideBox"]
+text = "DANH MỤC"
+
+[node name="CategoryButtons" type="VBoxContainer" parent="ScreenFrame/VBox/Body/LeftMenu/SidebarPad/SideBox"]
+theme_override_constants/separation = 8
+
+[node name="Main" type="VBoxContainer" parent="ScreenFrame/VBox/Body"]
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="Promo" type="PanelContainer" parent="ScreenFrame/VBox/Body/Main"]
+custom_minimum_size = Vector2(0, 172)
+
+[node name="PromoPad" type="MarginContainer" parent="ScreenFrame/VBox/Body/Main/Promo"]
+
+[node name="PromoRow" type="HBoxContainer" parent="ScreenFrame/VBox/Body/Main/Promo/PromoPad"]
+theme_override_constants/separation = 12
+
+[node name="PromoArt" type="TextureRect" parent="ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow"]
+custom_minimum_size = Vector2(135, 0)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PromoText" type="VBoxContainer" parent="ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow"]
+size_flags_horizontal = 3
+
+[node name="PromoTitle" type="Label" parent="ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow/PromoText"]
+text = "COMBO TÂN THỦ"
+
+[node name="PromoSubtitle" type="Label" parent="ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow/PromoText"]
+text = "Khởi đầu bùng nổ với vật phẩm yêu thích!"
+autowrap_mode = 3
+
+[node name="PromoSpacer" type="Control" parent="ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow/PromoText"]
+size_flags_vertical = 3
+
+[node name="PromoCTA" type="Button" parent="ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow/PromoText"]
+text = "MUA GÓI ƯU ĐÃI"
+
+[node name="ListHeader" type="Label" parent="ScreenFrame/VBox/Body/Main"]
+text = "VẬT PHẨM NỔI BẬT"
+
+[node name="Scroll" type="ScrollContainer" parent="ScreenFrame/VBox/Body/Main"]
+size_flags_vertical = 3
+
+[node name="Products" type="GridContainer" parent="ScreenFrame/VBox/Body/Main/Scroll"]
+columns = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+
+[node name="RightPanel" type="PanelContainer" parent="ScreenFrame/VBox/Body"]
+custom_minimum_size = Vector2(185, 0)
+
+[node name="MascotVBox" type="VBoxContainer" parent="ScreenFrame/VBox/Body/RightPanel"]
+theme_override_constants/separation = 12
+
+[node name="MascotTitle" type="Label" parent="ScreenFrame/VBox/Body/RightPanel/MascotVBox"]
+text = "MẸO MUA SẮM"
+horizontal_alignment = 1
+
+[node name="MascotArt" type="TextureRect" parent="ScreenFrame/VBox/Body/RightPanel/MascotVBox"]
+custom_minimum_size = Vector2(135, 160)
+expand_mode = 1
+stretch_mode = 5
+
+[node name="MascotDesc" type="Label" parent="ScreenFrame/VBox/Body/RightPanel/MascotVBox"]
+text = "Chọn skin và hiệu ứng để nhân vật thật nổi bật!"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="BottomNav" parent="ScreenFrame/VBox" instance=ExtResource("3_nav")]

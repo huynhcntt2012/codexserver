@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { Server, matchMaker } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { authenticate } from './auth.js';
-import { ArenaRoom } from './room.js';
+import { ArenaRoom, ArenaRoomV2 } from './room.js';
 import { registerDocuments } from './documents.js';
 
 export function createArenaServer() {
@@ -24,53 +24,92 @@ export function createArenaServer() {
       legacyHeaders: false,
     }),
   );
-  app.get(
-    '/rooms',
-    rateLimit({ windowMs: 60_000, limit: 120 }),
-    async (req, res) => {
-      res.setHeader('Cache-Control', 'no-store');
-      try {
-        const authorization = req.headers.authorization;
-        await authenticate(
-          authorization?.startsWith('Bearer ')
-            ? authorization.slice(7)
-            : undefined,
-        );
-      } catch {
-        res.status(401).json({ error: 'Invalid access token' });
-        return;
-      }
-      try {
-        const listings = await matchMaker.query({
-          name: 'arena',
-          private: false,
-        });
-        const rooms = listings.flatMap((listing) => {
-          const room = matchMaker.getLocalRoomById(listing.roomId);
-          if (
-            !(room instanceof ArenaRoom) ||
-            room.game.phase !== 'waiting' ||
-            !room.game.players.size
-          )
-            return [];
-          return [
-            {
-              roomId: listing.roomId,
-              players: room.game.players.size,
-              maxPlayers: room.maxClients,
-              ready: [...room.game.players.values()].filter(
-                (player) => player.ready,
-              ).length,
-              joinable: !room.locked && listing.clients < room.maxClients,
-            },
-          ];
-        });
-        res.json({ rooms });
-      } catch {
-        res.status(503).json({ error: 'Room list unavailable' });
-      }
-    },
-  );
+  const roomsLimit = rateLimit({ windowMs: 60_000, limit: 120 });
+  const bearer = async (req: express.Request, res: express.Response) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      const authorization = req.headers.authorization;
+      await authenticate(
+        authorization?.startsWith('Bearer ')
+          ? authorization.slice(7)
+          : undefined,
+      );
+      return true;
+    } catch {
+      res.status(401).json({ error: 'Invalid access token' });
+      return false;
+    }
+  };
+  app.get('/rooms', roomsLimit, async (req, res) => {
+    if (!(await bearer(req, res))) return;
+    try {
+      const listings = await matchMaker.query({
+        name: 'arena',
+        private: false,
+      });
+      const rooms = listings.flatMap((listing) => {
+        const room = matchMaker.getLocalRoomById(listing.roomId);
+        if (
+          !(room instanceof ArenaRoom) ||
+          room.game.phase !== 'waiting' ||
+          !room.game.players.size
+        )
+          return [];
+        return [
+          {
+            roomId: listing.roomId,
+            players: room.game.players.size,
+            maxPlayers: room.maxClients,
+            ready: [...room.game.players.values()].filter(
+              (player) => player.ready,
+            ).length,
+            joinable: !room.locked && listing.clients < room.maxClients,
+          },
+        ];
+      });
+      res.json({ rooms });
+    } catch {
+      res.status(503).json({ error: 'Room list unavailable' });
+    }
+  });
+  // Protocol v2 list: waiting AND playing rooms, with map, number and the seated
+  // account ids (opaque, so clients can mark rooms with friends). No names/tokens.
+  app.get('/rooms/v2', roomsLimit, async (req, res) => {
+    if (!(await bearer(req, res))) return;
+    try {
+      const listings = await matchMaker.query({
+        name: 'arena2',
+        private: false,
+      });
+      const rooms = listings.flatMap((listing) => {
+        const room = matchMaker.getLocalRoomById(listing.roomId);
+        if (!(room instanceof ArenaRoomV2) || !room.game.players.size)
+          return [];
+        const players = room.game.players.size;
+        return [
+          {
+            roomId: listing.roomId,
+            number: room.number,
+            map: room.game.map!.id,
+            phase: room.game.phase,
+            players,
+            maxPlayers: room.maxClients,
+            ready: [...room.game.players.values()].filter((p) => p.ready)
+              .length,
+            joinable:
+              room.game.phase === 'waiting' &&
+              !room.locked &&
+              players < room.maxClients,
+            accountIds: room.members(),
+          },
+        ];
+      });
+      rooms.sort((a, b) => a.number - b.number);
+      res.json({ version: 2, rooms });
+    } catch {
+      res.status(503).json({ error: 'Room list unavailable' });
+    }
+  });
   app.use(express.json({ limit: '8kb' }));
   const httpServer = createServer();
   const server = new Server({
@@ -78,6 +117,8 @@ export function createArenaServer() {
     greet: false,
   });
   server.define('arena', ArenaRoom);
+  // joinOrCreate/arena2 with { map } only matches rooms of that map.
+  server.define('arena2', ArenaRoomV2).filterBy(['map']);
   async function listen(port: number, hostname = '0.0.0.0') {
     await server.listen(port, hostname);
     // Colyseus 0.17 binds its router ahead of Express. Wrap the bound handlers

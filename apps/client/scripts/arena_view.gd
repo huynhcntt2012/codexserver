@@ -19,6 +19,7 @@ var previous_flames: Dictionary = {}
 var facings: Dictionary = {}
 var rings: Array[Dictionary] = []
 var dust_timer := 0.0
+var movement_cue: Dictionary = {}
 
 
 func set_snapshot(value: Dictionary, session: String) -> void:
@@ -45,9 +46,11 @@ func set_snapshot(value: Dictionary, session: String) -> void:
 					remains = true
 			if not remains and value.get("phase") != "waiting":
 				rings.append({"pos": ORIGIN + Vector2(old_bomb.x, old_bomb.y) * CELL + Vector2(22, 22),
-					"life": 0.38, "duration": 0.38, "color": Color("ffd391")})
+					"life": 0.38, "duration": 0.38, "color": Color("7edff2")})
 	snapshot = value
 	local_id = session
+	if value.get("phase") != "playing":
+		movement_cue.clear()
 	var active: Dictionary = {}
 	for player in value.get("players", []):
 		active[player.id] = true
@@ -63,7 +66,7 @@ func set_snapshot(value: Dictionary, session: String) -> void:
 		var key := Vector2i(flame.x, flame.y)
 		flames[key] = true
 		if not previous_flames.has(key):
-			_burst(ORIGIN + Vector2(key) * CELL + Vector2.ONE * CELL / 2, Color("ffcd83"), 5, 65, 0.42)
+			_burst(ORIGIN + Vector2(key) * CELL + Vector2.ONE * CELL / 2, Color("7edff2"), 5, 65, 0.42)
 	previous_flames = flames
 	if value.get("phase", "waiting") == "waiting":
 		sparks.clear()
@@ -73,6 +76,7 @@ func set_snapshot(value: Dictionary, session: String) -> void:
 
 func clear() -> void:
 	snapshot = {}
+	movement_cue.clear()
 	positions.clear()
 	moving.clear()
 	facings.clear()
@@ -90,13 +94,18 @@ func _process(delta: float) -> void:
 	dust_timer -= delta
 	for player in snapshot.get("players", []):
 		var target := Vector2(player.x, player.y)
+		if player.id == local_id and not movement_cue.is_empty():
+			if not player.alive or target != movement_cue.origin:
+				movement_cue.clear()
+			elif elapsed - movement_cue.started < 0.25:
+				target += movement_cue.direction * 0.25 * minf(1.0, (elapsed - movement_cue.started) / 0.05)
 		var current: Vector2 = positions.get(player.id, target)
 		moving[player.id] = current.distance_to(target) > 0.02
 		if moving[player.id]:
 			facings[player.id] = current.direction_to(target)
 			if dust_timer <= 0 and player.alive:
 				_burst(ORIGIN + current * CELL + Vector2(22, 38), Color("83b8ad"), 1, 10, 0.25)
-		positions[player.id] = current.move_toward(target, delta * 12.0)
+		positions[player.id] = current.move_toward(target, delta * (20.0 if player.id == local_id else 14.0))
 	if dust_timer <= 0:
 		dust_timer = 0.08
 	for particle in sparks:
@@ -108,6 +117,32 @@ func _process(delta: float) -> void:
 		ring.life -= delta
 	rings = rings.filter(func(r: Dictionary): return r.life > 0)
 	queue_redraw()
+
+
+func movement_intent(action: String) -> void:
+	if snapshot.get("phase") != "playing":
+		return
+	var directions := {"up": Vector2.UP, "down": Vector2.DOWN, "left": Vector2.LEFT, "right": Vector2.RIGHT}
+	if not directions.has(action):
+		return
+	for player in snapshot.get("players", []):
+		if player.id != local_id or not player.alive:
+			continue
+		var origin := Vector2(player.x, player.y)
+		var target: Vector2 = origin + directions[action]
+		if target.x < 0 or target.y < 0 or target.y >= snapshot.grid.size() or target.x >= snapshot.grid[int(target.y)].size():
+			return
+		if int(snapshot.grid[int(target.y)][int(target.x)]) != 0:
+			return
+		for bomb in snapshot.get("bombs", []):
+			if Vector2(bomb.x, bomb.y) == target:
+				return
+		for other in snapshot.players:
+			if other.id != local_id and other.alive and Vector2(other.x, other.y) == target:
+				return
+		if movement_cue.get("origin") == origin and movement_cue.get("action") == action:
+			return
+		movement_cue = {"origin": origin, "direction": directions[action], "action": action, "started": elapsed}
 
 
 func _burst(center: Vector2, color: Color, count: int, speed: float, life: float) -> void:
@@ -153,71 +188,43 @@ func _draw() -> void:
 		draw_arc(ring.pos, 8 + progress * 32, 0, TAU, 40, Color(ring.color, (1 - progress) * 0.75), 2, true)
 
 
-func _draw_tile(pos: Vector2, tile: int, checker: bool) -> void:
-	draw_rect(Rect2(pos, Vector2.ONE * CELL), Color("183c40") if checker else Color("1c4245"))
-	draw_rect(Rect2(pos + Vector2(1, 1), Vector2(42, 1)), Color("244b4d"))
-	if tile == 0:
-		draw_rect(Rect2(pos + Vector2(3, 40), Vector2(38, 2)), Color("153639"))
-		if int(pos.x + pos.y) % 7 == 0:
-			draw_line(pos + Vector2(33, 36), pos + Vector2(31, 31), Color("3e7260"), 2)
-			draw_line(pos + Vector2(34, 36), pos + Vector2(37, 32), Color("548268"), 2)
+func _rounded(rect: Rect2, color: Color, radius := 8) -> void:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.set_corner_radius_all(radius)
+	draw_style_box(style, rect)
+
+
+const FLOORS := [preload("res://art/boom/tiles/grass/0_0.png"), preload("res://art/boom/tiles/grass/0_1.png"), preload("res://art/boom/tiles/grass/1_0.png"), preload("res://art/boom/tiles/grass/1_1.png")]
+const WALL = preload("res://art/boom/obstacles/stone_wall/00.png")
+const CRATE = preload("res://art/boom/obstacles/wood_crate/00.png")
+const BOMB = preload("res://art/boom/bombs/water_blue.png")
+const SPLASH := [preload("res://art/boom/effects/water_splash/00.png"), preload("res://art/boom/effects/water_splash/01.png"), preload("res://art/boom/effects/water_splash/02.png"), preload("res://art/boom/effects/water_splash/03.png"), preload("res://art/boom/effects/water_splash/04.png"), preload("res://art/boom/effects/water_splash/05.png")]
+
+
+func _draw_tile(pos: Vector2, tile: int, _checker: bool) -> void:
+	var cell := (pos - ORIGIN) / CELL
+	var rect := Rect2(pos, Vector2.ONE * CELL)
+	draw_texture_rect(FLOORS[posmod(int(cell.x) * 7 + int(cell.y) * 3, 4)], rect, false)
 	if tile == 1:
-		draw_rect(Rect2(pos + Vector2(2, 6), Vector2(40, 37)), Color("0b242f"))
-		draw_rect(Rect2(pos + Vector2(2, 2), Vector2(40, 34)), Color("345969"))
-		draw_rect(Rect2(pos + Vector2(3, 2), Vector2(38, 6)), Color("527e89"))
-		draw_rect(Rect2(pos + Vector2(7, 12), Vector2(30, 17)), Color("2b4c5d"))
-		draw_rect(Rect2(pos + Vector2(8, 12), Vector2(3, 13)), Color("416c79"))
-		draw_rect(Rect2(pos + Vector2(16, 30), Vector2(12, 4)), Color(0.39, 0.9, 0.75, 0.12))
-		draw_rect(Rect2(pos + Vector2(18, 31), Vector2(8, 2)), Color("6bb3aa"))
+		draw_texture_rect(WALL, rect, false)
 	elif tile == 2:
-		draw_rect(Rect2(pos + Vector2(5, 9), Vector2(36, 34)), Color("112d32"))
-		draw_rect(Rect2(pos + Vector2(4, 4), Vector2(35, 34)), Color("ad6f4f"))
-		draw_rect(Rect2(pos + Vector2(7, 7), Vector2(29, 27)), Color("87543f"))
-		for offset in [9, 20, 31]:
-			draw_rect(Rect2(pos + Vector2(offset, 7), Vector2(3, 27)), Color("c4865c"))
-		draw_rect(Rect2(pos + Vector2(4, 4), Vector2(35, 5)), Color("e2ab75"))
-		draw_rect(Rect2(pos + Vector2(4, 30), Vector2(35, 6)), Color("c38b60"))
-		for offset in [7, 32]:
-			draw_rect(Rect2(pos + Vector2(offset, 5), Vector2(3, 3)), Color("6a5041"))
-		draw_line(pos + Vector2(12, 11), pos + Vector2(30, 29), Color("d29a68"), 3)
-		draw_rect(Rect2(pos + Vector2(17, 17), Vector2(10, 8)), Color("5e6b53"))
-		draw_rect(Rect2(pos + Vector2(20, 19), Vector2(4, 4)), Color("9fce89"))
+		draw_texture_rect(CRATE, rect, false)
 
 
 func _draw_bomb(bomb: Dictionary) -> void:
-	var center := ORIGIN + Vector2(bomb.x, bomb.y) * CELL + Vector2(22, 23)
-	var remaining := clampf(float(bomb.explodeAt - snapshot.now) / 2000.0, 0, 1)
-	var pulse := 1.0 + sin(elapsed * (10 + (1 - remaining) * 10)) * 0.055
-	draw_circle(center + Vector2(1, 7), 16, Color(0, 0, 0, 0.22))
-	draw_circle(center, 18 * pulse, Color(1, 0.55, 0.39, 0.12))
-	draw_circle(center, 13 * pulse, Color("101e31"))
-	draw_circle(center - Vector2(3, 3), 9 * pulse, Color("314257"))
-	draw_rect(Rect2(center + Vector2(-8, -5), Vector2(16, 10)), Color("f29074"))
-	draw_rect(Rect2(center + Vector2(-3, -8), Vector2(6, 16)), Color("f29074"))
-	draw_rect(Rect2(center + Vector2(-2, -3), Vector2(4, 6)), Color("ffd39b"))
-	draw_line(center + Vector2(3, -12), center + Vector2(7, -18), Color("d5b986"), 3)
-	var spark := center + Vector2(7, -18)
-	draw_circle(spark, 3 + sin(elapsed * 18), Color("ffe6a8"))
-	for i in range(3):
-		var drift := fmod(elapsed * 2.5 + i * 0.33, 1.0)
-		draw_circle(spark + Vector2(sin(i * 4.0 + elapsed) * drift * 9, -drift * 17), 2 * (1 - drift), Color(1, 0.8, 0.5, 1 - drift))
-	draw_arc(center, 17, -PI / 2, -PI / 2 + TAU * remaining, 28, Color("ffd78a"), 2, true)
+	var center := ORIGIN + Vector2(bomb.x, bomb.y) * CELL + Vector2(22, 22)
+	var size := 37.0 + sin(elapsed * 10) * 2
+	draw_texture_rect(BOMB, Rect2(center - Vector2.ONE * size / 2, Vector2.ONE * size), false)
 
 
 func _draw_flame(cell: Vector2i) -> void:
-	var center := ORIGIN + Vector2(cell) * CELL + Vector2(22, 22)
-	var shimmer := sin(elapsed * 20 + cell.x + cell.y) * 2
-	draw_circle(center, 25, Color(1, 0.52, 0.2, 0.15))
-	# Join only cells that are actually burning; end caps respect blocked blast paths.
-	for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		if previous_flames.has(cell + direction):
-			var endpoint: Vector2 = center + Vector2(direction) * 23
-			draw_line(center, endpoint, Color("f37455"), 27 + shimmer)
-			draw_line(center, endpoint, Color("ffbf69"), 17 + shimmer)
-			draw_line(center, endpoint, Color("fff0b5"), 7)
-	draw_circle(center, 15 + shimmer, Color("ffad60"))
-	draw_circle(center, 10 + shimmer, Color("ffdb86"))
-	draw_rect(Rect2(center - Vector2(5, 5), Vector2(10, 10)), Color("fff6d7"))
+	var frame := 0
+	for flame in snapshot.get("flames", []):
+		if int(flame.x) == cell.x and int(flame.y) == cell.y:
+			frame = clampi(int((500.0 - (float(flame.expiresAt) - float(snapshot.now))) / 500.0 * 6), 0, 5)
+	var pos := ORIGIN + Vector2(cell) * CELL
+	draw_texture_rect(SPLASH[frame], Rect2(pos, Vector2.ONE * CELL), false)
 
 
 func _draw_player(player: Dictionary) -> void:
@@ -238,6 +245,6 @@ func _draw_player(player: Dictionary) -> void:
 	draw_set_transform(pos)
 	if player.id == local_id:
 		draw_colored_polygon(PackedVector2Array([Vector2(18, -10), Vector2(26, -10), Vector2(22, -5)]), color)
-	Pilot.paint(self, int(player.slot), elapsed, walking, facings.get(player.id, Vector2.DOWN),
+	Pilot.paint(self, Pilot.selected if player.id == local_id and Pilot.selected >= 0 else int(player.slot), elapsed, walking, facings.get(player.id, Vector2.DOWN),
 		snapshot.get("phase") == "finished" and snapshot.get("winner") == player.id)
 	draw_set_transform(Vector2.ZERO)

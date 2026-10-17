@@ -189,3 +189,39 @@ test('desktop and mobile browsers authenticate, play a round, and retain account
     await mobile.close();
   }
 });
+
+test('character chooser loads five supplied characters and supports keyboard dismissal', async ({
+  page,
+  baseURL,
+}) => {
+  await page.goto(baseURL);
+  await page.getByRole('button', { name: 'Nhân vật', exact: true }).click();
+  const dialog = page.locator('#characters');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-character]')).toHaveCount(5);
+  await page.locator('[data-character="4"]').click();
+  await expect(page.locator('[data-character="4"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(
+    await dialog
+      .locator('img')
+      .evaluateAll((images) =>
+        images.every((image) => image.complete && image.naturalWidth > 0),
+      ),
+  ).toBe(true);
+  await page.locator('#characters-confirm').click();
+  await expect(dialog).toBeHidden();
+  await page.locator('#characters-open').click();
+  await expect(page.locator('[data-character="4"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.screenshot({
+    path: 'build/web-screenshots/web-characters.png',
+    fullPage: true,
+  });
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});

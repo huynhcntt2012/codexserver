@@ -46,7 +46,9 @@ mở rộng cluster. Không chạy nhiều replica arena với cấu hình hiệ
   client không được tự đẩy thời gian server.
 - `waiting → countdown (3 giây) → playing → finished (8 giây) → waiting`.
   Tất cả người trong lobby phải Ready, tối thiểu hai người.
-- Một input đang chờ/người/tick, bomb ưu tiên movement. Chỉ nhận enum hợp lệ.
+- Tối đa một input đang chờ/người, bomb ưu tiên movement. Lệnh di chuyển đến
+  sớm được giữ tới bước hợp lệ kế tiếp (tối đa 150 ms theo đồng hồ mô phỏng);
+  hướng mới thay hướng cũ, xử lý một lần rồi xóa. Chỉ nhận enum hợp lệ.
   Session ID do Colyseus cấp, không lấy từ payload.
 - Client không gửi tọa độ, damage, tốc độ, timer hoặc winner. JWT xác thực issuer,
   audience, chữ ký HS256 và expiry. Tên lấy từ JWT đã ký.
@@ -79,6 +81,18 @@ Arena dùng hostname riêng, không có URL path prefix.
 `network.test.ts` mở WebSocket thật với tám client; `smoke.gd` chạy chính adapter Godot
 qua FastAPI/PostgreSQL/Redis/Colyseus. Khi nâng Colyseus phải chạy cả hai.
 Nguồn: package đã cài và [Colyseus room messages](https://docs.colyseus.io/room).
+
+## Protocol v2: phòng online của app PC
+
+App Windows (`apps/practice`) chơi online qua room `arena2`
+([ARENA.md](ARENA.md#phong-v2-app-pc-room-arena2-va-snapshot-version-2)).
+Room v1 `arena` và snapshot v1 không đổi. Client PC vẫn chỉ gửi intent
+`up/down/left/right/bomb/ready`; vị trí, bom, lửa, timer, người thắng đều lấy
+từ snapshot v2 (thêm `map`, `number`, `roomKey`, `players[].hero`). Danh sách
+phòng PC đọc `GET /rooms/v2`. Arena URL suy ra từ API URL: `.../api` thành
+`.../arena` (proxy nginx), `:8000` thành `:2567`; có thể đặt `SUNI_ARENA_URL`.
+Kiểm chứng: `network.test.ts` (WebSocket thật, room v2) và
+`apps/practice/tests/online.gd` (hai người chơi Godot thật qua stack Docker).
 
 ## Backend
 

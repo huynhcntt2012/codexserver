@@ -38,7 +38,11 @@ docker compose ps
 
 Password DB dùng hex để ghép URI. Không dùng placeholder hoặc commit `.env`.
 DB/Redis chỉ mở trong network Docker. API/arena bind loopback.
-`001_initial.sql` chạy **chỉ lần đầu** tạo volume PostgreSQL.
+`001_initial.sql`, `002_social.sql`, `003_recovery.sql` chạy **chỉ lần đầu** tạo
+volume PostgreSQL. Volume đã có: chạy từng file còn thiếu bằng
+`docker compose exec -T postgres psql -U suni -d suni < infra/postgres/<file>.sql`.
+Email đặt lại mật khẩu: đặt `MAIL_MODE=smtp` và `SMTP_*` trong `.env`
+(xem `.env.example`); không dùng `MAIL_MODE=log` ngoài máy local.
 
 Máy chơi từ xa: mở tunnel trên từng máy chơi:
 

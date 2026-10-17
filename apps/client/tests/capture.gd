@@ -20,7 +20,11 @@ func _start() -> void:
 	timeout.timeout.connect(func(): quit(1))
 	root.add_child(timeout)
 	timeout.start(30)
+	scene._set_login_mode(false)
 	scene._join()
+	while scene.net.busy:
+		await process_frame
+	scene._enter_room("", true)
 	while not scene.net.connected:
 		await process_frame
 	second.join_game(scene.api_input.text, scene.arena_input.text)
