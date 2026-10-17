@@ -113,9 +113,20 @@ func run() -> void:
 	check(cards.size() == catalog.all().size() and lobby.find_child("Create_moon", true, false) != null and lobby.find_child("Create_" + map_id, true, false) != null, "Create popup lists all %d maps" % catalog.all().size())
 	await capture("online-create.png")
 	lobby.close_modal()
-	lobby.map_cards[slot].button.pressed.emit()
 	var online = game.pc_screens["online"]
-	check(await until(func(): return online.is_visible_in_tree() and arena.connected, 15.0), "A joins through Vào: " + arena.last_error)
+	if OS.get_environment("SUNI_JOIN_BY") == "card":
+		lobby.map_cards[slot].button.pressed.emit()
+		check(await until(func(): return online.is_visible_in_tree() and arena.connected, 15.0), "A joins through Vào: " + arena.last_error)
+	else:
+		# B (in the room) invites A; A's inbox card shows up in the lobby and joins.
+		var invite := await http(HTTPClient.METHOD_POST, "/v1/invites", {"account_id": str(account.account_id), "room_key": str(b_arena.snapshot.roomKey), "number": room_number}, b_token)
+		check(invite.status == 201, "B invites A (HTTP %d)" % invite.status)
+		var inbox = root.get_node("InviteInbox")
+		inbox.clock = 0.0
+		check(await until(func(): return inbox.card.visible and inbox.title.text.begins_with(b_name), 10.0), "A sees B's invite card in the lobby")
+		await capture("online-invite-card.png")
+		inbox.accept_button.pressed.emit()
+		check(await until(func(): return online.is_visible_in_tree() and arena.connected and arena.room_id == b_arena.room_id, 15.0), "A joins B's room from the invite: " + arena.last_error)
 	check(await until(func(): return arena.snapshot.get("players", []).size() == 2 and online.status_label.text.begins_with("2/8")), "Room shows both players")
 	check(online.seats[1].name.text.begins_with(a_name) or online.seats[0].name.text.begins_with(a_name), "Seat shows A's name")
 	# Room chat goes through the API room channel (membership from arena ingest).
@@ -131,6 +142,20 @@ func run() -> void:
 			await create_timer(0.5).timeout
 		check(b_read.status == 200 and b_read.data.messages.any(func(m): return str(m.body).ends_with(tag)), "B reads A's room chat")
 	await capture("online-room.png")
+	# A invites B from the waiting room's MỜI BẠN panel.
+	online.invite_button.pressed.emit()
+	check(await until(func(): return online.invite_panel.visible and online.invite_list.find_child("Friend_" + b_id, true, false) != null, 10.0), "MỜI BẠN lists friend B")
+	await capture("online-invite-panel.png")
+	online.invite_list.find_child("Friend_" + b_id, true, false).find_child("Invite", true, false).pressed.emit()
+	var got := false
+	for attempt in 20:
+		var inbox_b := await http(HTTPClient.METHOD_GET, "/v1/invites", null, b_token)
+		got = inbox_b.status == 200 and inbox_b.data.invites.any(func(i): return i["from"].name == a_name)
+		if got:
+			break
+		await create_timer(0.3).timeout
+	check(got, "B receives A's invite")
+	online.invite_panel.hide()
 	# Lobby list now says 2/8 for B (seen from B's token).
 	var listed: Dictionary = await b_arena.list_rooms()
 	check(listed.ok and listed.rooms.any(func(r): return int(r.number) == room_number and int(r.players) == 2), "List counts 2/8")
@@ -170,6 +195,49 @@ func run() -> void:
 	check(counted, "Online round counted for mission D02")
 	online.leave()
 	check(await until(func(): return lobby.is_visible_in_tree() and not arena.connected, 5.0), "Leave returns to the lobby")
+	b_arena.leave()
+	await until(func(): return not b_arena.connected, 5.0)
+	# Practice room "+ Mời": confirm, an online room opens on the same map with the picker.
+	lobby.practice_on("park")
+	game.pc_screens["matchmaking"].clock = 99.0
+	var room = game.pc_screens["room"]
+	check(await until(func(): return room.is_visible_in_tree(), 5.0), "Practice room opens")
+	room.find_child("InviteSlot", true, false).pressed.emit()
+	check(room.modal.visible and room.modal_title.text == "LUYỆN TẬP CÙNG BẠN BÈ", "+ Mời offers a practice room with bots")
+	room.modal_actions.get_child(1).pressed.emit()
+	check(await until(func(): return online.is_visible_in_tree() and arena.connected and str(arena.snapshot.get("map", "")) == "park", 15.0), "An online room opens on the practice map")
+	check(await until(func(): return online.invite_panel.visible and online.invite_list.find_child("Friend_" + b_id, true, false) != null, 10.0), "Friend picker opens by itself")
+	var bots := func() -> int: return arena.snapshot.get("players", []).filter(func(p): return bool(p.get("bot", false))).size()
+	check(bool(arena.snapshot.get("practice", false)) and bots.call() == 3 and arena.snapshot.players.size() == 4, "Practice room: me + 3 server bots")
+	await capture("online-practice-invite.png")
+	online.invite_list.find_child("Friend_" + b_id, true, false).find_child("Invite", true, false).pressed.emit()
+	var practice_invite := {}
+	for attempt in 20:
+		var inbox_b := await http(HTTPClient.METHOD_GET, "/v1/invites", null, b_token)
+		for i in inbox_b.data.get("invites", []) if inbox_b.status == 200 else []:
+			if i.room_id == arena.room_id:
+				practice_invite = i
+		if not practice_invite.is_empty():
+			break
+		await create_timer(0.3).timeout
+	check(not practice_invite.is_empty(), "B gets the practice room invite")
+	online.invite_panel.hide()
+	var practice_ok := await http(HTTPClient.METHOD_POST, "/v1/invites/%s/accept" % practice_invite.get("id", "x"), {}, b_token)
+	check(practice_ok.status == 200 and await b_arena.join_room(str(practice_ok.data.room_id), "zin"), "B accepts and joins the practice room: " + b_arena.last_error)
+	check(await until(func(): return arena.snapshot.players.size() == 4 and bots.call() == 2, 5.0), "B takes a bot's seat (2 people + 2 bots)")
+	await capture("online-practice-room.png")
+	online.ready_button.pressed.emit()
+	b_arena.send_action("ready")
+	check(await until(func(): return str(arena.snapshot.get("phase", "")) == "playing", 8.0), "Friends + bots round starts")
+	var starts := {}
+	for p in arena.snapshot.players:
+		starts[str(p.id)] = Vector2i(int(p.x), int(p.y))
+	check(await until(func(): return arena.snapshot.players.any(func(p): return bool(p.get("bot", false)) and Vector2i(int(p.x), int(p.y)) != starts.get(str(p.id))), 6.0), "Server bots move in the shared match")
+	await create_timer(1.5).timeout
+	await capture("online-practice-battle.png")
+	b_arena.leave()
+	online.leave()
+	await until(func(): return not arena.connected, 5.0)
 	b_arena.leave()
 	print("PRACTICE_ONLINE_OK" if not failed else "PRACTICE_ONLINE_FAILED")
 	quit(1 if failed else 0)

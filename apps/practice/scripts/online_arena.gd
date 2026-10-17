@@ -68,8 +68,12 @@ func friend_ids() -> Array:
 			ids.append(str(friend.get("id", "")))
 	return ids
 
-func create_room(map_id: String, hero: String) -> bool:
-	return await _join("create/arena2", {"map": map_id, "hero": hero})
+## practice = a private room where server bots fill the empty seats (up to 4).
+func create_room(map_id: String, hero: String, practice := false) -> bool:
+	var options := {"map": map_id, "hero": hero}
+	if practice:
+		options["practice"] = true
+	return await _join("create/arena2", options)
 
 func quick_join(map_id: String, hero: String) -> bool:
 	return await _join("joinOrCreate/arena2", {"map": map_id, "hero": hero})

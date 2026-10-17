@@ -54,6 +54,14 @@ var bombs: Dictionary = {}  # bomb id -> Sprite2D
 var flames: Dictionary = {}  # Vector2i -> AnimatedSprite2D
 var fighters: Dictionary = {}  # session id -> {root, sprite, name, from, to, t}
 var held := ""
+var invite_button: Button
+var invite_panel: Control
+var invite_list: VBoxContainer
+var invite_note: Label
+var invited: Dictionary = {}  # account id -> unix time of the last invite
+## Set by the practice room: open the friend picker as soon as the room shows.
+var invite_on_open := false
+var seats_title: Label
 var resend := 0.0
 var last_phase := ""
 
@@ -71,6 +79,7 @@ func _ready() -> void:
 	root.add_child(parts.bar)
 	build_room(root)
 	build_battle(root)
+	build_invite_panel()
 	build_modal()
 	OnlineArena.snapshot_received.connect(_on_snapshot)
 	OnlineArena.closed.connect(_on_closed)
@@ -94,7 +103,7 @@ func build_room(root: VBoxContainer) -> void:
 	body.add_child(left)
 	var left_stack := column(12, left)
 	var head := row(10, left_stack)
-	stretch(text("Người chơi trong phòng · tối đa 8", 22, INK, head))
+	seats_title = stretch(text("Người chơi trong phòng · tối đa 8", 22, INK, head))
 	pill("ONLINE", MINT, Color.WHITE, 14, head)
 	var grid_box := GridContainer.new()
 	grid_box.columns = 4
@@ -119,7 +128,13 @@ func build_room(root: VBoxContainer) -> void:
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ready_button = sized(candy("SẴN SÀNG", press_ready, "sun", 24), Vector2(0, 64)) as Button
 	ready_button.name = "Ready"
-	right.add_child(ready_button)
+	var actions := row(10, right)
+	actions.add_child(ready_button)
+	ready_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	invite_button = sized(candy("MỜI BẠN", open_invites, "lavender", 20), Vector2(170, 64)) as Button
+	invite_button.name = "InviteFriends"
+	invite_button.tooltip_text = "Mời bạn bè vào phòng này"
+	actions.add_child(invite_button)
 	build_chat(right)
 
 func seat_card(index: int) -> PanelContainer:
@@ -215,7 +230,9 @@ func render_room(snap: Dictionary) -> void:
 	var map_id := str(snap.get("map", ""))
 	var level: Dictionary = levels.get(map_id, {})
 	var number := "%03d" % int(snap.get("number", 0))
-	title_label.text = "Phòng %s · %s" % [number, str(level.get("name", map_id)).capitalize()]
+	var practice := bool(snap.get("practice", false))
+	var seat_count := int(snap.get("seats", 8))
+	title_label.text = ("Luyện tập %s · %s" if practice else "Phòng %s · %s") % [number, str(level.get("name", map_id)).capitalize()]
 	map_art.texture = MapCatalog.preview(map_id)
 	if not levels.has(map_id):
 		MapCatalog.refresh(true)  # a map published after this app last asked
@@ -227,8 +244,12 @@ func render_room(snap: Dictionary) -> void:
 	var ready := 0
 	for p in players:
 		ready += 1 if bool(p.get("ready", false)) else 0
+	var humans := players.filter(func(p): return not bool(p.get("bot", false))).size()
+	seats_title.text = "Người chơi + bot · tối đa %d" % seat_count if practice else "Người chơi trong phòng · tối đa 8"
 	for i in seats.size():
 		var seat: Dictionary = seats[i]
+		# Practice rooms have 4 seats; the rest of the grid stays hidden.
+		seat.holder.visible = i < seat_count
 		var frame := seat.holder.get_theme_stylebox("panel") as StyleBoxFlat
 		if i < players.size():
 			var p: Dictionary = players[i]
@@ -236,8 +257,9 @@ func render_room(snap: Dictionary) -> void:
 			seat.face.texture = load("res://assets/characters/portraits/%s.png" % hero_of(p))
 			seat.name.text = str(p.name) + (" (Bạn)" if mine else "")
 			seat.name.add_theme_color_override("font_color", INK)
-			seat.state.text = "Sẵn sàng" if p.ready else "Chưa sẵn sàng"
-			(seat.state.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).bg_color = MINT if p.ready else Color("ffaa45")
+			var bot := bool(p.get("bot", false))
+			seat.state.text = ("BOT · nhường ghế khi bạn vào" if bot else "Sẵn sàng") if p.ready else "Chưa sẵn sàng"
+			(seat.state.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).bg_color = LAVENDER if bot else (MINT if p.ready else Color("ffaa45"))
 			seat.state.get_parent().show()
 			frame.border_color = SUN if mine else Color("cfe6fb")
 		else:
@@ -249,8 +271,11 @@ func render_room(snap: Dictionary) -> void:
 	var me: Dictionary = OnlineArena.me()
 	var phase := str(snap.get("phase", "waiting"))
 	ready_button.disabled = phase != "waiting" or bool(me.get("ready", false))
+	invite_button.disabled = phase != "waiting" or humans >= seat_count
 	ready_button.text = "ĐÃ SẴN SÀNG" if bool(me.get("ready", false)) else "SẴN SÀNG"
-	if phase == "countdown":
+	if phase != "countdown" and practice:
+		status_label.text = "%d người + %d bot · Bot luôn sẵn sàng, bạn bè vào sẽ thay ghế bot. Bấm SẴN SÀNG để bắt đầu." % [humans, players.size() - humans]
+	elif phase == "countdown":
 		status_label.text = "Bắt đầu sau %d…" % ceili(maxf(0.0, float(snap.deadline) - float(snap.now)) / 1000.0)
 	elif players.size() < 2:
 		status_label.text = "%d/8 người · Cần ít nhất 2 người. Mời bạn bè vào phòng %s!" % [players.size(), number]
@@ -574,7 +599,7 @@ func spawn_fighter(p: Dictionary, cell: Vector2i) -> Dictionary:
 func render_side(snap: Dictionary) -> void:
 	var phase := str(snap.get("phase", ""))
 	var left := maxf(0.0, float(snap.get("deadline", 0)) - float(snap.get("now", 0))) / 1000.0
-	side_room.text = "● Phòng online %03d" % int(snap.get("number", 0))
+	side_room.text = ("● Luyện tập cùng bạn bè %03d" if bool(snap.get("practice", false)) else "● Phòng online %03d") % int(snap.get("number", 0))
 	side_timer.text = "%d:%02d" % [int(left) / 60, int(left) % 60] if phase == "playing" else "0:00"
 	side_timer.add_theme_color_override("font_color", Color("ffe17b") if phase == "playing" and left <= 30.0 else Color.WHITE)
 	stat_round.text = str(int(snap.get("round", 1)))
@@ -637,6 +662,8 @@ func _on_snapshot(snap: Dictionary) -> void:
 	var phase := str(snap.get("phase", "waiting"))
 	var in_battle := phase in ["playing", "finished"]
 	room_view.visible = not in_battle
+	if in_battle:
+		invite_panel.hide()
 	battle_view.visible = in_battle
 	parts.bar.visible = not in_battle
 	# The match uses the bot battle's dark backdrop; the waiting room keeps the sky.
@@ -668,6 +695,92 @@ func _on_closed(reason: String) -> void:
 	if reason != "":
 		game.pc_screens["lobby"].notice(reason + " Chọn phòng khác hoặc tạo phòng mới.", "PHÒNG ONLINE", "people")
 
+# ------------------------------------------------------------------ invites
+
+## Friend picker over the waiting room: online friends first, one "Mời" each.
+func build_invite_panel() -> void:
+	invite_panel = Control.new()
+	invite_panel.name = "InvitePanel"
+	invite_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	invite_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	invite_panel.hide()
+	canvas.add_child(invite_panel)
+	var dim := ColorRect.new()
+	dim.color = Color(0.03, 0.16, 0.36, 0.55)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed: invite_panel.hide())
+	invite_panel.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	invite_panel.add_child(center)
+	var sheet := card(CREAM, Color.WHITE, 26, 5, 18)
+	sheet.custom_minimum_size = Vector2(560, 0)
+	center.add_child(sheet)
+	var stack := column(10, sheet)
+	var head := row(10, stack)
+	stretch(title_text("MỜI BẠN BÈ", 26, INK, head))
+	head.add_child(round_icon("close", func(): invite_panel.hide(), "coral", 44))
+	invite_note = text("", 15, MUTED, stack)
+	invite_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(520, 360)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	stack.add_child(scroll)
+	invite_list = column(8)
+	invite_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(invite_list)
+
+func open_invites() -> void:
+	invite_panel.show()
+	for child in invite_list.get_children():
+		child.queue_free()
+	invite_note.text = "Đang tải danh sách bạn bè…"
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/friends")
+	if reply.status != 200 or not reply.data is Dictionary:
+		invite_note.text = "Chưa tải được bạn bè: %s" % str(reply.error)
+		return
+	var friends: Array = reply.data.get("friends", [])
+	friends.sort_custom(func(a, b): return bool(a.get("online", false)) and not bool(b.get("online", false)))
+	invite_note.text = "Lời mời có hạn 2 phút. Bạn bè đang online sẽ thấy thông báo ở góc màn hình." if not friends.is_empty() else "Bạn chưa có bạn bè. Kết bạn ở tab Bạn bè trong sảnh."
+	for friend in friends:
+		invite_list.add_child(friend_row(friend))
+
+func friend_row(friend: Dictionary) -> PanelContainer:
+	var holder := card(Color.WHITE, Color("cfe6fb"), 16, 2, 8)
+	holder.name = "Friend_" + str(friend.id)
+	var line := row(10, holder)
+	var online := bool(friend.get("online", false))
+	var dot := Panel.new()
+	dot.custom_minimum_size = Vector2(14, 14)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	dot.add_theme_stylebox_override("panel", box(MINT if online else Color("b3c1d6"), Color.TRANSPARENT, 7))
+	line.add_child(dot)
+	var words := column(0, line)
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stretch(text(str(friend.name), 18, INK, words))
+	text("Đang online" if online else "Ngoại tuyến", 13, MINT.darkened(0.2) if online else MUTED, words)
+	var friend_id := str(friend.id)
+	var recent: bool = Time.get_unix_time_from_system() - float(invited.get(friend_id, 0.0)) < 15.0
+	var send := candy("ĐÃ MỜI" if recent else "Mời", func(): invite(friend_id, holder), "sun", 16)
+	send.name = "Invite"
+	send.custom_minimum_size = Vector2(110, 44)
+	send.disabled = recent
+	line.add_child(send)
+	return holder
+
+func invite(friend_id: String, holder: Control) -> void:
+	var send: Button = holder.find_child("Invite", true, false)
+	send.disabled = true
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_POST, "/v1/invites", {"account_id": friend_id, "room_key": chat_key, "number": int(OnlineArena.snapshot.get("number", 0))})
+	if reply.status == 201:
+		invited[friend_id] = Time.get_unix_time_from_system()
+		send.text = "ĐÃ MỜI"
+		invite_note.text = "Đã gửi lời mời. Bạn bè vào phòng khi bấm VÀO trên thông báo."
+	else:
+		send.disabled = false
+		invite_note.text = {409: "Phòng không còn nhận người (đang chơi hoặc đã đầy).", 429: "Bạn mời quá nhanh, chờ một chút nhé.", 403: "Chưa gửi được: phòng chưa sẵn sàng, thử lại sau vài giây."}.get(int(reply.status), "Chưa gửi được: %s" % str(reply.error))
+
 func ask_leave() -> void:
 	if str(OnlineArena.snapshot.get("phase", "")) == "playing" and OnlineArena.me().get("alive", false):
 		notice("RỜI TRẬN?", "Trận đang diễn ra. Rời phòng sẽ bị tính là bị hạ.", leave, "RỜI PHÒNG")
@@ -678,6 +791,12 @@ func leave() -> void:
 	OnlineArena.leave()
 
 func _on_visibility() -> void:
+	if not is_visible_in_tree() and invite_panel:
+		invite_panel.hide()
+	if is_visible_in_tree() and invite_on_open:
+		invite_on_open = false
+		# The arena reports the seat to the API asynchronously; give it a moment.
+		get_tree().create_timer(1.0).timeout.connect(open_invites)
 	if is_visible_in_tree():
 		chat_after = 0
 		chat_clock = 0.0

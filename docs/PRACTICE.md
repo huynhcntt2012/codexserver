@@ -384,3 +384,5 @@ hình, số `001…`, tên, độ khó và hoạt động online trên bản đ�
 - **Tạo phòng** vẫn mở phòng mới riêng; **Luyện tập** chọn bản đồ rồi chơi với bot.
 
 Cửa sổ Nhiệm vụ (4 tab, nhận thưởng, Event Shop): xem [LIVEOPS.md](LIVEOPS.md).
+
+Mời bạn bè vào phòng online và từ phòng Luyện tập: xem [INVITES.md](INVITES.md).

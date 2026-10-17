@@ -300,7 +300,7 @@ func show_pc_screen(id: String) -> void:
 	pc_screens[id].show()
 	if id == "room":
 		reporter.room_opened()
-	elif id == "lobby":
+	elif id == "lobby" or id == "online":
 		reporter.room_closed()
 		if pc_screens.has("room"):
 			pc_screens["room"].reset_chat()

@@ -144,7 +144,8 @@ func invite_card() -> PanelContainer:
 	stack.alignment = BoxContainer.ALIGNMENT_CENTER
 	var label := text("Ô trống", 15, MUTED, stack)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var invite := sized(candy("+ Mời", func(): notice("MỜI BẠN", "Mời bạn bè cần chế độ online. Bản PC hiện chơi 1 người với 3 bot trên máy."), "ghost", 16), Vector2(110, 46))
+	var invite := sized(candy("+ Mời", invite_friends, "ghost", 16), Vector2(110, 46))
+	invite.name = "InviteSlot"
 	invite.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	stack.add_child(invite)
 	return holder
@@ -323,6 +324,23 @@ func refresh() -> void:
 	start_button.disabled = not all_ready()
 	start_button.text = "BẮT ĐẦU" if all_ready() else "CHỜ SẴN SÀNG…"
 	start_button.tooltip_text = "" if all_ready() else "Tất cả người chơi phải sẵn sàng"
+
+## A practice match runs on this computer, so friends play in a practice room on
+## the arena instead: same map, server bots fill the empty seats and give theirs
+## up to each friend who accepts the invite.
+func invite_friends() -> void:
+	if not AuthSession.has_session():
+		notice("MỜI BẠN", "Đăng nhập tài khoản để mời bạn bè chơi cùng.")
+		return
+	var map: Dictionary = maps[clampi(game.selected_level, 0, maps.size() - 1)]
+	notice("LUYỆN TẬP CÙNG BẠN BÈ", "Mở phòng luyện tập online trên %s: bạn + 3 bot, tối đa 4 người. Bạn bè vào sẽ thay ghế của bot. Mở phòng và mời bạn?" % map.name, func(): open_online(str(map.id)), "MỞ PHÒNG")
+
+func open_online(map_id: String) -> void:
+	if await OnlineArena.create_room(map_id, game.HEROES[game.selected_hero], true):
+		game.pc_screens["online"].invite_on_open = true
+		game.show_pc_screen("online")
+	else:
+		notice("PHÒNG LUYỆN TẬP", OnlineArena.last_error)
 
 func pick_map(step: int) -> void:
 	game._select_level(posmod(game.selected_level + step, maps.size()))
