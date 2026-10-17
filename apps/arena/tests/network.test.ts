@@ -489,3 +489,84 @@ test(
     }
   },
 );
+
+test(
+  'practice rooms: private, bots fill 4 seats, a friend takes a bot seat, bots play',
+  { timeout: 30_000 },
+  async () => {
+    process.env.JWT_SECRET = secret;
+    const { server, httpServer, listen } = createArenaServer();
+    await listen(0, '127.0.0.1');
+    const address = httpServer.address();
+    assert.ok(address && typeof address !== 'string');
+    const base = `http://127.0.0.1:${address.port}`;
+    const clients: ReturnType<typeof wireClient>[] = [];
+    let roomId = '';
+    const join = async (id: string, route: string, extra = {}) => {
+      const response = await fetch(`${base}/matchmake/${route}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: await token(id), ...extra }),
+      });
+      assert.equal(response.status, 200, await response.clone().text());
+      const seat = (await response.json()) as Seat;
+      roomId = seat.roomId;
+      const client = wireClient(base, seat);
+      clients.push(client);
+      await waitUntil(() => client.state.joined && !!client.state.snapshot);
+      return client;
+    };
+    type Seated = {
+      id: string;
+      bot?: boolean;
+      ready: boolean;
+      alive: boolean;
+      x: number;
+      y: number;
+    };
+    const seated = (c: ReturnType<typeof wireClient>) =>
+      (c.state.snapshot?.players ?? []) as unknown as Seated[];
+    try {
+      const host = await join('host', 'create/arena2', {
+        map: 'park',
+        hero: 'mimi',
+        practice: true,
+      });
+      await waitUntil(() => seated(host).length === 4);
+      assert.equal(seated(host).filter((p) => p.bot).length, 3);
+      const flags = host.state.snapshot as unknown as Record<string, unknown>;
+      assert.deepEqual([flags.practice, flags.seats], [true, 4]);
+      await waitUntil(() => seated(host).every((p) => p.ready || !p.bot));
+      // Private: never in the public list, but joinable by id from an invite.
+      const listed = await fetch(`${base}/rooms/v2`, {
+        headers: { Authorization: `Bearer ${await token('x')}` },
+      });
+      assert.deepEqual(
+        ((await listed.json()) as { rooms: unknown[] }).rooms,
+        [],
+      );
+      const friend = await join('friend', `joinById/${roomId}`);
+      await waitUntil(
+        () =>
+          seated(host).length === 4 &&
+          seated(host).filter((p) => p.bot).length === 2,
+      );
+      host.send('ready');
+      friend.send('ready');
+      await waitUntil(() => host.state.snapshot?.phase === 'playing', 6000);
+      const start = new Map(seated(host).map((p) => [p.id, `${p.x},${p.y}`]));
+      // Bots move and plant bombs on their own within a few seconds.
+      await waitUntil(
+        () =>
+          seated(host).some(
+            (p) => p.bot && `${p.x},${p.y}` !== start.get(p.id),
+          ) && (host.state.snapshot?.bombs.length ?? 0) > 0,
+        10_000,
+      );
+    } finally {
+      for (const c of clients) c.ws.close();
+      await delay(100);
+      await server.gracefullyShutdown(false);
+    }
+  },
+);

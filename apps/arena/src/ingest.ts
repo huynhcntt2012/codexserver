@@ -18,8 +18,10 @@ export type IngestEvent = {
   map_id?: string;
   round?: number;
   duration_ms?: number;
+  practice?: boolean;
   results?: {
     account_id: string | null;
+    is_bot?: boolean;
     name: string;
     placement: number;
     kills: number;

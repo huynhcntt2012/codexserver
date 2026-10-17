@@ -117,6 +117,8 @@ export class Arena {
   grid: Tile[][];
   /** v2 only: cosmetic hero id per player, validated against HEROES. */
   heroes = new Map<string, string>();
+  /** Server-driven bots (practice rooms); shown with `bot: true` in v2 snapshots. */
+  bots = new Set<string>();
   players = new Map<string, Player>();
   bombs = new Map<number, Bomb>();
   flames = new Map<string, Flame>();
@@ -174,6 +176,7 @@ export class Arena {
   removePlayer(id: string): void {
     this.players.delete(id);
     this.heroes.delete(id);
+    this.bots.delete(id);
     this.inputs.delete(id);
     if (this.phase === 'countdown') {
       this.phase = 'waiting';
@@ -421,6 +424,7 @@ export class Arena {
         alive: p.alive,
         ready: p.ready,
         ...(this.map ? { hero: this.heroes.get(p.id) } : {}),
+        ...(this.bots.has(p.id) ? { bot: true } : {}),
       })),
       bombs: [...this.bombs.values()],
       flames: [...this.flames.values()],

@@ -143,7 +143,18 @@ def profile(db: Session, account: Account, me: str) -> dict:
         "guest": account.username is None,
         "guild": guild.name if guild else None,
         "relation": relation(link(db, me, account.id), me),
+        "online": online_now(account),
     }
+
+
+def online_now(account: Account) -> bool:
+    """Seen by the API recently (any signed-in call, the app pings every 45 s)."""
+    from app.main import ONLINE_WINDOW
+
+    seen = account.last_seen_at
+    if seen is not None and seen.tzinfo is None:
+        seen = seen.replace(tzinfo=UTC)
+    return bool(seen and seen > datetime.now(UTC) - ONLINE_WINDOW)
 
 
 def target(db: Session, account_id: str, me: Account) -> Account:

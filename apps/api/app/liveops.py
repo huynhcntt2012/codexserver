@@ -825,10 +825,14 @@ def is_friend(db: Session, me: str, other: str) -> bool:
     return relation(link(db, me, other), me) == "friend"
 
 
-def on_match(db: Session, match, participants: list, source: str) -> None:
-    """Called once per new recorded match (matches.record_match)."""
+def on_match(db: Session, match, participants: list, source: str, practice=False) -> None:
+    """Called once per new recorded match (matches.record_match).
+
+    Arena rounds are "online", except rounds of a practice room with server bots;
+    those and client-reported bot rounds count as "practice".
+    """
     at = now()
-    mode = "online" if source == "arena" else "practice"
+    mode = "online" if source == "arena" and not practice else "practice"
     if mode == "practice" and match.duration_ms < PRACTICE_MIN_MS:
         return
     people = [p for p in participants if getattr(p, "account_id", None) and not p.is_bot]

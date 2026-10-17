@@ -16,7 +16,7 @@ def seed():
         liveops.seed_defaults(db)
 
 
-def arena_round(client, room, number, people, map_id="park", winner=None, bombs=3):
+def arena_round(client, room, number, people, map_id="park", winner=None, bombs=3, practice=False):
     """One verified online round, the way the arena reports it."""
     body = {
         "type": "match",
@@ -26,6 +26,7 @@ def arena_round(client, room, number, people, map_id="park", winner=None, bombs=
         "map_id": map_id,
         "round": number,
         "duration_ms": 60_000,
+        "practice": practice,
         "results": [
             {
                 "account_id": account,
@@ -120,6 +121,12 @@ def test_practice_counts_only_where_admin_allows_it(client):
     view = quests(client, ana_h)
     assert find(view, "D09")["status"] == "completed"
     assert find(view, "D02")["objectives"][0]["progress"] == 0  # online-only by default
+    # A server practice room (friends + bots) is verified but still "practice".
+    bo, _ = player(client, "bot_room_bo")
+    arena_round(client, "prac", 1, [ana, bo], "park", winner=ana, practice=True)
+    view = quests(client, ana_h)
+    assert find(view, "D02")["objectives"][0]["progress"] == 0
+    assert find(view, "D03")["status"] == "in_progress"
     bad = {
         **practice_only,
         "objectives": [{"type": "WITH_FRIEND", "target": 1, "modes": ["practice"]}],

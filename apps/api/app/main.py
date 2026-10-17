@@ -308,6 +308,7 @@ from app.admin_api import player_router  # noqa: E402
 from app.admin_api import router as admin_router  # noqa: E402
 from app.admin_auth import router as admin_auth_router  # noqa: E402
 from app.economy import router as economy_router  # noqa: E402
+from app.invites import router as invites_router  # noqa: E402
 from app.liveops import router as liveops_router  # noqa: E402
 from app.maps import router as maps_router  # noqa: E402
 from app.matches import router as matches_router  # noqa: E402
@@ -323,3 +324,4 @@ app.include_router(economy_router)
 app.include_router(matches_router)
 app.include_router(maps_router)
 app.include_router(liveops_router)
+app.include_router(invites_router)

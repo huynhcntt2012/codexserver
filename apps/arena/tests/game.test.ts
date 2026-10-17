@@ -280,3 +280,34 @@ test('v2 maps match the PC level files and keep every spawn safe', async () => {
   v1.addPlayer('a', 'A', 'kai');
   assert.equal('hero' in v1.snapshot().players[0]!, false);
 });
+
+test('server bots plant bombs, escape their own blasts and only send intents', async () => {
+  const { BotBrain, danger } = await import('../src/bots.js');
+  let seed = 7;
+  const random = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32;
+  let survived = 0;
+  let planted = 0;
+  for (const mapId of ['park', 'frost', 'pastry', 'moon']) {
+    const g = new Arena(MAPS[mapId]!);
+    g.addPlayer('bot', 'Bot', 'kai');
+    g.addPlayer('far', 'Far', 'mimi');
+    g.input('bot', 'ready');
+    g.input('far', 'ready');
+    g.tick(3000);
+    const brain = new BotBrain('bot', random);
+    let bombs = 0;
+    for (let t = 0; t < 400 && g.phase === 'playing'; t++) {
+      const action = brain.think(g);
+      if (action) g.input('bot', action);
+      g.tick();
+      bombs = Math.max(bombs, g.stats.get('bot')?.bombs ?? 0);
+    }
+    planted += bombs;
+    const bot = g.players.get('bot')!;
+    // Alive after 20 s, or killed by someone else's flame (never stuck in its own).
+    if (bot.alive) survived++;
+    assert.ok(!danger(g).has(`${bot.x},${bot.y}`) || !bot.alive);
+  }
+  assert.ok(planted >= 4, `bots planted ${planted} bombs`);
+  assert.equal(survived, 4);
+});

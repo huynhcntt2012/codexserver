@@ -140,6 +140,7 @@ def record_match(
     verified: bool,
     duration_ms: int,
     participants: list[ParticipantIn],
+    practice: bool = False,
 ) -> Match | None:
     """Idempotent on (room, round): a retried event returns the stored match."""
     existing = db.scalar(select(Match).where(Match.room_key == room.id, Match.round == round_no))
@@ -187,7 +188,7 @@ def record_match(
     # Missions: only a newly stored match counts (retried events return above).
     from app.liveops import on_match
 
-    on_match(db, match, participants, room.source)
+    on_match(db, match, participants, room.source, practice)
     return match
 
 
@@ -229,6 +230,8 @@ class ArenaEvent(BaseModel):
     map_id: str = Field(default="", max_length=24, pattern=r"^[a-z0-9_]*$")
     round: int = Field(default=0, ge=0)
     duration_ms: int = Field(default=0, ge=0, le=3_600_000)
+    # Practice room with server bots: verified, but counts as practice for missions.
+    practice: bool = False
     results: list[ParticipantIn] = Field(default_factory=list, max_length=8)
 
 
@@ -275,7 +278,7 @@ def arena_event(event: ArenaEvent, db: Db):
         room.status = "playing" if event.players else room.status
         if event.map_id:
             room.map_name, room.map_id = event.map_name, event.map_id
-        record_match(db, room, event.round, True, event.duration_ms, event.results)
+        record_match(db, room, event.round, True, event.duration_ms, event.results, event.practice)
     db.commit()
 
 
