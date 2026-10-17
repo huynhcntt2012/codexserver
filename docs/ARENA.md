@@ -174,6 +174,9 @@ ready, joinable, accountIds }] }` cho phòng đang chờ **và** đang chơi.
   `joinable` chỉ đúng khi đang chờ và còn ghế. `accountIds` là ID tài khoản
   đang ngồi, dùng cho bộ lọc bạn bè; không có tên, token hay sessionId.
 - Sự kiện ingest gửi kèm `map_name`, nên lịch sử phòng/trận ghi đúng bản đồ.
+- Bản đồ do admin phát hành ([MAPS.md](MAPS.md)): `map` không có sẵn thì arena hỏi
+  `GET {API_URL}/v1/maps` (cache 15 giây), kiểm tra lại layout và 8 ghế rồi mới dựng
+  phòng; bản đồ chưa phát hành hoặc lỗi bị từ chối (400).
 
 ## Xác thực, giới hạn và lỗi cần xử lý
 

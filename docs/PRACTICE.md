@@ -366,3 +366,21 @@ Lồng, Đền Gió Trên Mây, Núi Lửa Kẹo Đỏ, Vườn Sao Rơi, Xưở
 | Tạo phòng                                              | Online 17×13                                         | Luyện tập 17×13                                          |
 | ------------------------------------------------------ | ---------------------------------------------------- | -------------------------------------------------------- |
 | ![](screenshots/practice-maps/create-room-15-maps.png) | ![](screenshots/practice-maps/online-moon-17x13.png) | ![](screenshots/practice-maps/practice-pastry-17x13.png) |
+
+Admin có thể thêm bản đồ không cần build lại app: xem [MAPS.md](MAPS.md). App gộp bản đồ
+đã phát hành (`GET /v1/maps`) vào sảnh, Tạo phòng và Luyện tập (`scripts/map_catalog.gd`).
+
+### Sảnh: danh sách bản đồ (phòng mở theo nhu cầu)
+
+Lưới ở sảnh luôn hiện **mọi bản đồ** (15 có sẵn + bản đồ admin, nhãn “Mới”), 8 thẻ/trang:
+hình, số `001…`, tên, độ khó và hoạt động online trên bản đồ đó (“Chưa có phòng” hoặc
+“N người · M phòng”, cập nhật 5 giây). Không còn danh sách phòng riêng.
+
+- **Vào**: vào phòng còn chỗ trên bản đồ đó (ưu tiên phòng có bạn bè, rồi phòng đông
+  nhất); nếu không có, server mở phòng mới (`joinOrCreate`). Phòng chỉ phát sinh khi có
+  người vào. Khách được nhắc đăng nhập.
+- **Chỉ phòng trống**: bản đồ đang có phòng còn ghế. **Chỉ bạn bè**: bản đồ có bạn bè
+  đang ở trong phòng (thẻ viền vàng). **Tìm bản đồ**: số hoặc tên, không cần dấu.
+- **Tạo phòng** vẫn mở phòng mới riêng; **Luyện tập** chọn bản đồ rồi chơi với bot.
+
+Cửa sổ Nhiệm vụ (4 tab, nhận thưởng, Event Shop): xem [LIVEOPS.md](LIVEOPS.md).

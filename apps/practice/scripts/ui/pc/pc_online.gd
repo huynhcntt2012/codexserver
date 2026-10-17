@@ -63,10 +63,8 @@ func _init() -> void:
 func _ready() -> void:
 	name = "PcOnline"
 	setup()
-	for path in game.LEVEL_FILES:
-		var data = JSON.parse_string(FileAccess.get_file_as_string(path))
-		if data is Dictionary:
-			levels[str(data.id)] = data
+	reload_levels()
+	MapCatalog.changed.connect(reload_levels)
 	var root := page(canvas)
 	parts = top_bar("Phòng online", ask_leave, func(): open_settings(game.music_enabled, game._toggle_audio))
 	title_label = parts.title
@@ -77,6 +75,12 @@ func _ready() -> void:
 	OnlineArena.snapshot_received.connect(_on_snapshot)
 	OnlineArena.closed.connect(_on_closed)
 	visibility_changed.connect(_on_visibility)
+
+## Built-in and admin-published maps by id (MapCatalog).
+func reload_levels() -> void:
+	levels.clear()
+	for data in MapCatalog.all():
+		levels[str(data.id)] = data
 
 # ------------------------------------------------------------------ waiting room
 
@@ -212,7 +216,9 @@ func render_room(snap: Dictionary) -> void:
 	var level: Dictionary = levels.get(map_id, {})
 	var number := "%03d" % int(snap.get("number", 0))
 	title_label.text = "Phòng %s · %s" % [number, str(level.get("name", map_id)).capitalize()]
-	map_art.texture = load("res://assets/level_previews/%s.png" % map_id) if levels.has(map_id) else null
+	map_art.texture = MapCatalog.preview(map_id)
+	if not levels.has(map_id):
+		MapCatalog.refresh(true)  # a map published after this app last asked
 	map_name.text = str(level.get("name", map_id)).capitalize()
 	var tier := str(level.get("subtitle", "")).get_slice("•", 0).strip_edges()
 	map_info.text = "%s · Phòng %s · Ván %d · Mỗi người 1 bom, tầm nổ 2 ô. Người cuối cùng còn sống thắng." % [tier, number, int(snap.get("round", 1))]

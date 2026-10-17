@@ -314,10 +314,10 @@ func bot_heroes() -> Array:
 
 
 func _load_level() -> bool:
-	var json_text: String = FileAccess.get_file_as_string(LEVEL_FILES[selected_level])
-	var parsed = JSON.parse_string(json_text)
-	if typeof(parsed) != TYPE_DICTIONARY:
-		push_error("Level JSON không hợp lệ: " + LEVEL_FILES[selected_level])
+	# Built-in level files first, then maps an admin published (MapCatalog).
+	var parsed: Variant = MapCatalog.level_at(selected_level).duplicate(true)
+	if typeof(parsed) != TYPE_DICTIONARY or parsed.is_empty():
+		push_error("Bản đồ không hợp lệ: %d" % selected_level)
 		return false
 	var size := Vector2i(int(parsed.get("columns", 15)), int(parsed.get("rows", 11)))
 	if parsed.get("layout", []).size() != size.y or parsed.get("spawns", []).size() < 4:
@@ -452,7 +452,7 @@ func _spawn_fighter(hero_id: String, start_cell: Vector2i, is_bot: bool) -> Dict
 		"speed":1.0,"invulnerable":0.0,"action_time":0.0,"walk_time":0.0,
 		"bomb_clock":1.7 + rng.randf_range(0.0, 1.8),
 		"ai_clock":rng.randf_range(0.2, 0.8),
-		"kills":0,"items":0,
+		"kills":0,"items":0,"bombs_placed":0,
 		"root":holder,"sprite":visual
 	}
 	fighters.append(fighter)
@@ -797,6 +797,7 @@ func _place_bomb(actor: Dictionary) -> void:
 		"owner":actor,"cell":actor["cell"],"timer":2.4,
 		"range":actor["bomb_range"],"node":sprite,"ticked":false
 	})
+	actor["bombs_placed"] = int(actor.get("bombs_placed", 0)) + 1
 	actor["sprite"].action("place_bomb")
 	actor["action_time"] = 0.30
 	_sound("place_bomb")

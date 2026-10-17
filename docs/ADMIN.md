@@ -97,3 +97,7 @@ SUNI_WEB_URL=https://boom.sunifactory.com SUNI_ADMIN_USER=<tên> SUNI_ADMIN_PASS
 
 Test trình duyệt chỉ đọc: đăng nhập sai/đúng, mở 11 trang, chi tiết người chơi,
 kiểm tra không lỗi console/CSP và không tràn ngang ở 390px.
+
+Bản đồ do admin thêm: xem [MAPS.md](MAPS.md) (template, kiểm tra, phát hành).
+
+Nhiệm vụ và sự kiện LiveOps: xem [LIVEOPS.md](LIVEOPS.md).

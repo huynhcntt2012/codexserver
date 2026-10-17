@@ -77,7 +77,11 @@ func run() -> void:
 	var map_id := OS.get_environment("SUNI_ONLINE_MAP")
 	if map_id.is_empty():
 		map_id = "frost"
-	var level: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://levels/%s.json" % map_id))
+	# Built-in level file, or a map an admin published (fetched by MapCatalog).
+	var catalog = root.get_node("MapCatalog")
+	await catalog.refresh(true)
+	var level: Dictionary = catalog.find(map_id)
+	check(not level.is_empty(), "Map %s is known to the app" % map_id)
 	var b_arena: Node = load("res://scripts/online_arena.gd").new()
 	b_arena.token_override = b_token
 	root.add_child(b_arena)
@@ -94,22 +98,22 @@ func run() -> void:
 	lobby.rooms_clock = 0.0
 	check(await until(func(): return lobby.rooms_state == "ok" and lobby.rooms.any(func(r): return int(r.number) == room_number), 15.0), "Lobby lists B's room from the arena")
 	check(lobby.friend_ids.has(b_id), "Lobby knows B is a friend")
+	await capture("online-lobby-maps.png")
 	lobby.friends_toggle.button_pressed = true
-	check(lobby.visible_rooms().any(func(r): return int(r.number) == room_number), "Chỉ bạn bè shows the friend's room")
+	var map_at: int = lobby.map_index(map_id)
+	check(lobby.visible_maps() == [map_at], "Chỉ bạn bè shows the map with the friend's room")
 	lobby.open_toggle.button_pressed = true
-	var slot := -1
-	for i in lobby.room_cards.size():
-		if lobby.room_cards[i].holder.visible and int(lobby.room_cards[i].room.get("number", 0)) == room_number:
-			slot = i
-	check(slot >= 0 and lobby.room_cards[slot].button.text == "Vào" and lobby.room_cards[slot].count.text == "1/8", "Card shows Vào and 1/8")
+	check(lobby.visible_maps() == [map_at] and lobby.map_stats(map_id).join.get("number", 0) == room_number, "Chỉ phòng trống keeps it; Vào targets B's room")
+	var slot := 0
+	check(lobby.map_cards[slot].holder.visible and lobby.map_cards[slot].map.id == map_id and lobby.map_cards[slot].button.text == "Vào" and lobby.map_cards[slot].count.text == "1 người · 1 phòng", "Map card shows Vào and 1 người · 1 phòng")
 	await capture("online-lobby.png")
 	# Every map (classic and Boom World) is offered when creating a room.
 	lobby.open_create()
 	var cards: Array = lobby.modal_packs.find_children("Create_*", "Button", true, false)
-	check(cards.size() == game.LEVEL_FILES.size() and lobby.find_child("Create_moon", true, false) != null, "Create popup lists all %d maps" % game.LEVEL_FILES.size())
+	check(cards.size() == catalog.all().size() and lobby.find_child("Create_moon", true, false) != null and lobby.find_child("Create_" + map_id, true, false) != null, "Create popup lists all %d maps" % catalog.all().size())
 	await capture("online-create.png")
 	lobby.close_modal()
-	lobby.room_cards[slot].button.pressed.emit()
+	lobby.map_cards[slot].button.pressed.emit()
 	var online = game.pc_screens["online"]
 	check(await until(func(): return online.is_visible_in_tree() and arena.connected, 15.0), "A joins through Vào: " + arena.last_error)
 	check(await until(func(): return arena.snapshot.get("players", []).size() == 2 and online.status_label.text.begins_with("2/8")), "Room shows both players")
@@ -153,6 +157,17 @@ func run() -> void:
 	await capture("online-result.png")
 	# The finished round is recorded by the API as a verified match.
 	check(await until(func(): return str(arena.snapshot.get("phase", "")) == "waiting", 12.0) and online.room_view.visible, "Back to the waiting room after the round")
+	# The verified round reached the API and counted for both players' missions.
+	var counted := false
+	for attempt in 20:
+		var quests := await http(HTTPClient.METHOD_GET, "/v1/quests", null, b_token)
+		for quest in quests.data.get("daily", {}).get("quests", []) if quests.status == 200 else []:
+			if quest.key == "D02" and int(quest.objectives[0].progress) >= 1:
+				counted = true
+		if counted:
+			break
+		await create_timer(0.5).timeout
+	check(counted, "Online round counted for mission D02")
 	online.leave()
 	check(await until(func(): return lobby.is_visible_in_tree() and not arena.connected, 5.0), "Leave returns to the lobby")
 	b_arena.leave()

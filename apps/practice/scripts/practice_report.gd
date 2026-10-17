@@ -14,11 +14,14 @@ func signed_in() -> bool:
 func map_name() -> String:
 	return str(game.current_level.get("name", "")).capitalize() if game and game.current_level is Dictionary else ""
 
+func map_id() -> String:
+	return str(game.current_level.get("id", "")) if game and game.current_level is Dictionary else ""
+
 func room_opened() -> void:
 	if not signed_in() or room_id != "" or opening:
 		return
 	opening = true
-	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_POST, "/v1/practice/rooms", {"map_name": map_name()})
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_POST, "/v1/practice/rooms", {"map_name": map_name(), "map_id": map_id()})
 	opening = false
 	if reply.status == 201 and reply.data is Dictionary:
 		room_id = str(reply.data.get("room_id", ""))
@@ -28,7 +31,7 @@ func room_opened() -> void:
 func set_state(status: String) -> void:
 	if room_id == "" or not signed_in():
 		return
-	AuthSession.api(HTTPClient.METHOD_POST, "/v1/practice/rooms/%s/state" % room_id, {"status": status, "map_name": map_name()})
+	AuthSession.api(HTTPClient.METHOD_POST, "/v1/practice/rooms/%s/state" % room_id, {"status": status, "map_name": map_name(), "map_id": map_id()})
 
 func round_started() -> void:
 	set_state("playing")
@@ -55,6 +58,7 @@ func round_finished() -> void:
 			"hero": hero,
 			"placement": i + 1,
 			"kills": int(actor.get("kills", 0)),
+			"bombs": int(actor.get("bombs_placed", 0)),
 			"items": int(actor.get("items", 0)),
 			"score": points.call(actor),
 			"survived_ms": int(game.elapsed * 1000.0) if actor.alive else 0,

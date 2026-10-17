@@ -66,8 +66,7 @@ func _on_visibility() -> void:
 	if is_visible_in_tree():
 		clock = 0.0
 		heroes = [game.HEROES[game.selected_hero]] + game.bot_heroes()
-		var level = JSON.parse_string(FileAccess.get_file_as_string(game.LEVEL_FILES[game.selected_level]))
-		var map_name := str(level.get("name", "")) if level is Dictionary else ""
+		var map_name := str(MapCatalog.level_at(game.selected_level).get("name", ""))
 		subtitle.text = "1 người + 3 bot · %s" % map_name.capitalize()
 		refresh()
 

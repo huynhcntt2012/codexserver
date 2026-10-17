@@ -22,68 +22,86 @@ func run() -> void:
 	check(lobby.is_visible_in_tree(), "Guest opens desktop lobby")
 	lobby.hero_buttons[1].pressed.emit()
 	check(game.selected_hero == 1, "Character selection reaches gameplay")
-	check(lobby.room_cards.size() == lobby.PAGE_SIZE and lobby.maps.size() == game.LEVEL_FILES.size(), "Eight room slots; maps come from level files")
+	check(lobby.map_cards.size() == lobby.PAGE_SIZE and lobby.maps.size() == game.LEVEL_FILES.size(), "Eight map slots; maps come from level files")
 	var arena_for: Callable = root.get_node("OnlineArena").arena_for
 	check(arena_for.call("https://api.sunifactory.com") == "https://arena.sunifactory.com" and arena_for.call("http://127.0.0.1:8081/api/") == "http://127.0.0.1:8081/arena" and arena_for.call("http://127.0.0.1:8000") == "http://127.0.0.1:2567", "Arena URL follows the API URL")
 	check(lobby.fold("LÂU ĐÀI Băng") == "lau dai bang", "Vietnamese text folds without diacritics")
 	check(lobby.rooms_state == "signed_out" or lobby.rooms.is_empty(), "Guest has no online rooms")
 	await process_frame
 	lobby.refresh()
-	check(lobby.empty.visible and lobby.empty.text.begins_with("Đăng nhập"), "Guest is asked to sign in for online rooms")
+	# The map list is always there, even for a guest with no rooms.
+	check(not lobby.empty.visible and lobby.map_cards[0].holder.visible and lobby.map_cards[0].art.texture != null and lobby.summary.text.contains("Đăng nhập"), "Guest sees the map list and is asked to sign in for online play")
 	var bar_text := ""
 	for label in lobby.find_children("*", "Label", true, false):
 		bar_text += (label as Label).text + "|"
-	check(not bar_text.contains("bot"), "No bot wording on the online room list")
-	check(lobby.search.placeholder_text == "Tìm phòng…" and lobby.open_toggle.get_parent() == lobby.tier_select.get_parent() and lobby.friends_toggle.get_parent() == lobby.tier_select.get_parent(), "Filter bar: selects, two checkboxes and search")
-	# Ten fake listings in the v2 shape: 2 pages, one full room, one playing, one with a friend.
-	var fake := []
-	for i in 10:
-		fake.append({"roomId": "r%d" % i, "number": i + 1, "map": ["park", "frost", "coast"][i % 3], "phase": "waiting", "players": 3, "maxPlayers": 8, "joinable": true, "accountIds": ["acc%d" % i]})
-	fake[1].players = 8
-	fake[1].joinable = false
-	fake[2].phase = "playing"
-	fake[2].joinable = false
-	lobby.friend_ids = ["acc4"]
-	lobby.apply_rooms({"ok": true, "rooms": fake})
-	check(lobby.visible_rooms().size() == 10 and lobby.page_label.text == "1 / 2" and lobby.prev_page.disabled and not lobby.next_page.disabled, "Ten rooms span two pages")
-	var first: Dictionary = lobby.room_cards[0]
-	check(first.holder.visible and first.number.text == "001" and first.title.text == "Công Viên Kẹo" and first.count.text == "3/8" and first.button.text == "Vào" and not first.button.disabled, "Open room card: number, map, x/8, Vào")
-	check(lobby.room_cards[1].button.text == "Đầy" and lobby.room_cards[1].button.disabled and lobby.room_cards[1].count.text == "8/8", "Full room shows Đầy, disabled")
-	check(lobby.room_cards[2].button.text == "Đang chơi" and lobby.room_cards[2].button.disabled, "Playing room cannot be joined")
+	check(not bar_text.contains("bot"), "No bot wording on the lobby list")
+	check(lobby.search.placeholder_text == "Tìm bản đồ…" and lobby.open_toggle.get_parent() == lobby.tier_select.get_parent() and lobby.friends_toggle.get_parent() == lobby.tier_select.get_parent(), "Filter bar: selects, two checkboxes and search")
+	check(lobby.visible_maps().size() == 15 and lobby.page_label.text == "1 / 2" and lobby.prev_page.disabled and not lobby.next_page.disabled, "15 maps span two pages")
+	# Live rooms in the v2 shape: park has an open room with a friend, frost a full one,
+	# coast a playing one.
+	lobby.friend_ids = ["friend"]
+	lobby.apply_rooms({"ok": true, "rooms": [
+		{"roomId": "r1", "number": 1, "map": "park", "phase": "waiting", "players": 3, "maxPlayers": 8, "joinable": true, "accountIds": ["friend"]},
+		{"roomId": "r2", "number": 2, "map": "park", "phase": "waiting", "players": 1, "maxPlayers": 8, "joinable": true, "accountIds": ["x"]},
+		{"roomId": "r3", "number": 3, "map": "frost", "phase": "waiting", "players": 8, "maxPlayers": 8, "joinable": false, "accountIds": []},
+		{"roomId": "r4", "number": 4, "map": "coast", "phase": "playing", "players": 2, "maxPlayers": 8, "joinable": false, "accountIds": []},
+	]})
+	var first: Dictionary = lobby.map_cards[0]
+	check(first.number.text == "001" and first.title.text == "Công Viên Kẹo" and first.count.text == "4 người · 2 phòng" and first.button.text == "Vào" and not first.button.disabled, "Map card: number, name, people and rooms, Vào")
+	check(lobby.map_stats("park").join.roomId == "r1", "Vào prefers the friend's open room")
+	check(lobby.map_stats("frost").join.is_empty() and lobby.map_cards[1].button.text == "Vào", "A map with only full rooms still offers Vào (opens a new room)")
+	check(lobby.map_cards[3].count.text == "Chưa có phòng", "Maps without rooms say so")
+	check(lobby.summary.text.begins_with("15/15 bản đồ · 4 phòng đang mở · 14 người"), "Summary counts maps, rooms and people")
 	lobby.next_page.pressed.emit()
-	check(lobby.page_label.text == "2 / 2" and lobby.room_cards[0].holder.visible and lobby.room_cards[1].holder.visible and not lobby.room_cards[2].holder.visible, "Second page holds the last two rooms")
+	check(lobby.page_label.text == "2 / 2" and lobby.map_cards[6].holder.visible and not lobby.map_cards[7].holder.visible, "Second page holds the last seven maps")
 	lobby.open_toggle.button_pressed = true
-	check(lobby.visible_rooms().size() == 8 and lobby.page_label.text == "1 / 1", "Chỉ phòng trống hides full and playing rooms")
-	lobby.friends_toggle.button_pressed = true
-	check(lobby.visible_rooms().size() == 1 and lobby.visible_rooms()[0].roomId == "r4", "Chỉ bạn bè keeps rooms with a friend")
+	check(lobby.visible_maps() == [0] and lobby.page_label.text == "1 / 1", "Chỉ phòng trống keeps maps with an open room")
 	lobby.open_toggle.button_pressed = false
+	lobby.friends_toggle.button_pressed = true
+	check(lobby.visible_maps() == [0], "Chỉ bạn bè keeps maps where a friend plays")
 	lobby.friends_toggle.button_pressed = false
 	lobby.search.text = "Băng"
 	lobby.search.text_changed.emit("Băng")
-	check(lobby.visible_rooms().all(func(r): return r.map == "frost") and lobby.visible_rooms().size() == 3, "Search by map name ignores diacritics")
-	lobby.search.text = "007"
-	lobby.search.text_changed.emit("007")
-	check(lobby.visible_rooms().size() == 1 and lobby.visible_rooms()[0].number == 7, "Search by room number")
+	check(lobby.visible_maps() == [1], "Search by map name ignores diacritics")
+	lobby.search.text = "015"
+	lobby.search.text_changed.emit("015")
+	check(lobby.visible_maps() == [14], "Search by map number")
 	lobby.search.clear()
 	check(lobby.tier_select.item_count == 4, "All plus one entry per difficulty")
 	lobby.tier_select.select(3)
 	lobby.tier_select.item_selected.emit(3)
-	check(lobby.tier_filter == "Khó" and lobby.visible_rooms().all(func(r): return r.map == "coast"), "Difficulty filter")
+	check(lobby.tier_filter == "Khó" and lobby.visible_maps().all(func(i): return lobby.maps[i].tier == "Khó"), "Difficulty filter")
 	lobby.set_tier("")
 	check(lobby.map_select.item_count == lobby.maps.size() + 1, "Map dropdown lists every map")
 	lobby.map_select.select(2)
 	lobby.map_select.item_selected.emit(2)
-	check(lobby.visible_rooms().all(func(r): return r.map == "frost"), "Map dropdown filters one map")
+	check(lobby.visible_maps() == [1], "Map dropdown filters one map")
 	lobby.set_map(-1)
-	lobby.search.text = "khong co phong nay"
+	lobby.search.text = "khong co ban do nay"
 	lobby.search.text_changed.emit(lobby.search.text)
-	check(lobby.visible_rooms().is_empty() and lobby.empty.visible and lobby.empty.text.begins_with("Không có phòng"), "No match is announced")
+	check(lobby.visible_maps().is_empty() and lobby.empty.visible and lobby.empty.text.begins_with("Không có bản đồ"), "No match is announced")
 	lobby.search.clear()
 	lobby.apply_rooms({"ok": true, "rooms": []})
-	check(lobby.empty.visible and lobby.empty.text.contains("TẠO PHÒNG"), "Empty server list invites to create a room")
+	check(not lobby.empty.visible and lobby.map_cards[0].count.text == "Chưa có phòng", "No rooms: maps stay listed, rooms open on demand")
+	lobby.map_cards[0].button.pressed.emit()
+	check(lobby.modal.visible and lobby.modal_message.text.begins_with("Đăng nhập"), "Guest Vào asks to sign in")
+	lobby.close_modal()
 	lobby.open_create()
 	check(lobby.modal.visible and lobby.modal_message.text.begins_with("Đăng nhập"), "Guest cannot create an online room")
 	lobby.close_modal()
+	lobby.nav_tabs[lobby.NAV_MISSIONS].button.pressed.emit()
+	await process_frame
+	var missions = lobby.store_pages.missions
+	check(lobby.store.visible and missions.visible and lobby.store_title.text == "NHIỆM VỤ & SỰ KIỆN" and lobby.nav_index == lobby.NAV_MISSIONS, "Nhiệm vụ opens the mission window")
+	check(missions.state == "signed_out" and missions.list.get_child_count() == 1 and not lobby.mission_dot.visible, "Guest is asked to sign in for missions")
+	check(missions.countdown(90061) == "1 ngày 1 giờ" and missions.parse_time("2026-10-17T00:00:00+07:00") == missions.parse_time("2026-10-16T17:00:00+00:00"), "Countdown and server time parsing")
+	lobby.close_store()
+	var quit_button = lobby.find_child("QuitGame", true, false)
+	check(quit_button != null and quit_button.get_global_rect().position.x < 200, "X button sits at the top left")
+	quit_button.pressed.emit()
+	check(lobby.modal.visible and lobby.modal_title.text == "THOÁT GAME" and lobby.modal_extra.visible and lobby.modal_extra.text == "THOÁT" and lobby.modal_ok.text == "Ở LẠI" and lobby.modal_ok.has_focus(), "X asks to confirm, Ở LẠI focused")
+	lobby.modal_ok.pressed.emit()
+	check(not lobby.modal.visible and current_scene == game, "Ở LẠI keeps the game open")
 	check(lobby.grouped(12560) == "12.560", "Wallet uses dot grouping")
 	check(root.content_scale_aspect == Window.CONTENT_SCALE_ASPECT_EXPAND, "Lobby fills the screen")
 	lobby.show_social(1)

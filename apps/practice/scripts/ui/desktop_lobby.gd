@@ -1,6 +1,7 @@
 extends Control
-## PC-only home. The room list shows real ONLINE rooms from the arena server
-## (protocol v2, GET /rooms/v2): live x/8 counts, "Vào" joins, "Đầy" when 8/8.
+## PC-only home. The grid lists every MAP (built-in and admin-published) with live
+## counts of online rooms/players on it (arena GET /rooms/v2). "Vào" joins an open
+## room on that map, or the server opens a new one (rooms appear on demand).
 ## Bot practice stays available offline from its own button; friends and chat use
 ## the account API, ranked shows an honest empty state.
 const DESIGN := Vector2(1920, 1080)
@@ -16,6 +17,8 @@ const NAV_OFF := [Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color(1, 1, 1, 0), Color
 const NAV_HOME := 0
 const NAV_SHOP := 1
 const NAV_EQUIPMENT := 2
+const NAV_MISSIONS := 3
+const MISSIONS_SECONDS := 60.0
 const TIER_COLORS := {"Dễ": Color("4fa8ef"), "Trung bình": Color("ffaa45"), "Khó": Color("f4738d")}
 const FOLD := {
 	"a": "àáạảãâầấậẩẫăằắặẳẵ", "e": "èéẹẻẽêềếệểễ", "i": "ìíịỉĩ", "o": "òóọỏõôồốộổỗơờớợởỡ",
@@ -299,9 +302,8 @@ var fullscreen_toggle: Button
 var audio_toggle: Button
 var hero_buttons: Array[Button] = []
 var hero_states: Array[Label] = []
-## Eight reusable room cards (one page); filled from `rooms` on every refresh.
-var room_cards: Array[Dictionary] = []
-var room_buttons: Array[Button] = []
+## Eight reusable map cards (one page); filled from `maps` + `rooms` on refresh.
+var map_cards: Array[Dictionary] = []
 ## Raw v2 listings: roomId, number, map, phase, players, maxPlayers, joinable, accountIds.
 var rooms: Array = []
 var friend_ids: Array = []
@@ -314,6 +316,11 @@ var friends_clock := 0.0
 const ROOMS_SECONDS := 5.0
 const FRIENDS_SECONDS := 20.0
 var joining := false
+var mission_dot: Panel
+var missions_clock := 0.0
+var missions_busy := false
+## The open map-grid popup (title, message, button prefix, action) for refreshes.
+var map_grid: Array = []
 var only_open := false
 var only_friends := false
 var open_toggle: Button
@@ -472,8 +479,13 @@ func build_top_bar(parent: Control) -> void:
 	parent.add_child(bar)
 	top_bar = bar
 	var line := row(14, bar)
+	# Top-left X: quit the game (asks first).
+	var quit := icon_button("close", confirm_quit, 64, Color("f4738d"), 32)
+	quit.name = "QuitGame"
+	quit.tooltip_text = "Thoát game"
+	line.add_child(quit)
 	var logo := card(Color("2a8fd8"), Color("bff2ff"), 30, 5, 6)
-	logo.custom_minimum_size = Vector2(350, 92)
+	logo.custom_minimum_size = Vector2(300, 92)
 	line.add_child(logo)
 	var brand := column(-6, logo)
 	brand.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -487,7 +499,7 @@ func build_top_bar(parent: Control) -> void:
 		["nav_home", "Sảnh chính", go_home],
 		["nav_shop", "Cửa hàng", func(): open_shop("shop")],
 		["nav_bag", "Trang bị", func(): open_shop("equipment")],
-		["nav_trophy", "Nhiệm vụ", func(): notice("Nhiệm vụ hằng ngày đang được phát triển.", "NHIỆM VỤ", "star", 3)],
+		["nav_trophy", "Nhiệm vụ", func(): open_shop("missions")],
 		["nav_star", "Xếp hạng", func(): notice("Chế độ chơi bot chưa có bảng xếp hạng online.", "XẾP HẠNG", "trophy", 4)],
 	]
 	for i in nav.size():
@@ -507,6 +519,16 @@ func build_top_bar(parent: Control) -> void:
 		caption.add_theme_constant_override("outline_size", 6)
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nav_tabs.append({"button": tab, "glyph": glyph, "caption": caption})
+		if i == NAV_MISSIONS:
+			# Red dot: a mission reward is waiting (GET /v1/quests "claimable").
+			mission_dot = Panel.new()
+			mission_dot.name = "MissionDot"
+			mission_dot.add_theme_stylebox_override("panel", box(Color("ff4d6a"), Color.WHITE, 12, 3))
+			mission_dot.size = Vector2(24, 24)
+			mission_dot.position = Vector2(96, 6)
+			mission_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			mission_dot.hide()
+			tab.add_child(mission_dot)
 	set_nav(NAV_HOME)
 	spacer(line)
 	gold = wallet(line, "coin", 250)
@@ -662,7 +684,7 @@ func build_right(parent: Control) -> void:
 	var mode_specs := [
 		["TÌM TRẬN NHANH", "Vào phòng online còn chỗ", Color("ffd56b"), "res://assets/ui/launch/mascot_pip.png", quick_play],
 		["TẠO PHÒNG", "Mở phòng online, tối đa 8 người", Color("8fdcf5"), "res://assets/ui/launch/mascot_nop.png", open_create],
-		["LUYỆN TẬP", "Chơi offline trên máy này", Color("d4bdf7"), "", practice],
+		["LUYỆN TẬP", "Chọn bản đồ, chơi offline", Color("d4bdf7"), "", open_practice],
 	]
 	for spec in mode_specs:
 		var big := button("", spec[4], spec[2], INK, 20, 26)
@@ -686,6 +708,7 @@ func build_right(parent: Control) -> void:
 	var filters := card(Color("1660a6"), LINE, 30, 4, 12)
 	main.add_child(filters)
 	var bar := row(14, filters)
+	MapCatalog.changed.connect(fill_selects)
 	style_select(tier_select, "Tất cả độ khó", tiers())
 	tier_select.item_selected.connect(func(index): set_tier(tier_select.get_item_text(index) if index > 0 else ""))
 	bar.add_child(tier_select)
@@ -695,10 +718,10 @@ func build_right(parent: Control) -> void:
 	style_select(map_select, "Tất cả bản đồ", names)
 	map_select.item_selected.connect(func(index): set_map(index - 1))
 	bar.add_child(map_select)
-	open_toggle = check_toggle("Chỉ phòng trống", "Chỉ hiện phòng còn ghế và đang chờ, vào được ngay", func(on): only_open = on; page = 0; refresh())
+	open_toggle = check_toggle("Chỉ phòng trống", "Chỉ hiện bản đồ đang có phòng còn ghế, vào được ngay", func(on): only_open = on; page = 0; refresh())
 	open_toggle.name = "OnlyOpen"
 	bar.add_child(open_toggle)
-	friends_toggle = check_toggle("Chỉ bạn bè", "Chỉ hiện phòng có ít nhất một người trong danh sách bạn bè", func(on): only_friends = on; page = 0; refresh())
+	friends_toggle = check_toggle("Chỉ bạn bè", "Chỉ hiện bản đồ có bạn bè đang ở trong phòng", func(on): only_friends = on; page = 0; refresh())
 	friends_toggle.name = "OnlyFriends"
 	bar.add_child(friends_toggle)
 	var field := card(Color("0f4f8f"), LINE, 26, 3, 4)
@@ -706,8 +729,8 @@ func build_right(parent: Control) -> void:
 	field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(field)
 	var field_line := row(8, field)
-	search.placeholder_text = "Tìm phòng…"
-	search.tooltip_text = "Số phòng hoặc tên bản đồ (không cần dấu)"
+	search.placeholder_text = "Tìm bản đồ…"
+	search.tooltip_text = "Số hoặc tên bản đồ (không cần dấu)"
 	search.clear_button_enabled = true
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search.add_theme_stylebox_override("normal", box(Color.TRANSPARENT, Color.TRANSPARENT, 0, 0, 14))
@@ -728,7 +751,7 @@ func build_right(parent: Control) -> void:
 	grid.add_theme_constant_override("v_separation", 12)
 	list.add_child(grid)
 	for i in PAGE_SIZE:
-		grid.add_child(room_card())
+		grid.add_child(map_card())
 	empty = text("", 22, Color("ffe17b"), list)
 	empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -796,12 +819,12 @@ func style_select(select: OptionButton, all: String, entries: Array[String]) -> 
 		select.add_theme_color_override(state, Color.WHITE)
 	select.get_popup().add_theme_font_size_override("font_size", 20)
 
-## One reusable slot of the room grid: thumbnail, number, map name, difficulty
-## pill, x/8 players, lock, and "Vào" / "Đầy" / "Đang chơi".
-func room_card() -> PanelContainer:
-	var slot := room_cards.size()
+## One reusable slot of the map grid: thumbnail, number, map name, difficulty,
+## people and open rooms on that map, "Mới" for admin maps, and "Vào".
+func map_card() -> PanelContainer:
+	var slot := map_cards.size()
 	var holder := card(Color("e9fbff"), Color("b8e9f7"), 22, 4, 10)
-	holder.name = "Room%d" % slot
+	holder.name = "Map%d" % slot
 	holder.custom_minimum_size = Vector2(0, 118)
 	holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	holder.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -810,7 +833,7 @@ func room_card() -> PanelContainer:
 	thumb.custom_minimum_size = Vector2(132, 92)
 	thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	line.add_child(thumb)
-	var art := picture("res://assets/level_previews/park.png", Vector2(126, 86))
+	var art := picture("", Vector2(126, 86))
 	thumb.add_child(art)
 	var facts := column(8, line)
 	facts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -818,14 +841,13 @@ func room_card() -> PanelContainer:
 	var head := row(10, facts)
 	var number := pill("000", Color("1d78bd"), Color.WHITE, 17, head)
 	var title := stretch(text("", 24, INK, head))
-	var meta := row(12, facts)
+	var meta := row(10, facts)
 	var mode := pill("", Color("4fa8ef"), Color.WHITE, 16, meta)
 	meta.add_child(Glyph.new("people", Color("2f7fc0"), 24))
-	var count := text("0/8", 21, INK, meta)
+	var count := stretch(text("", 19, INK, meta))
 	count.name = "Players"
-	var lock := Glyph.new("lock", Color("2f7fc0"), 24)
-	lock.mouse_filter = Control.MOUSE_FILTER_PASS
-	meta.add_child(lock)
+	var fresh := pill("Mới", Color("ff7083"), Color.WHITE, 14, meta)
+	fresh.tooltip_text = "Bản đồ do admin thêm"
 	var choice := button("Vào", func(): enter_slot(slot), Color("ffcb52"), Color("8a4b1f"), 22, 16)
 	choice.name = "Join"
 	choice.custom_minimum_size = Vector2(124, 58)
@@ -833,8 +855,7 @@ func room_card() -> PanelContainer:
 	choice.add_theme_stylebox_override("disabled", box(Color("9fc6e3"), Color("d6ecfa"), 16, 3, 8))
 	choice.add_theme_color_override("font_disabled_color", Color.WHITE)
 	line.add_child(choice)
-	room_cards.append({"holder": holder, "art": art, "number": number, "title": title, "mode": mode, "count": count, "lock": lock, "button": choice, "room": {}})
-	room_buttons.append(choice)
+	map_cards.append({"holder": holder, "art": art, "number": number, "title": title, "mode": mode, "count": count, "fresh": fresh, "button": choice, "map": {}})
 	return holder
 
 ## In-canvas popup in the lobby's own style, shared by notices and settings.
@@ -937,6 +958,7 @@ func open_modal(title: String, icon: String, message: String, with_settings := f
 	modal_ok.text = "ĐÓNG" if with_settings else "ĐÃ HIỂU"
 	modal_extra.hide()
 	modal_extra_action = Callable()
+	tint_extra(Color("3fd39a"), Color("0d4b3a"))
 	modal.show()
 	modal_ok.grab_focus()
 	sync_nav()
@@ -965,13 +987,41 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	elif chat.visible:
 		chat.close()
 		get_viewport().set_input_as_handled()
+	else:
+		confirm_quit()
+		get_viewport().set_input_as_handled()
+
+## Quit popup: "Ở LẠI" is focused, so Enter/Esc never quits by accident.
+func confirm_quit() -> void:
+	open_modal("THOÁT GAME", "close", "Bạn có chắc muốn thoát BỤP BỤP không?")
+	modal_action("THOÁT", quit_game)
+	tint_extra(Color("f4738d"), Color.WHITE)
+	modal_ok.text = "Ở LẠI"
+	modal_ok.grab_focus()
+
+## Colours the popup's second button (green by default, coral for quitting).
+func tint_extra(fill: Color, color: Color) -> void:
+	for state in ["normal", "hover", "pressed"]:
+		var style := modal_extra.get_theme_stylebox(state) as StyleBoxFlat
+		style.bg_color = fill.lightened(0.15) if state == "hover" else (fill.darkened(0.12) if state == "pressed" else fill)
+	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+		modal_extra.add_theme_color_override(state, color)
+
+func quit_game() -> void:
+	if OnlineArena.connected:
+		OnlineArena.leave()
+	get_tree().quit()
 
 ## Lights the tab for whatever is open: a notice's own tab, the store page, else home.
 func sync_nav() -> void:
 	if modal.visible and modal_nav >= 0:
 		set_nav(modal_nav)
 	elif store.visible:
-		set_nav(NAV_EQUIPMENT if store_pages.has("equipment") and store_pages.equipment.visible else NAV_SHOP)
+		var shown := ""
+		for key in store_pages:
+			if store_pages[key].visible:
+				shown = key
+		set_nav({"equipment": NAV_EQUIPMENT, "missions": NAV_MISSIONS}.get(shown, NAV_SHOP))
 	else:
 		set_nav(NAV_HOME)
 
@@ -1049,7 +1099,10 @@ func build_store() -> void:
 ## Pages are built on first use; the kit scales them to the popup's rect.
 func store_page(target: String) -> Control:
 	if not store_pages.has(target):
-		var page_node = (preload("res://scripts/ui/pc/pc_shop.gd") if target == "shop" else preload("res://scripts/ui/pc/pc_equipment.gd")).new()
+		var scripts := {"shop": preload("res://scripts/ui/pc/pc_shop.gd"), "equipment": preload("res://scripts/ui/pc/pc_equipment.gd"), "missions": preload("res://scripts/ui/pc/pc_missions.gd")}
+		var page_node = scripts[target].new()
+		if target == "missions":
+			page_node.claimable_changed.connect(set_mission_dot)
 		page_node.embedded = true
 		page_node.navigate.connect(_on_store_navigate)
 		store_area.add_child(page_node)
@@ -1067,7 +1120,7 @@ func open_shop(target: String) -> void:
 	var shown := store_page(target)
 	for key in store_pages:
 		store_pages[key].visible = store_pages[key] == shown
-	store_title.text = "CỬA HÀNG" if target == "shop" else "TRANG BỊ"
+	store_title.text = {"shop": "CỬA HÀNG", "equipment": "TRANG BỊ", "missions": "NHIỆM VỤ & SỰ KIỆN"}[target]
 	store.show()
 	sync_nav()
 
@@ -1202,23 +1255,43 @@ static func fold(value: String) -> String:
 	return out
 
 ## Reads map cards from the same level files gameplay loads, so new maps need no lobby edits.
+## Map list for filters, cards and "Tạo phòng": the built-in levels plus maps an
+## admin published (MapCatalog); rebuilt whenever that list changes.
 func load_maps() -> void:
-	for path in game.LEVEL_FILES:
-		var data = JSON.parse_string(FileAccess.get_file_as_string(path))
-		if typeof(data) != TYPE_DICTIONARY:
-			data = {}
+	maps.clear()
+	for data in MapCatalog.all():
 		var subtitle := str(data.get("subtitle", ""))
 		var map := {
-			"id": str(data.get("id", path.get_file().get_basename())),
-			"name": str(data.get("name", path.get_file().get_basename())),
+			"id": str(data.get("id", "")),
+			"name": str(data.get("name", "")),
 			"subtitle": subtitle,
 			"tier": subtitle.get_slice("•", 0).strip_edges(),
 			"columns": int(data.get("columns", 15)),
 			"rows": int(data.get("rows", 11)),
 			"story": str(data.get("story", "")),
+			"custom": bool(data.get("custom", false)),
 		}
 		map.keywords = fold(" ".join([map.id, map.name, subtitle, str(data.get("theme", ""))]))
 		maps.append(map)
+
+## Refills the difficulty and map dropdowns, keeping the chosen filters.
+func fill_selects() -> void:
+	var map_id: String = maps[map_filter].id if map_filter >= 0 and map_filter < maps.size() else ""
+	load_maps()
+	tier_select.clear()
+	tier_select.add_item("Tất cả độ khó")
+	for tier in tiers():
+		tier_select.add_item(tier)
+	tier_select.select(maxi(0, tiers().find(tier_filter) + 1))
+	map_select.clear()
+	map_select.add_item("Tất cả bản đồ")
+	for map in maps:
+		map_select.add_item(str(map.name).capitalize())
+	map_filter = map_index(map_id) if map_id != "" else -1
+	map_select.select(map_filter + 1)
+	if modal.visible and modal_packs.find_child("MapGrid", true, false) and not map_grid.is_empty():
+		open_map_grid(map_grid[0], map_grid[1], map_grid[2], map_grid[3])
+	refresh()
 
 func tiers() -> Array[String]:
 	var found: Array[String] = []
@@ -1245,23 +1318,41 @@ func map_index(map_id: String) -> int:
 			return i
 	return -1
 
-## Filters, all combined: difficulty, map, "Chỉ phòng trống" (a free seat and still
-## waiting, so "Vào" works now), "Chỉ bạn bè" (at least one accepted friend seated),
-## and the search words (room number or map name, diacritics ignored).
-func room_matches(room: Dictionary) -> bool:
-	var index := map_index(str(room.get("map", "")))
-	if index < 0:
-		return false
+## Online activity on one map: people, open rooms, a friend seated, and the room
+## "Vào" should join (a friend's open room first, then the fullest open one).
+func map_stats(map_id: String) -> Dictionary:
+	var stats := {"players": 0, "rooms": 0, "open": 0, "friend": false, "join": {}}
+	var best_score := -1
+	for room in rooms:
+		if not room is Dictionary or str(room.get("map", "")) != map_id:
+			continue
+		stats.players += int(room.get("players", 0))
+		stats.rooms += 1
+		var friend := has_friend(room)
+		stats.friend = stats.friend or friend
+		if bool(room.get("joinable", false)):
+			stats.open += 1
+			var score := int(room.get("players", 0)) + (100 if friend else 0)
+			if score > best_score:
+				best_score = score
+				stats.join = room
+	return stats
+
+## Filters, all combined: difficulty, map, "Chỉ phòng trống" (the map has an open
+## room with a free seat), "Chỉ bạn bè" (an accepted friend is in a room on it) and
+## the search words (map number or name, diacritics ignored).
+func map_matches(index: int) -> bool:
 	var map: Dictionary = maps[index]
 	if tier_filter != "" and map.tier != tier_filter:
 		return false
 	if map_filter >= 0 and map_filter != index:
 		return false
-	if only_open and not bool(room.get("joinable", false)):
+	var stats := map_stats(map.id)
+	if only_open and int(stats.open) == 0:
 		return false
-	if only_friends and not has_friend(room):
+	if only_friends and not stats.friend:
 		return false
-	var haystack := "%03d %d %s" % [int(room.get("number", 0)), int(room.get("number", 0)), map.keywords]
+	var haystack := "%03d %d %s" % [index + 1, index + 1, map.keywords]
 	for word in fold(search.text).split(" ", false):
 		if not haystack.contains(word):
 			return false
@@ -1273,43 +1364,48 @@ func has_friend(room: Dictionary) -> bool:
 			return true
 	return false
 
-func visible_rooms() -> Array:
-	return rooms.filter(func(room): return room is Dictionary and room_matches(room))
+func visible_maps() -> Array[int]:
+	var found: Array[int] = []
+	for i in maps.size():
+		if map_matches(i):
+			found.append(i)
+	return found
 
-## Enter in the search box joins the first open room that matches.
+## Enter in the search box enters the first matching map.
 func join_first_match() -> void:
-	for room in visible_rooms():
-		if bool(room.get("joinable", false)):
-			enter_room(str(room.roomId))
-			return
+	var found := visible_maps()
+	if not found.is_empty():
+		enter_map(str(maps[found[0]].id))
 
 func page_count() -> int:
-	return maxi(1, ceili(visible_rooms().size() / float(PAGE_SIZE)))
+	return maxi(1, ceili(visible_maps().size() / float(PAGE_SIZE)))
 
-func fill_card(slot: Dictionary, room: Dictionary) -> void:
-	slot.room = room
-	var map: Dictionary = maps[map_index(str(room.map))]
-	slot.art.texture = load("res://assets/level_previews/%s.png" % map.id)
-	slot.number.text = "%03d" % int(room.get("number", 0))
+func fill_card(slot: Dictionary, index: int) -> void:
+	var map: Dictionary = maps[index]
+	slot.map = map
+	slot.art.texture = MapCatalog.preview(map.id)
+	slot.number.text = "%03d" % (index + 1)
 	slot.title.text = str(map.name).capitalize()
-	slot.title.tooltip_text = slot.title.text
+	slot.title.tooltip_text = "%s · %s\n%s" % [slot.title.text, map.subtitle, map.story]
 	slot.mode.text = map.tier if map.tier != "" else "Đấu thường"
 	(slot.mode.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).bg_color = TIER_COLORS.get(map.tier, Color("4fa8ef"))
-	var players := int(room.get("players", 0))
-	var most := int(room.get("maxPlayers", 8))
-	slot.count.text = "%d/%d" % [players, most]
-	var joinable := bool(room.get("joinable", false))
-	var full := players >= most
+	(slot.fresh as Label).get_parent().visible = bool(map.get("custom", false))
+	var stats := map_stats(map.id)
 	var button: Button = slot.button
-	button.text = "Vào" if joinable else ("Đầy" if full else "Đang chơi")
-	button.disabled = not joinable or joining
-	button.tooltip_text = "Vào phòng " + slot.number.text if joinable else ("Phòng đã đủ %d người" % most if full else "Trận đang diễn ra, chờ ván sau")
-	var lock: Glyph = slot.lock
-	lock.tint = Color("2f7fc0") if joinable else Color("e0566f")
-	lock.queue_redraw()
-	lock.tooltip_text = "Phòng mở" if joinable else ("Phòng đầy" if full else "Đang chơi, chưa vào được")
+	button.disabled = joining
+	if rooms_state != "ok":
+		slot.count.text = "%d×%d" % [map.columns, map.rows]
+		button.tooltip_text = "Đăng nhập để chơi online trên bản đồ này"
+	elif int(stats.rooms) == 0:
+		slot.count.text = "Chưa có phòng"
+		button.tooltip_text = "Mở phòng mới trên bản đồ này"
+	else:
+		slot.count.text = "%d người · %d phòng" % [stats.players, stats.rooms]
+		var room: Dictionary = stats.join
+		button.tooltip_text = ("Vào phòng %03d (%d/%d)" % [int(room.number), int(room.players), int(room.maxPlayers)]) if not room.is_empty() else "Các phòng đang chơi hoặc đã đầy: mở phòng mới"
+	slot.count.tooltip_text = button.tooltip_text
 	var frame := slot.holder.get_theme_stylebox("panel") as StyleBoxFlat
-	frame.border_color = Color("ffc93c") if has_friend(room) else Color("b8e9f7")
+	frame.border_color = Color("ffc93c") if stats.friend else Color("b8e9f7")
 
 func refresh() -> void:
 	var hero: int = game.selected_hero
@@ -1329,23 +1425,23 @@ func refresh() -> void:
 		hero_states[i].text = "Đang chọn" if picked else "Sẵn sàng"
 		hero_states[i].add_theme_color_override("font_color", Color("ffe17b") if picked else Color("aef5c8"))
 		(hero_buttons[i].get_child(0) as Glyph).set_kind("check" if picked else "plus")
-	var found := visible_rooms()
+	var found := visible_maps()
 	page = clampi(page, 0, page_count() - 1)
 	var shown := found.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-	for i in room_cards.size():
-		room_cards[i].holder.visible = i < shown.size()
+	for i in map_cards.size():
+		map_cards[i].holder.visible = i < shown.size()
 		if i < shown.size():
-			fill_card(room_cards[i], shown[i])
+			fill_card(map_cards[i], shown[i])
 	empty.visible = shown.is_empty()
-	match rooms_state:
-		"signed_out": empty.text = "Đăng nhập tài khoản để xem và vào phòng online. Chế độ khách vẫn chơi LUYỆN TẬP được."
-		"error": empty.text = rooms_error + " Đang thử lại…"
-		"loading": empty.text = "Đang tải danh sách phòng…"
-		_: empty.text = "Chưa có phòng online nào đang mở. Bấm TẠO PHÒNG để mở phòng đầu tiên!" if rooms.is_empty() else "Không có phòng khớp bộ lọc. Bỏ bớt bộ lọc hoặc đổi từ khóa."
+	empty.text = "Chưa có bản đồ nào có phòng còn chỗ hoặc có bạn bè. Bỏ bớt bộ lọc, hoặc bấm Vào để mở phòng mới." if only_open or only_friends else "Không có bản đồ khớp bộ lọc. Bỏ bớt bộ lọc hoặc đổi từ khóa."
 	var people := 0
 	for room in rooms:
 		people += int(room.get("players", 0))
-	summary.text = "%d/%d phòng · %d người trong phòng" % [found.size(), rooms.size(), people]
+	match rooms_state:
+		"ok": summary.text = "%d/%d bản đồ · %d phòng đang mở · %d người" % [found.size(), maps.size(), rooms.size(), people]
+		"signed_out": summary.text = "%d/%d bản đồ · Đăng nhập để chơi online" % [found.size(), maps.size()]
+		"error": summary.text = "%d/%d bản đồ · %s" % [found.size(), maps.size(), rooms_error]
+		_: summary.text = "%d/%d bản đồ · Đang tải phòng…" % [found.size(), maps.size()]
 	page_label.text = "%d / %d" % [page + 1, page_count()]
 	prev_page.disabled = page == 0
 	next_page.disabled = page >= page_count() - 1
@@ -1375,9 +1471,19 @@ func can_play_online() -> bool:
 	return false
 
 func enter_slot(slot: int) -> void:
-	var room: Dictionary = room_cards[slot].room
-	if bool(room.get("joinable", false)):
-		enter_room(str(room.roomId))
+	var map: Dictionary = map_cards[slot].map
+	if not map.is_empty():
+		enter_map(str(map.id))
+
+## "Vào" on a map: an open room on it (a friend's first), else the server opens one.
+func enter_map(map_id: String) -> void:
+	if not can_play_online():
+		return
+	var room: Dictionary = map_stats(map_id).join
+	if not room.is_empty():
+		await enter_room(str(room.roomId))
+	else:
+		await go_online(func(): return await OnlineArena.quick_join(map_id, hero_id()), "Đang mở phòng…")
 
 func enter_room(room_id: String) -> void:
 	await go_online(func(): return await OnlineArena.join_room(room_id, hero_id()), "Đang vào phòng…")
@@ -1393,11 +1499,25 @@ func quick_play() -> void:
 	await go_online(func(): return await OnlineArena.quick_join(map_id, hero_id()), "Đang tìm phòng…")
 
 ## Map picker for a new online room: every map as a card (preview, name,
-## difficulty, size), five per row, so all 15 maps fit in one popup.
+## difficulty, size), five per row; built-in and admin-published maps alike.
 func open_create() -> void:
 	if not can_play_online():
 		return
-	open_modal("TẠO PHÒNG ONLINE", "people", "Chọn bản đồ. Phòng tối đa 8 người; ván bắt đầu khi mọi người đã Sẵn sàng (ít nhất 2 người).")
+	open_map_grid("TẠO PHÒNG ONLINE", "Chọn bản đồ. Phòng tối đa 8 người; ván bắt đầu khi mọi người đã Sẵn sàng (ít nhất 2 người).", "Create_", create_room)
+
+## Offline practice starts by choosing the map (admin maps included).
+func open_practice() -> void:
+	open_map_grid("LUYỆN TẬP · CHỌN BẢN ĐỒ", "Chơi trên máy này: 1 người + 3 bot. Bản đồ “Mới” do admin thêm.", "Practice_", practice_on)
+
+func practice_on(map_id: String) -> void:
+	game._select_level(maxi(0, MapCatalog.index_of(map_id)))
+	practice()
+
+## Shared grid popup; reopened with the same action when the map list changes.
+func open_map_grid(title: String, message: String, prefix: String, action: Callable) -> void:
+	MapCatalog.refresh()
+	map_grid = [title, message, prefix, action]
+	open_modal(title, "people", message)
 	modal_icon.get_parent().hide()
 	modal_ok.text = "ĐÓNG"
 	for child in modal_packs.get_children():
@@ -1408,15 +1528,21 @@ func open_create() -> void:
 	grid.columns = 5
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
-	modal_packs.add_child(grid)
+	# Admins can keep adding maps: show three rows and scroll the rest.
+	var scroll := ScrollContainer.new()
+	scroll.name = "MapScroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size = Vector2(5 * 228 + 4 * 12 + 16, mini(3, ceili(maps.size() / 5.0)) * (196 + 12))
+	scroll.add_child(grid)
+	modal_packs.add_child(scroll)
 	for map in maps:
-		grid.add_child(map_choice(map))
+		grid.add_child(map_choice(map, prefix, action))
 	modal_packs.show()
 
-func map_choice(map: Dictionary) -> Button:
+func map_choice(map: Dictionary, prefix: String, action: Callable) -> Button:
 	var map_id: String = map.id
-	var option := button("", func(): close_modal(); create_room(map_id), Color("e4f7ff"), INK, 18, 16, Color("b8e9f7"))
-	option.name = "Create_" + map_id
+	var option := button("", func(): close_modal(); action.call(map_id), Color("e4f7ff"), INK, 18, 16, Color("b8e9f7"))
+	option.name = prefix + map_id
 	option.custom_minimum_size = Vector2(228, 196)
 	option.tooltip_text = "%s · %s\n%s" % [str(map.name).capitalize(), map.subtitle, map.story]
 	var stack := column(4, option)
@@ -1426,7 +1552,8 @@ func map_choice(map: Dictionary) -> Button:
 	stack.offset_top = 8
 	stack.offset_bottom = -8
 	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var art := picture("res://assets/level_previews/%s.png" % map_id, Vector2(200, 122))
+	var art := picture("", Vector2(200, 122))
+	art.texture = MapCatalog.preview(map_id)
 	stack.add_child(art)
 	var title := stretch(text(str(map.name).capitalize(), 18, INK, stack))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1434,6 +1561,8 @@ func map_choice(map: Dictionary) -> Button:
 	meta.alignment = BoxContainer.ALIGNMENT_CENTER
 	pill(map.tier if map.tier != "" else "Đấu thường", TIER_COLORS.get(map.tier, Color("4fa8ef")), Color.WHITE, 14, meta)
 	text("%d×%d" % [map.columns, map.rows], 14, Color("4b6a8a"), meta)
+	if map.custom:
+		pill("Mới", Color("ff7083"), Color.WHITE, 13, meta).tooltip_text = "Bản đồ do admin thêm"
 	return option
 
 func create_room(map_id: String) -> void:
@@ -1466,6 +1595,22 @@ func leave() -> void:
 func _exit_tree() -> void:
 	ScreenFill.set_fill(get_tree(), false)
 
+func set_mission_dot(count: int) -> void:
+	if mission_dot:
+		mission_dot.visible = count > 0
+		mission_dot.tooltip_text = "%d phần thưởng chờ nhận" % count
+
+## Mission rewards waiting? Asked every minute while signed in (also the day's check-in).
+func fetch_missions() -> void:
+	if missions_busy or not AuthSession.has_session():
+		set_mission_dot(0)
+		return
+	missions_busy = true
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/quests")
+	missions_busy = false
+	if reply.status == 200 and reply.data is Dictionary:
+		set_mission_dot(int(reply.data.get("claimable", 0)))
+
 ## Live room list from the arena (every 5 s while the lobby shows) plus the
 ## accepted friends list for "Chỉ bạn bè" (every 20 s).
 func fetch_rooms() -> void:
@@ -1486,6 +1631,9 @@ func apply_rooms(reply: Dictionary) -> void:
 	if reply.get("ok", false):
 		rooms = reply.rooms
 		rooms_state = "ok"
+		# A room on a map published after this app last asked: refresh the catalog.
+		if rooms.any(func(room): return room is Dictionary and map_index(str(room.get("map", ""))) < 0):
+			MapCatalog.refresh()
 	else:
 		rooms = []
 		rooms_state = "error" if AuthSession.has_session() else "signed_out"
@@ -1500,6 +1648,10 @@ func _process(delta: float) -> void:
 		if rooms_clock <= 0.0:
 			rooms_clock = ROOMS_SECONDS
 			fetch_rooms()
+		missions_clock -= delta
+		if missions_clock <= 0.0:
+			missions_clock = MISSIONS_SECONDS
+			fetch_missions()
 	var viewport := get_viewport_rect().size
 	backdrop.position = Vector2.ZERO
 	backdrop.size = viewport

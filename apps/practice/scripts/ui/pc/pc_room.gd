@@ -37,14 +37,22 @@ var rng := RandomNumberGenerator.new()
 func _init() -> void:
 	super("sky")
 
+## Built-in maps plus admin-published ones (MapCatalog), in catalog order.
+func load_maps() -> void:
+	maps.clear()
+	for data in MapCatalog.all():
+		var subtitle := str(data.get("subtitle", ""))
+		if bool(data.get("custom", false)):
+			subtitle += " · Bản đồ mới (admin)"
+		maps.append({"id": str(data.get("id", "?")), "name": str(data.get("name", "?")).capitalize(), "subtitle": subtitle})
+	if is_inside_tree() and map_art:
+		refresh()
+
 func _ready() -> void:
 	name = "PcRoom"
 	setup()
-	for path in game.LEVEL_FILES:
-		var data = JSON.parse_string(FileAccess.get_file_as_string(path))
-		if not (data is Dictionary):
-			data = {}
-		maps.append({"id": str(data.get("id", path.get_file().get_basename())), "name": str(data.get("name", "?")).capitalize(), "subtitle": str(data.get("subtitle", ""))})
+	load_maps()
+	MapCatalog.changed.connect(load_maps)
 	var root := page(canvas)
 	parts = top_bar("Phòng luyện tập", leave, func(): open_settings(game.music_enabled, game._toggle_audio))
 	root.add_child(parts.bar)
@@ -84,6 +92,7 @@ func _ready() -> void:
 	map_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	map_info = text("", 13, MUTED, words)
 	map_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	map_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	switch.add_child(round_icon("right", func(): pick_map(1), "sun", 44))
 	build_chat(side)
 	ready_label = text("", 15, INK, side)
@@ -301,8 +310,8 @@ func refresh() -> void:
 			var is_ready := i <= ready
 			(entry.badge as Label).text = "SẴN SÀNG" if is_ready else "Đang vào…"
 			((entry.badge as Label).get_parent().get_theme_stylebox("panel") as StyleBoxFlat).bg_color = MINT if is_ready else Color("b3c1d6")
-	var map: Dictionary = maps[game.selected_level]
-	map_art.texture = load("res://assets/level_previews/%s.png" % map.id)
+	var map: Dictionary = maps[clampi(game.selected_level, 0, maps.size() - 1)]
+	map_art.texture = MapCatalog.preview(map.id)
 	map_name.text = map.name
 	map_info.text = map.subtitle
 	while announced < ready:
@@ -316,7 +325,7 @@ func refresh() -> void:
 	start_button.tooltip_text = "" if all_ready() else "Tất cả người chơi phải sẵn sàng"
 
 func pick_map(step: int) -> void:
-	game._select_level(posmod(game.selected_level + step, game.LEVEL_FILES.size()))
+	game._select_level(posmod(game.selected_level + step, maps.size()))
 	refresh()
 
 ## Changing hero reshuffles the bot line-up, so bots re-confirm readiness.
