@@ -1,0 +1,31 @@
+; Game Boom - Step 3 with 3 maps, local bot AI, animation and original audio
+config_version=5
+
+[application]
+config/name="Bụp Bụp! — Chơi với bot"
+run/main_scene="res://scenes/ui/launch/launch_screen.tscn"
+run/main_scene.web="res://scenes/ui/ui_showcase.tscn"
+config/features=PackedStringArray("4.0", "GL Compatibility")
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=920
+window/size/window_width_override=1280
+window/size/window_height_override=920
+window/size/mode=3
+window/size/mode.web=0
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+
+[autoload]
+AuthSession="*res://scripts/auth_session.gd"
+UIState="*res://scripts/ui/ui_state.gd"
+GameCursor="*res://scripts/ui/game_cursor.gd"
+CatalogSync="*res://scripts/catalog_sync.gd"
+OnlineArena="*res://scripts/online_arena.gd"
+MapCatalog="*res://scripts/map_catalog.gd"

@@ -1,0 +1,29 @@
+{
+  "id": "candy_maze",
+  "name": "Mê Cung Kẹo",
+  "tier": "Trung bình",
+  "region": "Khu vườn kẹo",
+  "story": "Mô tả ngắn hiện ở thẻ bản đồ (không bắt buộc).",
+  "art": {
+    "floor": "pastry",
+    "wall": "stone_wall",
+    "crate": "wood_crate",
+    "bomb": "pink",
+    "fx": "heart"
+  },
+  "layout": [
+    "#################",
+    "#...C.C...C.C...#",
+    "#.#.#C#.#.#C#.#.#",
+    "#.C.....C.....C.#",
+    "#C#.#.#C#C#.#.#C#",
+    "#..C.C.....C.C..#",
+    "#.#C#.#.#.#.#C#.#",
+    "#..C.C.....C.C..#",
+    "#C#.#.#C#C#.#.#C#",
+    "#.C.....C.....C.#",
+    "#.#.#C#.#.#C#.#.#",
+    "#...C.C...C.C...#",
+    "#################"
+  ]
+}

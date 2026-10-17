@@ -1,0 +1,132 @@
+name: suni-bomb-arena
+
+services:
+  web:
+    image: ${WEB_IMAGE:-suni-web:local}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports: ['${BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8081}:8080']
+    depends_on:
+      api: { condition: service_healthy }
+      arena: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/health']
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: suni
+      POSTGRES_USER: suni
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql:ro
+      - ./infra/postgres/002_social.sql:/docker-entrypoint-initdb.d/002_social.sql:ro
+      - ./infra/postgres/003_recovery.sql:/docker-entrypoint-initdb.d/003_recovery.sql:ro
+      - ./infra/postgres/004_admin.sql:/docker-entrypoint-initdb.d/004_admin.sql:ro
+      - ./infra/postgres/005_sync.sql:/docker-entrypoint-initdb.d/005_sync.sql:ro
+      - ./infra/postgres/006_room_chat.sql:/docker-entrypoint-initdb.d/006_room_chat.sql:ro
+      - ./infra/postgres/007_maps.sql:/docker-entrypoint-initdb.d/007_maps.sql:ro
+      - ./infra/postgres/008_liveops.sql:/docker-entrypoint-initdb.d/008_liveops.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U suni -d suni']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    # Redis 7.2 remains BSD-3-Clause; do not silently switch license families.
+    image: redis:7.2-bookworm
+    command:
+      [
+        redis-server,
+        --save,
+        '',
+        --appendonly,
+        'no',
+        --maxmemory,
+        64mb,
+        --maxmemory-policy,
+        noeviction,
+      ]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    image: ${API_IMAGE:-suni-api:local}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    environment:
+      DATABASE_URL: postgresql+psycopg://suni:${POSTGRES_PASSWORD}@postgres:5432/suni
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      # Password reset email: smtp sends, log prints codes (local only), disabled refuses.
+      MAIL_MODE: ${MAIL_MODE:-disabled}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      ARENA_URL: http://arena:2567
+    ports: ['${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000']
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          CMD,
+          python,
+          -c,
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    restart: unless-stopped
+
+  arena:
+    image: ${ARENA_IMAGE:-suni-arena:local}
+    build:
+      context: .
+      dockerfile: apps/arena/Dockerfile
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      # Room/round reports for the admin portal (signed service token, non-blocking).
+      API_URL: http://api:8000
+      PORT: 2567
+    ports: ['${BIND_ADDRESS:-127.0.0.1}:${ARENA_PORT:-2567}:2567']
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://localhost:2567/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

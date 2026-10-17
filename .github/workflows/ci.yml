@@ -1,0 +1,82 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  arena:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:web
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+      - run: node scripts/collect-node-licenses.mjs
+      - uses: actions/upload-artifact@v4
+        with: { name: node-license-notices, path: build/licenses/node }
+
+  api:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { version: 0.13.0, enable-cache: true }
+      - run: uv sync --locked --project apps/api --python 3.12
+      - run: uv run --project apps/api ruff check apps/api
+      - run: uv run --project apps/api ruff format --check apps/api
+      - run: cd apps/api && uv run pytest
+      - run: uv run --project apps/api python scripts/collect-python-licenses.py
+      - uses: actions/upload-artifact@v4
+        with: { name: python-license-notices, path: build/licenses/python }
+
+  web-and-stack:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps --only-shell chromium
+      - run: bash scripts/install-godot.sh /tmp/suni-godot
+      - run: bash scripts/install-godot-templates.sh
+      - name: Validate and export practice game
+        env:
+          GODOT: /tmp/suni-godot/godot
+        run: |
+          python3 apps/practice/tools/verify_step3.py
+          python3 scripts/build-practice.py --web-only
+          "$GODOT" --headless --path apps/practice --script res://tests/headless_smoke.gd
+          "$GODOT" --headless --path apps/practice --script res://tests/gameplay.gd
+      - name: Create ephemeral CI configuration
+        run: |
+          echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)" >> .env
+          echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env
+      - run: docker compose up -d --build --wait
+      - run: npm run test:web:smoke
+      - run: npx playwright test --config apps/web/playwright.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-test-evidence
+          path: |
+            build/web-screenshots
+            build/web-test-results
+            docs/screenshots/step3
+      - if: failure()
+        run: docker compose logs --tail=120
+      - if: always()
+        run: docker compose down -v

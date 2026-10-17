@@ -1,0 +1,38 @@
+name: Build release images
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  publish:
+    # Protect this environment in repository settings before enabling releases.
+    environment: release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci && npm run lint && npm test && npm run build
+      - run: docker build --target test -f apps/api/Dockerfile -t suni-api-test .
+      - run: docker run --rm suni-api-test
+      - run: |
+          echo "REGISTRY_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/arena/Dockerfile
+          push: true
+          tags: ghcr.io/${{ env.REGISTRY_OWNER }}/suni-arena:${{ github.sha }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: runtime
+          push: true
+          tags: ghcr.io/${{ env.REGISTRY_OWNER }}/suni-api:${{ github.sha }}

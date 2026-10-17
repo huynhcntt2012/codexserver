@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/launch/brand_header.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/launch/logo_bupbup.png" id="2"]
+
+[node name="BrandHeader" type="Control"]
+mouse_filter = 2
+
+script = ExtResource("1")
+
+[node name="BrandLogo" type="TextureRect" parent="."]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 520.0
+offset_bottom = 177.0
+texture = ExtResource("2")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2

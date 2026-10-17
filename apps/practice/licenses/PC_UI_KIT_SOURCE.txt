@@ -1,0 +1,10 @@
+User supplied Bubble Isles client UI (Google Drive folder 1E0FY5LnrCso2Ny4MSHZOP5ElAR1wyYcl)
+bubble_isles_client.zip — Drive file 14HPoPdWV-YLrmIkUVM4JyonNucJSDGEN
+SHA-256: 5c2994fc910dfe7dc071fa081ac0870a07a7e5627c17d47d6811980aa383076b
+Mockup Messenger_creation_CB557F4D-4B3E-454F-928D-8811860C1C34.png — Drive file 18QW-6RXNzWO-HXxr-tEIX05c7TCXEmz_
+SHA-256: 88b84ccf9915e9e378864bdbf3d6d351723f545f015cfb2db0436b06d0d62ac4
+
+The ZIP's docs/ASSET_LICENSES.md lists its UI as code-drawn and owned by the
+project. Only the layout, colour palette and button/panel style were rewritten
+in scripts/ui/pc/*.gd. No file, chibi avatar, name, logo or mockup image from
+the ZIP was copied; screens use the existing Step 3 portraits, items and maps.

@@ -1,0 +1,50 @@
+{
+  "id": "pastry",
+  "name": "TIỆM BÁNH MÂY",
+  "subtitle": "Dễ • Xứ sở bánh ngọt",
+  "theme": "pastry",
+  "crate": "wood_crate",
+  "wall": "stone_wall",
+  "bomb": "pink",
+  "fx": "heart",
+  "bot_step": 0.39,
+  "bot_bomb": 3.0,
+  "bg": "#FFF2DF",
+  "columns": 17,
+  "rows": 13,
+  "layout": [
+    "#################",
+    "#....CC...CC....#",
+    "#.#C#.#.#.#.#C#.#",
+    "#.C..C.C.C.C..C.#",
+    "#.#C#.#.#.#.#C#.#",
+    "#...............#",
+    "#C#.#.#.#.#.#.#C#",
+    "#...............#",
+    "#.#C#.#.#.#.#C#.#",
+    "#.C..C.C.C.C..C.#",
+    "#.#C#.#.#.#.#C#.#",
+    "#....CC...CC....#",
+    "#################"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      15,
+      1
+    ],
+    [
+      15,
+      11
+    ],
+    [
+      1,
+      11
+    ]
+  ],
+  "pack_id": "004",
+  "story": "Chiếc lò bánh của cô Mây bỗng nguội lạnh, để lại cả thị trấn không còn mùi bánh mới. Tìm lại Tia Lửa Hồng bị giấu sau những khay bánh biết đi."
+}
