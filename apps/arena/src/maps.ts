@@ -383,6 +383,129 @@ export const MAPS: Record<string, MapDef> = {
 /** Cosmetic hero ids the client may ask for; anything else falls back by slot. */
 export const HEROES = ['bombo', 'mimi', 'zin', 'lala', 'kai'] as const;
 
-export function isMapId(value: unknown): value is string {
-  return typeof value === 'string' && Object.hasOwn(MAPS, value);
+// ---------------------------------------------------------------- admin maps
+
+/** Shape of one entry of the API's public `GET /v1/maps` (admin-published maps). */
+interface RemoteLevel {
+  id?: unknown;
+  name?: unknown;
+  subtitle?: unknown;
+  columns?: unknown;
+  rows?: unknown;
+  layout?: unknown;
+  arena_spawns?: unknown;
+}
+
+const REMOTE_TTL_MS = 15_000;
+let remote: { at: number; maps: Map<string, MapDef> } | null = null;
+let pending: Promise<Map<string, MapDef>> | null = null;
+
+/**
+ * Rebuilds a MapDef from the API, re-checking everything the simulation relies on
+ * (the API validates on save; the arena never trusts a layout it cannot use).
+ */
+export function toMapDef(level: RemoteLevel): MapDef | null {
+  const {
+    id,
+    name,
+    columns: width,
+    rows: height,
+    layout,
+    arena_spawns,
+  } = level;
+  if (
+    typeof id !== 'string' ||
+    !/^[a-z][a-z0-9_]{2,23}$/.test(id) ||
+    Object.hasOwn(MAPS, id) ||
+    typeof name !== 'string' ||
+    name.length > 40 ||
+    typeof width !== 'number' ||
+    typeof height !== 'number' ||
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width < 11 ||
+    width > 21 ||
+    height < 9 ||
+    height > 17 ||
+    !Array.isArray(layout) ||
+    layout.length !== height ||
+    !layout.every(
+      (row) =>
+        typeof row === 'string' &&
+        row.length === width &&
+        /^#[#C.]*#$/.test(row),
+    ) ||
+    !/^#+$/.test(layout[0] as string) ||
+    !/^#+$/.test(layout[height - 1] as string) ||
+    !Array.isArray(arena_spawns) ||
+    arena_spawns.length !== 8
+  )
+    return null;
+  const spawns: [number, number][] = [];
+  for (const spawn of arena_spawns as unknown[]) {
+    if (
+      !Array.isArray(spawn) ||
+      spawn.length !== 2 ||
+      !spawn.every((n) => Number.isInteger(n))
+    )
+      return null;
+    const [x, y] = spawn as [number, number];
+    if (x < 1 || y < 1 || x >= width - 1 || y >= height - 1) return null;
+    if ((layout[y] as string)[x] === '#') return null;
+    spawns.push([x, y]);
+  }
+  if (new Set(spawns.map((s) => s.join(','))).size !== 8) return null;
+  const subtitle = typeof level.subtitle === 'string' ? level.subtitle : '';
+  return {
+    id,
+    name,
+    tier: subtitle.split('•')[0]?.trim() ?? '',
+    width,
+    height,
+    layout: layout as string[],
+    spawns,
+  };
+}
+
+async function fetchRemote(): Promise<Map<string, MapDef>> {
+  const base = process.env.API_URL;
+  const maps = new Map<string, MapDef>();
+  if (!base) return maps;
+  const response = await fetch(`${base}/v1/maps`, {
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!response.ok) throw new Error(`API ${response.status}`);
+  const body = (await response.json()) as { maps?: unknown };
+  for (const level of Array.isArray(body.maps) ? body.maps : []) {
+    const def = toMapDef(level as RemoteLevel);
+    if (def) maps.set(def.id, def);
+  }
+  return maps;
+}
+
+/** Published admin maps, cached for 15 s; the last good list survives API errors. */
+export async function remoteMaps(): Promise<Map<string, MapDef>> {
+  if (remote && Date.now() - remote.at < REMOTE_TTL_MS) return remote.maps;
+  pending ??= fetchRemote()
+    .then((maps) => {
+      remote = { at: Date.now(), maps };
+      return maps;
+    })
+    .catch(() => remote?.maps ?? new Map<string, MapDef>())
+    .finally(() => {
+      pending = null;
+    });
+  return pending;
+}
+
+/** Built-in map, or a published admin map from the API; null when unknown. */
+export async function findMap(id: unknown): Promise<MapDef | null> {
+  if (typeof id !== 'string') return null;
+  if (Object.hasOwn(MAPS, id)) return MAPS[id]!;
+  return (await remoteMaps()).get(id) ?? null;
+}
+
+/** Test hook: forget cached admin maps. */
+export function resetRemoteMaps(): void {
+  remote = null;
 }

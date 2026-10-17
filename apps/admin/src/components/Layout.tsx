@@ -8,8 +8,10 @@ import { useSession } from '@/lib/session';
 const NAV = [
   ['/', '🏠', 'Dashboard'],
   ['/players', '👥', 'Người chơi'],
+  ['/quests', '📋', 'Nhiệm vụ'],
   ['/events', '🎉', 'Sự kiện'],
   ['/items', '🎒', 'Vật phẩm'],
+  ['/maps', '🗺️', 'Bản đồ'],
   ['/giftcodes', '🎁', 'Giftcode'],
   ['/shop', '🛒', 'Shop'],
   ['/matches', '⚔️', 'Phòng & trận'],

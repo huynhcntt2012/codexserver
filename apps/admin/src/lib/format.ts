@@ -83,6 +83,8 @@ export const EVENT_KIND: Record<string, string> = {
   collect: 'Thu thập',
   shop: 'Ưu đãi shop',
   custom: 'Tùy chỉnh',
+  story: 'Cốt truyện nhiều chương',
+  challenge: 'Thử thách có thời hạn',
 };
 
 export const ROLE: Record<string, string> = {
@@ -123,6 +125,12 @@ export const ACTION: Record<string, string> = {
   'account.edit': 'Sửa thông tin tài khoản',
   'wallet.adjust': 'Điều chỉnh ví',
   'item.icon': 'Cập nhật ảnh vật phẩm',
+  'map.create': 'Tạo bản đồ',
+  'map.update': 'Sửa bản đồ',
+  'map.publish': 'Phát hành bản đồ',
+  'map.hide': 'Ẩn bản đồ',
+  'quest.save': 'Lưu nhiệm vụ',
+  'quest.seed': 'Thêm nhiệm vụ mặc định',
 };
 
 /** Item art copied from the game into /admin/game at build time. */

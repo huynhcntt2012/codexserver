@@ -32,6 +32,8 @@ services:
       - ./infra/postgres/004_admin.sql:/docker-entrypoint-initdb.d/004_admin.sql:ro
       - ./infra/postgres/005_sync.sql:/docker-entrypoint-initdb.d/005_sync.sql:ro
       - ./infra/postgres/006_room_chat.sql:/docker-entrypoint-initdb.d/006_room_chat.sql:ro
+      - ./infra/postgres/007_maps.sql:/docker-entrypoint-initdb.d/007_maps.sql:ro
+      - ./infra/postgres/008_liveops.sql:/docker-entrypoint-initdb.d/008_liveops.sql:ro
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U suni -d suni']
       interval: 5s

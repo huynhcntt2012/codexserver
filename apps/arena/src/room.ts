@@ -2,7 +2,7 @@ import { Room, type Client, ServerError } from '@colyseus/core';
 import { authenticate } from './auth.js';
 import { Arena, TICK_MS, type RoundResult } from './game.js';
 import { processId as ingestProcess, report } from './ingest.js';
-import { MAPS, isMapId } from './maps.js';
+import { findMap } from './maps.js';
 
 /** Short public room numbers (001-999), unique among this process's live rooms. */
 const numbers = new Set<number>();
@@ -26,12 +26,14 @@ export class ArenaRoom extends Room {
   private accounts = new Map<string, { accountId: string; name: string }>();
   private reported = '';
 
-  onCreate(options?: { map?: unknown }) {
+  async onCreate(options?: { map?: unknown }) {
     if (this.protocol === 2) {
-      if (!isMapId(options?.map)) throw new ServerError(400, 'Unknown map');
-      this.game = new Arena(MAPS[options.map]!);
+      // Built-in maps or a map an admin published through the API.
+      const map = await findMap(options?.map);
+      if (!map) throw new ServerError(400, 'Unknown map');
+      this.game = new Arena(map);
       this.number = takeNumber();
-      void this.setMetadata({ map: options.map, number: this.number });
+      void this.setMetadata({ map: map.id, number: this.number });
     }
     this.onMessage(0, (client, action: unknown) => {
       this.game.input(client.sessionId, action);
@@ -112,6 +114,7 @@ export class ArenaRoom extends Room {
       type: 'closed',
       room_id: this.roomId,
       map_name: this.mapName(),
+      map_id: this.game.map?.id ?? '',
     });
   }
 
@@ -134,6 +137,7 @@ export class ArenaRoom extends Room {
       players,
       max_players: this.maxClients,
       map_name: this.mapName(),
+      map_id: this.game.map?.id ?? '',
     });
   }
 
@@ -142,6 +146,7 @@ export class ArenaRoom extends Room {
       type: 'match',
       room_id: this.roomId,
       map_name: this.mapName(),
+      map_id: this.game.map?.id ?? '',
       round: result.round,
       duration_ms: result.durationMs,
       results: result.players.map((p) => ({

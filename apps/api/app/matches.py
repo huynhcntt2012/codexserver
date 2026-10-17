@@ -55,6 +55,7 @@ class GameRoom(Base):
     creator_name: Mapped[str] = mapped_column(String(24), default="")
     status: Mapped[str] = mapped_column(String(10), default="waiting")
     map_name: Mapped[str] = mapped_column(String(40), default="")
+    map_id: Mapped[str] = mapped_column(String(24), default="")
     players: Mapped[int] = mapped_column(Integer, default=0)
     max_players: Mapped[int] = mapped_column(Integer, default=8)
     rounds: Mapped[int] = mapped_column(Integer, default=0)
@@ -71,6 +72,7 @@ class Match(Base):
     source: Mapped[str] = mapped_column(String(10))
     round: Mapped[int] = mapped_column(Integer)
     map_name: Mapped[str] = mapped_column(String(40), default="")
+    map_id: Mapped[str] = mapped_column(String(24), default="")
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     winner_name: Mapped[str | None] = mapped_column(String(24))
     duration_ms: Mapped[int] = mapped_column(Integer, default=0)
@@ -150,6 +152,7 @@ def record_match(
         source=room.source,
         round=round_no,
         map_name=room.map_name,
+        map_id=room.map_id or "",
         verified=verified,
         winner_name=next((p.name for p in participants if p.winner), None),
         duration_ms=duration_ms,
@@ -181,6 +184,10 @@ def record_match(
     except IntegrityError:
         db.rollback()
         return db.scalar(select(Match).where(Match.room_key == room.id, Match.round == round_no))
+    # Missions: only a newly stored match counts (retried events return above).
+    from app.liveops import on_match
+
+    on_match(db, match, participants, room.source)
     return match
 
 
@@ -219,6 +226,7 @@ class ArenaEvent(BaseModel):
     max_players: int = Field(default=8, ge=1, le=8)
     # Protocol v2 rooms pick one of the shared maps; v1 rooms omit it.
     map_name: str = Field(default="Neon Garden", min_length=1, max_length=40)
+    map_id: str = Field(default="", max_length=24, pattern=r"^[a-z0-9_]*$")
     round: int = Field(default=0, ge=0)
     duration_ms: int = Field(default=0, ge=0, le=3_600_000)
     results: list[ParticipantIn] = Field(default_factory=list, max_length=8)
@@ -234,6 +242,7 @@ def arena_room(db: Session, event: ArenaEvent) -> GameRoom:
             room_id=event.room_id,
             status="waiting",
             map_name=event.map_name,
+            map_id=event.map_id,
             max_players=event.max_players,
             created_at=now(),
             updated_at=now(),
@@ -253,6 +262,7 @@ def arena_event(event: ArenaEvent, db: Db):
         room.status = "waiting" if event.phase == "waiting" else "playing"
         room.players = len(event.players)
         room.map_name = event.map_name
+        room.map_id = event.map_id
         for player in event.players:
             if db.get(Account, player.account_id):
                 add_member(db, room.id, player.account_id)
@@ -263,6 +273,8 @@ def arena_event(event: ArenaEvent, db: Db):
                 room.creator_name = first.display_name
     else:
         room.status = "playing" if event.players else room.status
+        if event.map_id:
+            room.map_name, room.map_id = event.map_name, event.map_id
         record_match(db, room, event.round, True, event.duration_ms, event.results)
     db.commit()
 
@@ -272,6 +284,7 @@ def arena_event(event: ArenaEvent, db: Db):
 
 class PracticeRoom(BaseModel):
     map_name: str = Field(default="", max_length=40)
+    map_id: str = Field(default="", max_length=24, pattern=r"^[a-z0-9_]*$")
 
 
 @router.post("/v1/practice/rooms", status_code=201)
@@ -285,6 +298,7 @@ def practice_room(body: PracticeRoom, account: Identity, db: Db):
         creator_name=account.display_name,
         status="waiting",
         map_name=body.map_name,
+        map_id=body.map_id,
         players=4,
         max_players=4,
         created_at=now(),
@@ -306,6 +320,7 @@ def own_room(db: Session, room_id: str, account: Account) -> GameRoom:
 class PracticeState(BaseModel):
     status: Literal["waiting", "playing", "closed"]
     map_name: str | None = Field(default=None, max_length=40)
+    map_id: str | None = Field(default=None, max_length=24, pattern=r"^[a-z0-9_]*$")
 
 
 @router.post("/v1/practice/rooms/{room_id}/state", status_code=204)
@@ -314,6 +329,8 @@ def practice_state(room_id: str, body: PracticeState, account: Identity, db: Db)
     room.status = body.status
     if body.map_name is not None:
         room.map_name = body.map_name
+    if body.map_id is not None:
+        room.map_id = body.map_id
     room.updated_at = now()
     if body.status == "closed":
         room.closed_at = now()

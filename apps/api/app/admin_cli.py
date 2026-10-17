@@ -19,12 +19,20 @@ def main() -> int:
     from app.main import SessionLocal, password_hash
 
     parser = argparse.ArgumentParser(prog="python -m app.admin_cli")
-    parser.add_argument("command", choices=["create", "reset-password", "import-icons"])
-    parser.add_argument("username", help="admin name, or the asset folder for import-icons")
+    parser.add_argument(
+        "command", choices=["create", "reset-password", "import-icons", "seed-quests"]
+    )
+    parser.add_argument(
+        "username", nargs="?", default="", help="admin name, or the asset folder for import-icons"
+    )
     parser.add_argument("--role", choices=["owner", "operator", "viewer"], default="owner")
     args = parser.parse_args()
     if args.command == "import-icons":
         return import_icons(args.username)
+    if args.command == "seed-quests":
+        return seed_quests()
+    if not args.username:
+        parser.error("username is required")
     password = os.environ.get("ADMIN_PASSWORD") or getpass.getpass("Admin password: ")
     if len(password) < 12:
         print("Password needs at least 12 characters.", file=sys.stderr)
@@ -71,6 +79,17 @@ def import_icons(folder: str) -> int:
                 done += 1
         db.commit()
     print(f"OK: {done} icons imported")
+    return 0
+
+
+def seed_quests() -> int:
+    """Adds the default daily/weekly missions (D01–D05, W01–W03) that are missing."""
+    import app.main  # noqa: F401
+    from app.liveops import seed_defaults
+    from app.main import SessionLocal
+
+    with SessionLocal() as db:
+        print(f"OK: {seed_defaults(db)} quests added")
     return 0
 
 

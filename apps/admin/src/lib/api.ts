@@ -31,6 +31,8 @@ const DETAILS: Record<string, string> = {
   'Account already suspended': 'Tài khoản đang bị khóa.',
   'Player already owns this item': 'Người chơi đã có vật phẩm này.',
   'Item id already exists': 'ID vật phẩm đã tồn tại.',
+  'Map id already exists': 'ID bản đồ đã tồn tại.',
+  'Map id cannot change': 'Không đổi được ID của bản đồ đã tạo.',
   'Giftcode already exists': 'Mã quà tặng đã tồn tại.',
   'Pause the event before editing it': 'Hãy tạm dừng sự kiện trước khi sửa.',
   'Publish the item before selling it':
@@ -70,6 +72,11 @@ function describe(status: number, body: unknown): string {
       return 'Có vật phẩm không nằm trong danh mục.';
     if (detail.startsWith('Cannot '))
       return 'Trạng thái hiện tại không cho phép thao tác này.';
+  }
+  // Map validation: {"errors": [...]} with Vietnamese reasons from the API.
+  if (detail && typeof detail === 'object' && 'errors' in detail) {
+    const errors = (detail as { errors: unknown }).errors;
+    if (Array.isArray(errors) && errors.length) return errors.join(' · ');
   }
   if (Array.isArray(detail) && detail.length) {
     const first = detail[0] as { loc?: unknown[]; msg?: string };

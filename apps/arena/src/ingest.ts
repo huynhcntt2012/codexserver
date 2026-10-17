@@ -15,6 +15,7 @@ export type IngestEvent = {
   players?: { account_id: string; name: string }[];
   max_players?: number;
   map_name?: string;
+  map_id?: string;
   round?: number;
   duration_ms?: number;
   results?: {

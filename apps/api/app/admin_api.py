@@ -20,6 +20,7 @@ import jwt
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import (
+    JSON,
     DateTime,
     ForeignKey,
     Integer,
@@ -657,9 +658,13 @@ class GameEvent(Base):
     reward_items: Mapped[str] = mapped_column(Text, default="[]")
     created_by: Mapped[str] = mapped_column(String(32))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # LiveOps (app/liveops.py): claim window, chapters/quests/shop JSON, publish version.
+    claim_end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    config: Mapped[dict | None] = mapped_column(JSON)
+    version: Mapped[int] = mapped_column(Integer, default=0)
 
 
-EventKind = Literal["login", "match", "rank", "collect", "shop", "custom"]
+EventKind = Literal["login", "match", "rank", "collect", "shop", "custom", "story", "challenge"]
 
 
 def event_phase(event: GameEvent) -> str:
@@ -685,6 +690,9 @@ def event_view(event: GameEvent) -> dict:
         "start_at": event.start_at,
         "end_at": event.end_at,
         "reward_items": json.loads(event.reward_items or "[]"),
+        "claim_end_at": event.claim_end_at,
+        "config": event.config or {},
+        "version": event.version or 0,
         "created_by": event.created_by,
         "updated_at": event.updated_at,
     }
@@ -697,6 +705,8 @@ class EventFields(BaseModel):
     start_at: datetime
     end_at: datetime
     reward_items: list[str] = Field(default_factory=list, max_length=10)
+    claim_end_at: datetime | None = None
+    config: dict | None = None
 
     @field_validator("end_at")
     @classmethod
@@ -713,6 +723,20 @@ def check_rewards(db: Session, ids: list[str]) -> None:
         raise HTTPException(422, f"Unknown items: {', '.join(missing)}")
 
 
+def checked_config(db: Session, body: "EventFields") -> dict:
+    """Validates chapters/quests/shop (app.liveops); errors block the save."""
+    from app.liveops import EventConfig, validate_event
+
+    try:
+        config = EventConfig(**(body.config or {}))
+    except ValueError as exc:
+        raise HTTPException(422, {"errors": [str(exc)[:500]], "warnings": []}) from exc
+    result = validate_event(db, config, body.start_at, body.end_at, body.claim_end_at)
+    if not result["ok"]:
+        raise HTTPException(422, {"errors": result["errors"], "warnings": result["warnings"]})
+    return config.model_dump()
+
+
 @router.get("/events")
 def events(_: Reader, db: Db):
     rows = db.scalars(select(GameEvent).order_by(GameEvent.start_at.desc()))
@@ -722,6 +746,7 @@ def events(_: Reader, db: Db):
 @router.post("/events", status_code=201)
 def create_event(body: EventFields, admin: Operator, db: Db):
     check_rewards(db, body.reward_items)
+    config = checked_config(db, body)
     event = GameEvent(
         id=str(uuid.uuid4()),
         name=body.name,
@@ -731,6 +756,9 @@ def create_event(body: EventFields, admin: Operator, db: Db):
         start_at=aware(body.start_at),
         end_at=aware(body.end_at),
         reward_items=json.dumps(body.reward_items),
+        claim_end_at=aware(body.claim_end_at) if body.claim_end_at else None,
+        config=config,
+        version=0,
         created_by=admin.username,
         updated_at=now(),
     )
@@ -753,6 +781,7 @@ def update_event(event_id: str, body: EventFields, admin: Operator, db: Db):
     if event_phase(event) == "running":
         raise HTTPException(409, "Pause the event before editing it")
     check_rewards(db, body.reward_items)
+    config = checked_config(db, body)
     before = event_view(event)
     event.name = body.name
     event.kind = body.kind
@@ -760,6 +789,8 @@ def update_event(event_id: str, body: EventFields, admin: Operator, db: Db):
     event.start_at = aware(body.start_at)
     event.end_at = aware(body.end_at)
     event.reward_items = json.dumps(body.reward_items)
+    event.claim_end_at = aware(body.claim_end_at) if body.claim_end_at else None
+    event.config = config
     event.updated_at = now()
     audit(db, admin, "event.update", "event", event.id, before=before, after=event_view(event))
     db.commit()
@@ -776,6 +807,10 @@ def event_action(
         raise HTTPException(409, f"Cannot {action} an event that is {event.status}")
     event.status = "paused" if action == "pause" else "published"
     event.updated_at = now()
+    if action != "pause":
+        from app.liveops import snapshot
+
+        snapshot(db, event, admin.username)
     audit(db, admin, f"event.{action}", "event", event.id)
     db.commit()
     return event_view(event)
