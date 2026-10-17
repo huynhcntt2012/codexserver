@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static validation of a stage 3 Godot 4 project and its three maps/assets."""
+"""Static validation of a stage 3 Godot 4 project and its maps/assets."""
 from pathlib import Path
 from collections import deque
 import struct
@@ -34,22 +34,26 @@ def escapes_from_corner(lines,sp):
   break
  return False
 
-for level_id in ['park','frost','coast']:
+for level_id in ['park','frost','coast']+sorted(q.stem for q in (ROOT/'levels').glob('*.json') if q.stem not in ('park','frost','coast')):
  p=ROOT/'levels'/f'{level_id}.json';require(p.is_file(),f'Missing {p.name}')
  if not p.is_file():continue
  level=json.loads(p.read_text(encoding='utf-8'))
  lines=level['layout']
- require(len(lines)==11 and all(len(row)==15 for row in lines),f'Bad dimensions {level_id}')
+ cols,rows=level.get('columns',15),level.get('rows',11)
+ require((cols,rows) in ((15,11),(17,13)) and len(lines)==rows and all(len(row)==cols for row in lines),f'Bad dimensions {level_id}')
  require(all(set(row).issubset(set('.#C')) for row in lines),f'Bad symbols {level_id}')
- for x,y in ((1,1),(13,1),(13,9),(1,9)):
+ for x,y in [tuple(s) for s in level['spawns']]:
   require(path_is_open(lines,x,y),f'Blocked spawn {level_id} {x,y}')
   require(any(path_is_open(lines,x+dx,y+dy) for dx,dy in DIRS),f'Trapped spawn {level_id} {x,y}')
-  require(escapes_from_corner(lines,(x,y)),f'No bomb exit path {level_id} {x,y}')
+  # Escapable when the first bomb goes at the spawn or on a neighbouring safe
+  # cell (17x13 maps keep an L-shaped 3-cell start, like the arena server).
+  starts=[(x,y)]+[(x+dx,y+dy) for dx,dy in DIRS if path_is_open(lines,x+dx,y+dy)]
+  require(any(escapes_from_corner(lines,s) for s in starts),f'No bomb exit path {level_id} {x,y}')
  for kind in (level['crate'],level['wall']):
   require((ROOT/'assets/obstacles'/kind/'00.png').exists(),f'Missing obstacle {kind}')
  for y in range(2):
   for x in range(4):
-   require((ROOT/'assets/tiles'/level['theme']/f'{y}_{x}.png').is_file(),f'Missing {level_id} floor {y}_{x}')
+    require((ROOT/'assets/tiles'/level['theme']/f'{y}_{x}.png').is_file(),f'Missing {level_id} floor {y}_{x}')
  require((ROOT/'assets/bombs'/f'{level["bomb"]}.png').exists(),f'Missing bomb {level_id}')
  require((ROOT/'assets/level_previews'/f'{level_id}.png').exists(),f'Missing preview {level_id}')
  print(f'PASS map: {level["name"]} | crates={sum(row.count("C") for row in lines)}')

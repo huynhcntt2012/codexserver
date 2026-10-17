@@ -1,0 +1,50 @@
+{
+  "id": "station",
+  "name": "GA TÀU CẦU VỒNG",
+  "subtitle": "Trung bình • Nhà ga sắc màu",
+  "theme": "station",
+  "crate": "wood_crate",
+  "wall": "special_wall",
+  "bomb": "classic_blue",
+  "fx": "fire_vertical",
+  "bot_step": 0.34,
+  "bot_bomb": 2.6,
+  "bg": "#F9F0FF",
+  "columns": 17,
+  "rows": 13,
+  "layout": [
+    "#################",
+    "#.....C.C.C.....#",
+    "#.#.#C#C#C#C#.#.#",
+    "#..CCC.....CCC..#",
+    "#.#.#C#C#C#C#.#.#",
+    "#..C.........C..#",
+    "#C#.#C#.#.#C#.#C#",
+    "#..C.........C..#",
+    "#.#.#C#C#C#C#.#.#",
+    "#..CCC.....CCC..#",
+    "#.#.#C#C#C#C#.#.#",
+    "#.....C.C.C.....#",
+    "#################"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      15,
+      1
+    ],
+    [
+      15,
+      11
+    ],
+    [
+      1,
+      11
+    ]
+  ],
+  "pack_id": "007",
+  "story": "Đường ray sáng rực nhưng đoàn tàu vẫn chạy vòng quanh ga không người lái. Muốn bước tiếp, nhóm bạn phải đưa các mảnh bản đồ về đúng toa tàu."
+}

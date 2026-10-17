@@ -155,13 +155,13 @@ lại được giữ trong snapshot tới reset, không tiếp tục mô phỏng
 Room `arena` và snapshot v1 giữ nguyên, nên web và Godot cũ không đổi. App PC
 dùng room riêng `arena2`; client cũ không thấy phòng này trong `/rooms`.
 
-- Tạo phòng: `POST /matchmake/create/arena2` với
-  `{ "token", "map": "park" | "frost" | "coast", "hero"? }`. Map lạ hoặc thiếu
+- Tạo phòng: `POST /matchmake/create/arena2` với `{ "token", "map", "hero"? }`;
+  `map` là một trong 15 id trong `maps.ts` (park, frost, coast và 12 map Boom World 17×13). Map lạ hoặc thiếu
   thì lỗi, không tạo phòng. `joinOrCreate/arena2` lọc theo `map`
   (`filterBy(['map'])`); `joinById/<roomId>` nhận `{ token, hero? }`.
 - `hero` thuộc `bombo`, `mimi`, `zin`, `lala`, `kai` và chỉ dùng để vẽ nhân vật.
   Giá trị lạ được thay bằng nhân vật theo slot.
-- Bản đồ 15×11 lấy layout từ `apps/practice/levels/*.json`
+- Bản đồ 15×11 hoặc 17×13 lấy layout từ `apps/practice/levels/*.json`
   ([maps.ts](../apps/arena/src/maps.ts), test so khớp với file level).
   Có 8 điểm xuất phát; thùng trong phạm vi 2 ô quanh điểm xuất phát bị bỏ.
   Luật giữ như v1: 1 bom/người, tầm nổ 2, chưa có vật phẩm.

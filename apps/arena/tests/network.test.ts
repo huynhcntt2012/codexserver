@@ -288,9 +288,23 @@ test(
       assert.equal((await fetch(`${base}/rooms/v2`)).status, 401);
       // Unknown or missing maps never create a room.
       assert.ok(
-        (await reserve('x', 'create/arena2', { map: 'moon' })).status >= 400,
+        (await reserve('x', 'create/arena2', { map: 'mars' })).status >= 400,
       );
       assert.ok((await reserve('x', 'create/arena2')).status >= 400);
+      // A 17 x 13 Boom World map: own size and 8 spawns, then the room closes.
+      const moon = await join('moon', 'create/arena2', { map: 'moon' });
+      const moonSnap = moon.state.snapshot as unknown as Record<
+        string,
+        unknown
+      >;
+      assert.deepEqual(
+        [moonSnap.map, moonSnap.width, moonSnap.height],
+        ['moon', 17, 13],
+      );
+      assert.equal((moonSnap.grid as unknown[]).length, 13);
+      moon.ws.close();
+      clients.splice(clients.indexOf(moon), 1);
+      await delay(200);
       const host = await join('host', 'create/arena2', {
         map: 'frost',
         hero: 'lala',

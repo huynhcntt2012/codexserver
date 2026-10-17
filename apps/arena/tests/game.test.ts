@@ -241,6 +241,7 @@ test('round stats credit bombs and knockouts outside the snapshot', () => {
 });
 
 test('v2 maps match the PC level files and keep every spawn safe', async () => {
+  assert.equal(Object.keys(MAPS).length, 15);
   const { readFileSync } = await import('node:fs');
   for (const map of Object.values(MAPS)) {
     const level = JSON.parse(
@@ -253,7 +254,8 @@ test('v2 maps match the PC level files and keep every spawn safe', async () => {
     assert.equal(map.name, level.name);
     assert.deepEqual([map.width, map.height], [level.columns, level.rows]);
     const grid = createLayoutMap(map);
-    assert.equal(grid.length, 11);
+    assert.equal(grid.length, map.height);
+    assert.ok(grid.every((row) => row.length === map.width));
     assert.equal(new Set(map.spawns.map((s) => s.join(','))).size, 8);
     for (const [x, y] of map.spawns) {
       assert.equal(grid[y]![x], Tile.Floor);
@@ -270,7 +272,7 @@ test('v2 maps match the PC level files and keep every spawn safe', async () => {
     for (let i = 0; i < 8; i++) assert.ok(g.addPlayer(`p${i}`, `P${i}`, 'kai'));
     assert.equal(g.addPlayer('p9', 'P9'), false);
     const snap = g.snapshot();
-    assert.deepEqual([snap.width, snap.height], [15, 11]);
+    assert.deepEqual([snap.width, snap.height], [map.width, map.height]);
     assert.equal((snap.players[0] as { hero?: string }).hero, 'kai');
   }
   // v1 snapshots keep their exact shape (no hero field).

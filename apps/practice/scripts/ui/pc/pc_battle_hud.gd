@@ -7,7 +7,6 @@ const BANNER_TIME := 1.3
 const SIDEBAR := 260.0
 const BAR := 66.0
 const GAP := 12.0
-const ARENA := Vector2(960, 704)
 
 var game: Node
 var map_label: Label
@@ -21,7 +20,7 @@ var sidebar: PanelContainer
 var bar: PanelContainer
 var frame: Panel
 var arena_rect := Rect2()
-var laid_out_for := Vector2.ZERO
+var laid_out_for := Rect2()
 
 func _init() -> void:
 	super("sky")
@@ -121,21 +120,27 @@ func build_bar() -> void:
 	status_label = stretch(text("", 15, Color.WHITE, line))
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
-## Places sidebar, bar and arena for the current window; the arena keeps its
-## 960×704 proportions and grows to the largest size that fits.
+## Board size of the loaded map in pixels (15x11 or 17x13 tiles of 64 px).
+func arena_size() -> Vector2:
+	return Vector2(game.columns * game.TILE, game.rows * game.TILE)
+
+## Places sidebar, bar and arena for the current window; the arena keeps the
+## map's proportions and grows to the largest size that fits.
 func layout() -> void:
 	var area := canvas.size
-	if area == laid_out_for or area.x <= 0.0:
+	var key := Rect2(area, arena_size())
+	if key == laid_out_for or area.x <= 0.0:
 		return
-	laid_out_for = area
+	laid_out_for = key
 	var side_x := area.x - SIDEBAR - GAP
 	sidebar.position = Vector2(side_x, GAP)
 	sidebar.size = Vector2(SIDEBAR, area.y - GAP * 2)
 	var left := Rect2(GAP, GAP, side_x - GAP * 2, area.y - BAR - GAP * 3)
 	bar.position = Vector2(GAP, area.y - BAR - GAP)
 	bar.size = Vector2(left.size.x, BAR)
-	var fit := minf(left.size.x / ARENA.x, left.size.y / ARENA.y)
-	var size := ARENA * fit
+	var board := arena_size()
+	var fit := minf(left.size.x / board.x, left.size.y / board.y)
+	var size := board * fit
 	arena_rect = Rect2(left.position + (left.size - size) / 2.0, size)
 	frame.position = arena_rect.position - Vector2(8, 8)
 	frame.size = arena_rect.size + Vector2(16, 16)

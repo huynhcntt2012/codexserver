@@ -13,10 +13,14 @@ func _smoke() -> void:
 	var game = packed.instantiate()
 	root.add_child(game)
 	await process_frame
-	for level_index in range(3):
+	for level_index in range(game.LEVEL_FILES.size()):
 		game._select_level(level_index)
 		game._new_round()
 		await process_frame
+		var level: Dictionary = game.current_level
+		assert(game.columns == int(level.get("columns", 15)) and game.rows == int(level.get("rows", 11)), "Board size follows the level")
+		for i in game.fighters.size():
+			assert(game.fighters[i]["cell"] == game.spawn_cell(i), "Fighter on its level spawn")
 		assert(game.terrain.size() > 20, "Missing solid walls")
 		assert(game.crates.size() > 10, "Missing breakables")
 		assert(game.fighters.size() == 4, "Wrong fighter count")
@@ -27,6 +31,9 @@ func _smoke() -> void:
 		game.bombs[0]["timer"] = 0.03
 		await create_timer(0.12).timeout
 		assert(game.bursts.size() >= 1, "Bomb did not explode")
+		# Bots keep playing for a moment on every map (no stuck AI or errors).
+		game.player["invulnerable"] = 99.0
+		await create_timer(0.6).timeout
 		print("SMOKE PASS ", game.current_level["id"])
 	print("ALL GAME BOOM STEP 3 SMOKE TESTS PASSED")
 	if game.music_enabled:

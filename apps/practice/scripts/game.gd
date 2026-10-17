@@ -3,14 +3,20 @@ extends Node2D
 ## six-frame movement and pathfinding bot AI. All assets custom-generated.
 
 const TILE: int = 64
-const COLUMNS: int = 15
-const ROWS: int = 11
+## Board size of the loaded level (15x11 classic maps, 17x13 Boom World maps).
+var columns: int = 15
+var rows: int = 11
 const START_TIME: float = 180.0
 const ARENA_POS: Vector2 = Vector2(160, 112)
 const HEROES = ["bombo", "mimi", "zin", "lala", "kai"]
 const HERO_NAMES = ["BOMBO", "MIMI", "ZIN", "LALA", "KAI"]
 const HERO_COLORS = [Color("2baaff"), Color("ff6da9"), Color("ff6959"), Color("ffbe3c"), Color("5cdc90")]
-const LEVEL_FILES = ["res://levels/park.json", "res://levels/frost.json", "res://levels/coast.json"]
+const LEVEL_FILES = [
+	"res://levels/park.json", "res://levels/frost.json", "res://levels/coast.json",
+	"res://levels/pastry.json", "res://levels/forest.json", "res://levels/harbor.json", "res://levels/station.json",
+	"res://levels/clock.json", "res://levels/crystal.json", "res://levels/market.json", "res://levels/sky.json",
+	"res://levels/volcano.json", "res://levels/star.json", "res://levels/factory.json", "res://levels/moon.json",
+]
 const DIRECTIONS = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 const HERO_SCRIPT = preload("res://scripts/hero_sprite.gd")
 
@@ -55,7 +61,7 @@ var explosion_depth: int = 0
 var last_won: bool = false
 var reporter: Node = preload("res://scripts/practice_report.gd").new()
 ## Arena placement in viewport pixels; the PC HUD resizes it to fill the window.
-var arena_layout := Rect2(ARENA_POS, Vector2(COLUMNS * TILE, ROWS * TILE))
+var arena_layout := Rect2(ARENA_POS, Vector2(15 * TILE, 11 * TILE))
 var background: Sprite2D
 var pc_screens: Dictionary = {}  # PC menus inside `menu`: lobby, matchmaking, room
 
@@ -259,7 +265,7 @@ func layout_arena(rect: Rect2, viewport: Vector2) -> void:
 func _apply_arena_layout() -> void:
 	if is_instance_valid(world):
 		world.position = arena_layout.position
-		world.scale = Vector2.ONE * (arena_layout.size.x / float(COLUMNS * TILE))
+		world.scale = Vector2.ONE * (arena_layout.size.x / float(columns * TILE))
 
 
 ## Catalog icon downloads wait while a round runs so they never compete with play.
@@ -313,15 +319,24 @@ func _load_level() -> bool:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		push_error("Level JSON không hợp lệ: " + LEVEL_FILES[selected_level])
 		return false
-	current_level = parsed
-	if current_level.get("layout", []).size() != ROWS:
-		push_error("Sai số hàng trong bản đồ.")
+	var size := Vector2i(int(parsed.get("columns", 15)), int(parsed.get("rows", 11)))
+	if parsed.get("layout", []).size() != size.y or parsed.get("spawns", []).size() < 4:
+		push_error("Sai số hàng hoặc điểm xuất phát trong bản đồ.")
 		return false
-	for row in current_level["layout"]:
-		if str(row).length() != COLUMNS:
+	for row in parsed["layout"]:
+		if str(row).length() != size.x:
 			push_error("Sai số cột trong bản đồ.")
 			return false
+	current_level = parsed
+	columns = size.x
+	rows = size.y
 	return true
+
+
+## Spawn cell for player 0 and bots 1-3, from the level file.
+func spawn_cell(index: int) -> Vector2i:
+	var point: Array = current_level["spawns"][index]
+	return Vector2i(int(point[0]), int(point[1]))
 
 
 func _new_round() -> void:
@@ -350,11 +365,10 @@ func _new_round() -> void:
 	_apply_arena_layout()
 	add_child(world)
 	_build_map()
-	player = _spawn_fighter(HEROES[selected_hero], Vector2i(1, 1), false)
+	player = _spawn_fighter(HEROES[selected_hero], spawn_cell(0), false)
 	var enemy_names: Array = bot_heroes()
-	_spawn_fighter(enemy_names[0], Vector2i(13, 1), true)
-	_spawn_fighter(enemy_names[1], Vector2i(13, 9), true)
-	_spawn_fighter(enemy_names[2], Vector2i(1, 9), true)
+	for i in 3:
+		_spawn_fighter(enemy_names[i], spawn_cell(i + 1), true)
 	remaining_bots = 3
 	_update_hud()
 	game_state = "playing"
@@ -385,9 +399,9 @@ func _build_map() -> void:
 			floors.append(load("res://assets/tiles/%s/%d_%d.png" % [floor_theme, n, m]))
 	var wall_tex = load("res://assets/obstacles/%s/00.png" % wall_name)
 	var crate_tex = load("res://assets/obstacles/%s/00.png" % crate_name)
-	for y in range(ROWS):
+	for y in range(rows):
 		var line: String = str(current_level["layout"][y])
-		for x in range(COLUMNS):
+		for x in range(columns):
 			var cell = Vector2i(x, y)
 			var ground = Sprite2D.new()
 			ground.texture = floors[(y % 2) * 4 + ((x + y) % 4)]
@@ -408,7 +422,7 @@ func _build_map() -> void:
 	var border = ReferenceRect.new()
 	border.editor_only = false
 	border.position = Vector2.ZERO
-	border.size = Vector2(COLUMNS * TILE, ROWS * TILE)
+	border.size = Vector2(columns * TILE, rows * TILE)
 	border.border_color = Color("d2f7ff")
 	border.border_width = 3
 	border.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -715,7 +729,7 @@ func _distance(a: Vector2i, b: Vector2i) -> int:
 
 
 func _can_walk(cell: Vector2i) -> bool:
-	if cell.x < 0 or cell.y < 0 or cell.x >= COLUMNS or cell.y >= ROWS:
+	if cell.x < 0 or cell.y < 0 or cell.x >= columns or cell.y >= rows:
 		return false
 	if terrain.has(cell) or crates.has(cell):
 		return false
@@ -811,7 +825,7 @@ func _blast_cells(origin: Vector2i, power: int) -> Array:
 	for direction in DIRECTIONS:
 		for step in range(1, power + 1):
 			var target: Vector2i = origin + direction * step
-			if target.x < 0 or target.y < 0 or target.x >= COLUMNS or target.y >= ROWS:
+			if target.x < 0 or target.y < 0 or target.x >= columns or target.y >= rows:
 				break
 			if terrain.has(target):
 				break

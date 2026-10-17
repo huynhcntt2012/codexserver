@@ -930,6 +930,7 @@ func open_modal(title: String, icon: String, message: String, with_settings := f
 	modal_icon.set_kind(icon)
 	modal_message.text = message
 	modal_message.visible = message != ""
+	modal_icon.get_parent().show()
 	modal_settings.visible = with_settings
 	modal_packs.hide()
 	name_input.hide()
@@ -1212,6 +1213,9 @@ func load_maps() -> void:
 			"name": str(data.get("name", path.get_file().get_basename())),
 			"subtitle": subtitle,
 			"tier": subtitle.get_slice("•", 0).strip_edges(),
+			"columns": int(data.get("columns", 15)),
+			"rows": int(data.get("rows", 11)),
+			"story": str(data.get("story", "")),
 		}
 		map.keywords = fold(" ".join([map.id, map.name, subtitle, str(data.get("theme", ""))]))
 		maps.append(map)
@@ -1388,21 +1392,49 @@ func quick_play() -> void:
 	var map_id: String = maps[map_filter if map_filter >= 0 else clampi(game.selected_level, 0, maps.size() - 1)].id
 	await go_online(func(): return await OnlineArena.quick_join(map_id, hero_id()), "Đang tìm phòng…")
 
+## Map picker for a new online room: every map as a card (preview, name,
+## difficulty, size), five per row, so all 15 maps fit in one popup.
 func open_create() -> void:
 	if not can_play_online():
 		return
-	open_modal("TẠO PHÒNG ONLINE", "people", "Chọn bản đồ. Phòng mở cho tối đa 8 người; ván bắt đầu khi mọi người đã Sẵn sàng (ít nhất 2 người).")
+	open_modal("TẠO PHÒNG ONLINE", "people", "Chọn bản đồ. Phòng tối đa 8 người; ván bắt đầu khi mọi người đã Sẵn sàng (ít nhất 2 người).")
+	modal_icon.get_parent().hide()
 	modal_ok.text = "ĐÓNG"
 	for child in modal_packs.get_children():
 		modal_packs.remove_child(child)
 		child.queue_free()
+	var grid := GridContainer.new()
+	grid.name = "MapGrid"
+	grid.columns = 5
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	modal_packs.add_child(grid)
 	for map in maps:
-		var map_id: String = map.id
-		var option := button("%s  ·  %s" % [str(map.name).capitalize(), map.tier], func(): close_modal(); create_room(map_id), Color("e4f7ff"), INK, 22, 18, Color("b8e9f7"))
-		option.name = "Create_" + map_id
-		option.custom_minimum_size = Vector2(600, 60)
-		modal_packs.add_child(option)
+		grid.add_child(map_choice(map))
 	modal_packs.show()
+
+func map_choice(map: Dictionary) -> Button:
+	var map_id: String = map.id
+	var option := button("", func(): close_modal(); create_room(map_id), Color("e4f7ff"), INK, 18, 16, Color("b8e9f7"))
+	option.name = "Create_" + map_id
+	option.custom_minimum_size = Vector2(228, 196)
+	option.tooltip_text = "%s · %s\n%s" % [str(map.name).capitalize(), map.subtitle, map.story]
+	var stack := column(4, option)
+	stack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	stack.offset_left = 8
+	stack.offset_right = -8
+	stack.offset_top = 8
+	stack.offset_bottom = -8
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var art := picture("res://assets/level_previews/%s.png" % map_id, Vector2(200, 122))
+	stack.add_child(art)
+	var title := stretch(text(str(map.name).capitalize(), 18, INK, stack))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var meta := row(6, stack)
+	meta.alignment = BoxContainer.ALIGNMENT_CENTER
+	pill(map.tier if map.tier != "" else "Đấu thường", TIER_COLORS.get(map.tier, Color("4fa8ef")), Color.WHITE, 14, meta)
+	text("%d×%d" % [map.columns, map.rows], 14, Color("4b6a8a"), meta)
+	return option
 
 func create_room(map_id: String) -> void:
 	await go_online(func(): return await OnlineArena.create_room(map_id, hero_id()), "Đang tạo phòng…")

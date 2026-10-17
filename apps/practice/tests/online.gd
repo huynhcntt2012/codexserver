@@ -73,13 +73,17 @@ func run() -> void:
 	check(ask.status == 201, "Friend request sent")
 	var accepted := await http(HTTPClient.METHOD_POST, "/v1/friends/requests/%s/accept" % str(ask.data.request_id), null, b_token)
 	check(accepted.status == 200, "Friend request accepted")
-	# Player B opens a room on frost with its own adapter.
+	# Player B opens a room (SUNI_ONLINE_MAP, default frost) with its own adapter.
+	var map_id := OS.get_environment("SUNI_ONLINE_MAP")
+	if map_id.is_empty():
+		map_id = "frost"
+	var level: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://levels/%s.json" % map_id))
 	var b_arena: Node = load("res://scripts/online_arena.gd").new()
 	b_arena.token_override = b_token
 	root.add_child(b_arena)
-	check(await b_arena.create_room("frost", "mimi"), "B creates a frost room: " + b_arena.last_error)
+	check(await b_arena.create_room(map_id, "mimi"), "B creates a %s room: %s" % [map_id, b_arena.last_error])
 	var room_number := int(b_arena.snapshot.get("number", 0))
-	check(b_arena.snapshot.map == "frost" and room_number > 0 and b_arena.snapshot.width == 15 and b_arena.snapshot.height == 11, "v2 snapshot with map and number")
+	check(b_arena.snapshot.map == map_id and room_number > 0 and int(b_arena.snapshot.width) == int(level.columns) and int(b_arena.snapshot.height) == int(level.rows), "v2 snapshot with map and number")
 	# Player A sees it in the real lobby, with the friend filter.
 	change_scene_to_file("res://scenes/main.tscn")
 	await process_frame
@@ -99,6 +103,12 @@ func run() -> void:
 			slot = i
 	check(slot >= 0 and lobby.room_cards[slot].button.text == "Vào" and lobby.room_cards[slot].count.text == "1/8", "Card shows Vào and 1/8")
 	await capture("online-lobby.png")
+	# Every map (classic and Boom World) is offered when creating a room.
+	lobby.open_create()
+	var cards: Array = lobby.modal_packs.find_children("Create_*", "Button", true, false)
+	check(cards.size() == game.LEVEL_FILES.size() and lobby.find_child("Create_moon", true, false) != null, "Create popup lists all %d maps" % game.LEVEL_FILES.size())
+	await capture("online-create.png")
+	lobby.close_modal()
 	lobby.room_cards[slot].button.pressed.emit()
 	var online = game.pc_screens["online"]
 	check(await until(func(): return online.is_visible_in_tree() and arena.connected, 15.0), "A joins through Vào: " + arena.last_error)

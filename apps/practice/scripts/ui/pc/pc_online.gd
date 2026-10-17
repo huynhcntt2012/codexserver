@@ -7,7 +7,6 @@ const TILE := 64
 const MOVE_SECONDS := 0.15
 const RESEND := 0.09
 const CHAT_POLL := 3.0
-const TIERS := {"park": "Dễ", "frost": "Trung bình", "coast": "Khó"}
 
 var game: Node
 var parts: Dictionary
@@ -215,7 +214,8 @@ func render_room(snap: Dictionary) -> void:
 	title_label.text = "Phòng %s · %s" % [number, str(level.get("name", map_id)).capitalize()]
 	map_art.texture = load("res://assets/level_previews/%s.png" % map_id) if levels.has(map_id) else null
 	map_name.text = str(level.get("name", map_id)).capitalize()
-	map_info.text = "%s · Phòng %s · Ván %d · Mỗi người 1 bom, tầm nổ 2 ô. Người cuối cùng còn sống thắng." % [TIERS.get(map_id, ""), number, int(snap.get("round", 1))]
+	var tier := str(level.get("subtitle", "")).get_slice("•", 0).strip_edges()
+	map_info.text = "%s · Phòng %s · Ván %d · Mỗi người 1 bom, tầm nổ 2 ô. Người cuối cùng còn sống thắng." % [tier, number, int(snap.get("round", 1))]
 	var players: Array = snap.get("players", [])
 	players.sort_custom(func(a, b): return int(a.slot) < int(b.slot))
 	var ready := 0

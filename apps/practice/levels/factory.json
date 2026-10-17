@@ -1,0 +1,50 @@
+{
+  "id": "factory",
+  "name": "XƯỞNG ROBOT KẸO",
+  "subtitle": "Khó • Nhà máy robot",
+  "theme": "factory",
+  "crate": "metal_barrel",
+  "wall": "special_wall",
+  "bomb": "strong_black",
+  "fx": "fire_horizontal",
+  "bot_step": 0.29,
+  "bot_bomb": 2.1,
+  "bg": "#D9F4E9",
+  "columns": 17,
+  "rows": 13,
+  "layout": [
+    "#################",
+    "#...CC.CCC.CC...#",
+    "#.#.#C#.#.#C#.#.#",
+    "#.......C.......#",
+    "#.#C#C#C#C#C#C#.#",
+    "#CC.CCCC.CCCC.CC#",
+    "#C#.#.#.#.#.#.#C#",
+    "#CC.CCCC.CCCC.CC#",
+    "#.#C#C#C#C#C#C#.#",
+    "#.......C.......#",
+    "#.#.#C#.#.#C#.#.#",
+    "#...CC.CCC.CC...#",
+    "#################"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      15,
+      1
+    ],
+    [
+      15,
+      11
+    ],
+    [
+      1,
+      11
+    ]
+  ],
+  "pack_id": "014",
+  "story": "Tất cả những chiếc máy làm kẹo chuyển sang sản xuất hộp màu xám. Robot Bíp bí mật chỉ ra cỗ máy đã bị điều khiển từ Cung Điện Trăng."
+}

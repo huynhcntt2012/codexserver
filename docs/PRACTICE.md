@@ -345,3 +345,24 @@ hạ, server chọn B thắng, cả hai về phòng chờ rồi rời phòng.
 | -------------------------------------------------- | -------------------------------------------------- |
 | ![](screenshots/practice-online/online-lobby.png)  | ![](screenshots/practice-online/online-room.png)   |
 | ![](screenshots/practice-online/online-battle.png) | ![](screenshots/practice-online/online-result.png) |
+
+### 15 bản đồ: thêm 12 map Boom World (17×13)
+
+Gói `Boom_World_12_Maps_Godot4.zip` thêm 12 map (004–015): Tiệm Bánh Mây, Rừng Nấm
+Đom Đóm, Bến Cảng Bong Bóng, Ga Tàu Cầu Vồng, Tháp Đồng Hồ, Hang Pha Lê, Chợ Đêm Đèn
+Lồng, Đền Gió Trên Mây, Núi Lửa Kẹo Đỏ, Vườn Sao Rơi, Xưởng Robot Kẹo, Cung Điện Trăng.
+
+- **Ở đâu**: `levels/<id>.json` (định dạng như 3 map cũ, thêm `story`, `pack_id`) và
+  `apps/arena/src/maps.ts`; test arena kiểm tra hai bên giống nhau.
+- **Sảnh**: hộp **Tạo phòng** là lưới 15 thẻ (ảnh, tên, độ khó, kích thước); bộ lọc
+  bản đồ và độ khó, tìm phòng, Tìm trận nhanh và Luyện tập đều có đủ 15 map.
+- **Kích thước**: game đọc `columns`/`rows` và `spawns` từ file level. Bàn 17×13 dùng
+  cho cả Luyện tập (1 người + 3 bot) và online (8 ghế: 4 góc + 4 điểm giữa cạnh).
+- **Hình ảnh**: mỗi map có bộ nền riêng tô theo màu nền của map; tường, thùng, bom và
+  hiệu ứng dùng ảnh có sẵn. Ảnh preview vẽ từ dữ liệu map.
+- **Luật**: luật Classic như 3 map cũ. Hazard của từng map (hơi nóng, gió…) chưa làm.
+  Thùng trong bán kính 2 ô quanh 4 góc xuất phát được dọn, giống server.
+
+| Tạo phòng                                              | Online 17×13                                         | Luyện tập 17×13                                          |
+| ------------------------------------------------------ | ---------------------------------------------------- | -------------------------------------------------------- |
+| ![](screenshots/practice-maps/create-room-15-maps.png) | ![](screenshots/practice-maps/online-moon-17x13.png) | ![](screenshots/practice-maps/practice-pastry-17x13.png) |

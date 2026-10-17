@@ -1,0 +1,50 @@
+{
+  "id": "moon",
+  "name": "CUNG ĐIỆN TRĂNG",
+  "subtitle": "Khó • Cung trăng nhiệm màu",
+  "theme": "moon",
+  "crate": "metal_barrel",
+  "wall": "special_wall",
+  "bomb": "star",
+  "fx": "ice",
+  "bot_step": 0.29,
+  "bot_bomb": 2.1,
+  "bg": "#1B2558",
+  "columns": 17,
+  "rows": 13,
+  "layout": [
+    "#################",
+    "#...C..C.C..C...#",
+    "#.#C#C#C#C#C#C#.#",
+    "#.....C...C.....#",
+    "#.#.#.#.#.#.#.#.#",
+    "#..CCC.....CCC..#",
+    "#.#C#.#.#.#.#C#.#",
+    "#..CCC.....CCC..#",
+    "#.#.#.#.#.#.#.#.#",
+    "#.....C...C.....#",
+    "#.#C#C#C#C#C#C#.#",
+    "#...C..C.C..C...#",
+    "#################"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      15,
+      1
+    ],
+    [
+      15,
+      11
+    ],
+    [
+      1,
+      11
+    ]
+  ],
+  "pack_id": "015",
+  "story": "Tại điện trăng, Kẻ Xám để lộ bí mật: hắn chỉ sợ sắc màu làm ai cũng khác biệt. Vượt qua ba vệ binh cuối cùng và khôi phục Lõi Cầu Vồng, bầu trời sẽ sáng trở lại."
+}

@@ -1,0 +1,50 @@
+{
+  "id": "forest",
+  "name": "RỪNG NẤM ĐOM ĐÓM",
+  "subtitle": "Trung bình • Khu rừng kỳ ảo",
+  "theme": "forest",
+  "crate": "barrel",
+  "wall": "shrub",
+  "bomb": "water_blue",
+  "fx": "water_splash",
+  "bot_step": 0.34,
+  "bot_bomb": 2.6,
+  "bg": "#E8F5D6",
+  "columns": 17,
+  "rows": 13,
+  "layout": [
+    "#################",
+    "#...CCC...CCC...#",
+    "#.#C#.#C#C#.#C#.#",
+    "#.C..C.....C..C.#",
+    "#.#.#C#.#.#C#.#.#",
+    "#C..C.CC.CC.C..C#",
+    "#C#C#C#C#C#C#C#C#",
+    "#C..C.CC.CC.C..C#",
+    "#.#.#C#.#.#C#.#.#",
+    "#.C..C.....C..C.#",
+    "#.#C#.#C#C#.#C#.#",
+    "#...CCC...CCC...#",
+    "#################"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      15,
+      1
+    ],
+    [
+      15,
+      11
+    ],
+    [
+      1,
+      11
+    ]
+  ],
+  "pack_id": "005",
+  "story": "Những cây nấm ngừng phát sáng khi Đom Đóm Trưởng Lão đánh mất chiếc chuông rừng. Trong những vạt nấm, một cơn mưa bào tử đang chờ người lạ."
+}
