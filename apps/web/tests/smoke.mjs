@@ -19,16 +19,20 @@ async function until(predicate, timeout = 15000) {
 }
 
 try {
+  // The site root is the public portal; the multiplayer web client is /demo/.
   const response = await fetch(base);
   assert.equal(response.status, 200);
-  assert.match(await response.text(), /Bụp Bụp! · Đấu trường bóng nước/);
+  assert.match(await response.text(), /BỤP BỤP! – Đặt bom nước/);
   assert.match(
     response.headers.get('content-security-policy'),
     /connect-src 'self'/,
   );
+  const demo = await fetch(`${base}/demo/`);
+  assert.equal(demo.status, 200);
+  assert.match(await demo.text(), /Bụp Bụp! · Đấu trường bóng nước/);
   assert.equal((await fetch(`${base}/.env`)).status, 404);
   assert.match(
-    (await fetch(`${base}/app.mjs`)).headers.get('content-type'),
+    (await fetch(`${base}/demo/app.mjs`)).headers.get('content-type'),
     /javascript/,
   );
   await assert.rejects(
