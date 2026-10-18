@@ -1,7 +1,7 @@
 import { Room, type Client, ServerError } from '@colyseus/core';
 import { authenticate } from './auth.js';
 import { Arena, TICK_MS, type RoundResult } from './game.js';
-import { processId as ingestProcess, report } from './ingest.js';
+import { fetchLoadout, processId as ingestProcess, report } from './ingest.js';
 import { findMap, HEROES } from './maps.js';
 import { BotBrain } from './bots.js';
 
@@ -53,6 +53,19 @@ export class ArenaRoom extends Room {
       this.game.input(client.sessionId, action);
     });
     this.game.onRoundEnd = (result) => this.reportRound(result);
+    // Each item use the simulation accepted is consumed once from the API stock.
+    let uses = 0;
+    this.game.onItemUsed = (playerId, item) => {
+      const account = this.accounts.get(playerId);
+      if (!account) return;
+      report({
+        type: 'use',
+        room_id: this.roomId,
+        account_id: account.accountId,
+        item_id: item,
+        use_id: `${ingestProcess}.${this.roomId}.${++uses}`,
+      });
+    };
     this.setSimulationInterval(() => {
       if (this.practice) this.driveBots();
       this.game.tick();
@@ -161,6 +174,10 @@ export class ArenaRoom extends Room {
     if (!this.game.addPlayer(client.sessionId, auth.name, options?.hero))
       throw new ServerError(409, 'Round already starting');
     this.accounts.set(client.sessionId, auth);
+    if (this.protocol === 2)
+      void fetchLoadout(auth.accountId).then(({ items, pet }) =>
+        this.game.setLoadout(client.sessionId, items, pet),
+      );
     client.sendBytes(1, this.snapshotBytes());
     this.reportRoom();
   }

@@ -109,7 +109,7 @@ Luồng tích hợp:
    nghĩa** JWT được chấp nhận. Nhận `JOIN_ROOM` (10) rồi gửi ACK `[10]`.
 5. Nhận snapshot, gửi action theo định dạng dưới đây. Gửi `[12]` để rời phòng.
 
-Adapter có sẵn: [web network.mjs](../apps/web/public/network.mjs) và
+Adapter có sẵn: [web network.mjs](../apps/web/public/demo/network.mjs) và
 [Godot network.gd](../apps/client/scripts/network.gd). Đây là adapter cho wire
 protocol hiện tại, không phải SDK Colyseus tổng quát.
 

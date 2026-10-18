@@ -42,6 +42,8 @@ const DETAILS: Record<string, string> = {
   'Keep at least one active owner': 'Cần giữ ít nhất một owner đang hoạt động.',
   'Admin username taken': 'Tên admin đã được dùng.',
   'Current password is wrong': 'Mật khẩu hiện tại không đúng.',
+  'Slug already exists': 'Đường dẫn (slug) này đã có bài khác dùng.',
+  'Post not found': 'Không tìm thấy bài viết (có thể đã bị xóa).',
 };
 
 export function getToken(): string | null {

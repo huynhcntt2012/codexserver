@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { ArenaClient } from '../public/network.mjs';
+import { ArenaClient } from '../public/demo/network.mjs';
 
 // Run only against a development stack: creates a test account and a guest.
 const base = process.env.SUNI_WEB_URL || 'http://127.0.0.1:8081';

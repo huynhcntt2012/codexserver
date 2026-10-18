@@ -10,7 +10,10 @@ signal snapshot_received(snapshot: Dictionary)
 signal closed(reason: String)
 
 const MAPS := ["park", "frost", "coast"]
-const ACTIONS := ["up", "down", "left", "right", "bomb", "ready"]
+const ACTIONS := [
+	"up", "down", "left", "right", "bomb", "ready", "mount",
+	"use_throw_bomb", "use_dart", "use_blue_shield", "use_speed_shoes", "use_freeze_bomb", "use_push_glove",
+]
 const CONNECT_MS := 12000
 
 var room_id := ""

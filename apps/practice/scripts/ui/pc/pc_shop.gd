@@ -2,14 +2,17 @@ extends "res://scripts/ui/pc/pc_kit.gd"
 ## PC shop ("SHOP"): category menu on the left; a striped awning and banner over
 ## the item grid (art, name, description, price, MUA); on the right the hero as
 ## shop mascot with a speech bubble about the selected item and its buy button.
+## Wings and halos are tried on the mascot before buying.
 ## Purchases go through UIState (server wallet when signed in, demo wallet
 ## otherwise); there is no real payment and no invented discount.
 signal navigate(destination: String)
 const CATEGORIES := [
-	["", "Tất cả"], ["consumable", "Vật phẩm"], ["outfit", "Trang phục"], ["hat", "Mũ"],
+	["", "Tất cả"], ["consumable", "Vật phẩm"], ["outfit", "Trang phục"], ["hat", "Mũ"], ["wings", "Cánh"],
 	["bomb_skin", "Skin bom"], ["effect", "Hiệu ứng"], ["pet", "Pet"], ["accessory", "Phụ kiện"],
 ]
 const RARITY := {"common": ["Thường", Color("8fa3c0")], "rare": ["Hiếm", Color("4fb7f5")], "epic": ["Epic", Color("a98bf0")], "legendary": ["Huyền thoại", Color("ff7083")]}
+const HeroPreview := preload("res://scripts/ui/hero_preview.gd")
+const TRY_ON := ["hat", "wings"]
 const PANEL := Color("1567ae")
 const PANEL_EDGE := Color("74d3f0")
 
@@ -41,7 +44,7 @@ var selected := ""
 var grid: GridContainer
 var tiles: Dictionary = {}
 var menu: Dictionary = {}
-var preview_hero: TextureRect
+var preview_hero: Control
 var preview_icon: TextureRect
 var preview_name: Label
 var preview_rarity: Label
@@ -73,6 +76,7 @@ func _ready() -> void:
 	UIState.inventory_changed.connect(refresh)
 	UIState.wallet_changed.connect(refresh)
 	UIState.profile_changed.connect(refresh)
+	UIState.loadout_changed.connect(refresh)
 	visibility_changed.connect(func(): if is_visible_in_tree(): render_grid())
 	render_grid()
 
@@ -197,7 +201,8 @@ func build_mascot(body: Control) -> void:
 	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	side.add_child(stage)
-	preview_hero = picture("", Vector2.ZERO)
+	preview_hero = HeroPreview.new()
+	preview_hero.name = "PreviewHero"
 	preview_hero.set_anchors_preset(Control.PRESET_FULL_RECT)
 	stage.add_child(preview_hero)
 	var badge := card(Color.WHITE, Color("ffd0e1"), 46, 4, 6)
@@ -330,7 +335,13 @@ func refresh() -> void:
 		style.bg_color = Color("fff6dc") if id == selected else Color("eef8ff")
 	var item := UIState.get_item(selected)
 	var bound := str(item.get("character_id", ""))
-	preview_hero.texture = load("res://assets/characters/portraits/%s.png" % (bound if bound != "" else hero))
+	# The mascot wears the current loadout plus the selected wings/halo on trial.
+	var look: Dictionary = UIState.profile.get("loadout", {}).duplicate()
+	var slot := str(item.get("category", ""))
+	var trying := slot in TRY_ON and not UIState.equipped(selected)
+	if trying:
+		look[slot] = selected
+	preview_hero.show_hero(bound if bound != "" else hero, look)
 	preview_icon.texture = icon_texture(str(item.get("icon", "")))
 	preview_name.text = str(item.get("name", "Chọn vật phẩm"))
 	var rarity: Array = RARITY.get(str(item.get("rarity", "")), RARITY.common)
@@ -343,14 +354,21 @@ func refresh() -> void:
 	var stock := owned_text(item)
 	if stock != "":
 		note += "\n" + stock
+	if trying:
+		note += "\nĐang mặc thử" + (" · bấm MẶC NGAY để giữ" if UIState.owned(selected) else "")
 	preview_desc.text = note
 	var owned_already := not item.is_empty() and str(item.get("category", "")) != "consumable" and UIState.owned(selected)
-	buy_button.disabled = item.is_empty() or owned_already
-	buy_button.text = "ĐÃ SỞ HỮU" if owned_already else ("MUA THÊM" if stock != "" else "MUA")
+	# A bought wing/halo can be put on from here, the try-on becoming the real look.
+	var wear := owned_already and trying
+	buy_button.disabled = item.is_empty() or (owned_already and not wear)
+	buy_button.text = "MẶC NGAY" if wear else ("ĐÃ SỞ HỮU" if owned_already else ("MUA THÊM" if stock != "" else "MUA"))
 
 func request_buy() -> void:
 	var item := UIState.get_item(selected)
 	if item.is_empty():
+		return
+	if str(item.get("category", "")) in TRY_ON and UIState.owned(selected):
+		UIState.equip(selected)
 		return
 	notice("XÁC NHẬN MUA", "Mua %s với giá %s?\nKhông thanh toán bằng tiền thật." % [item.get("name", ""), price_text(item)], func(): UIState.buy(selected), "MUA")
 

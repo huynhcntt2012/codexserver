@@ -7,6 +7,9 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     ports: ['${BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8081}:8080']
+    # Website downloads (scripts/publish-release.py): ZIPs + latest.json at /releases/.
+    volumes:
+      - ${RELEASES_DIR:-./build/releases}:/usr/share/nginx/releases:ro
     depends_on:
       api: { condition: service_healthy }
       arena: { condition: service_healthy }
@@ -35,6 +38,9 @@ services:
       - ./infra/postgres/007_maps.sql:/docker-entrypoint-initdb.d/007_maps.sql:ro
       - ./infra/postgres/008_liveops.sql:/docker-entrypoint-initdb.d/008_liveops.sql:ro
       - ./infra/postgres/009_invites.sql:/docker-entrypoint-initdb.d/009_invites.sql:ro
+      - ./infra/postgres/010_battle_items.sql:/docker-entrypoint-initdb.d/010_battle_items.sql:ro
+      - ./infra/postgres/011_website.sql:/docker-entrypoint-initdb.d/011_website.sql:ro
+      - ./infra/postgres/012_wings.sql:/docker-entrypoint-initdb.d/012_wings.sql:ro
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U suni -d suni']
       interval: 5s
@@ -82,6 +88,10 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-}
       ARENA_URL: http://arena:2567
+      # Admin "Website" module shows latest.json and release history (read-only).
+      RELEASES_DIR: /releases
+    volumes:
+      - ${RELEASES_DIR:-./build/releases}:/releases:ro
     ports: ['${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000']
     depends_on:
       postgres: { condition: service_healthy }

@@ -10,7 +10,7 @@ signal toast_requested(message: String)
 const ITEM_PATH = "res://data/ui/items.json"
 const CHAR_PATH = "res://data/ui/characters.json"
 const PROFILE_PATH = "res://data/ui/demo_profile.json"
-const SLOTS = ["hat", "outfit", "bomb_skin", "effect", "pet", "accessory"]
+const SLOTS = ["hat", "wings", "outfit", "bomb_skin", "effect", "pet", "accessory"]
 var items: Array = []
 var characters: Array = []
 var profile: Dictionary = {}
@@ -171,6 +171,17 @@ func equip(item_id: String) -> bool:
 	loadout_changed.emit()
 	toast_requested.emit("Đã trang bị: " + str(item.get("name", "")))
 	return true
+
+## Empties a slot, so the hero can be seen without that item again.
+func unequip(slot: String) -> void:
+	var loadout: Dictionary = profile.get("loadout", {})
+	var item := get_item(str(loadout.get(slot, "")))
+	if item.is_empty():
+		return
+	loadout[slot] = ""
+	profile["loadout"] = loadout
+	loadout_changed.emit()
+	toast_requested.emit("Đã tháo: " + str(item.get("name", "")))
 
 func choose_hero(hero_id: String) -> void:
 	if get_character(hero_id).is_empty():

@@ -315,7 +315,7 @@ def purchase(body: PurchaseBody, account: Identity, db: Db):
         stock = db.get(Stock, (account.id, item.id)) or Stock(
             account_id=account.id, item_id=item.id, quantity=0
         )
-        stock.quantity += 1
+        stock.quantity += item.quantity or 1
         db.add(stock)
     else:
         db.add(InventoryItem(account_id=account.id, item_id=item.id))
@@ -339,6 +339,7 @@ def catalog_payload(db: Session) -> dict:
             "price": i.price,
             "currency": i.currency,
             "duration_days": i.duration_days,
+            "quantity": i.quantity or 1,
             "icon": i.icon,
             "icon_sha256": i.icon_sha256,
             "icon_url": f"/v1/assets/{i.icon_sha256}.png" if i.icon_sha256 else None,

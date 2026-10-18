@@ -386,3 +386,19 @@ hình, số `001…`, tên, độ khó và hoạt động online trên bản đ�
 Cửa sổ Nhiệm vụ (4 tab, nhận thưởng, Event Shop): xem [LIVEOPS.md](LIVEOPS.md).
 
 Mời bạn bè vào phòng online và từ phòng Luyện tập: xem [INVITES.md](INVITES.md).
+
+### Cánh và hào quang (trước / sau khi mua)
+
+- 6 bộ cánh (ô mới **Cánh**, category `wings`) và 6 hào quang (ô **Mũ**, category `hat`):
+  Thiên Thần Xanh, Trái Tim Hồng, Lửa Đỏ, Ánh Vàng, Lá Xanh, Trắng Cổ Điển. Ảnh trong
+  `apps/practice/assets/cosmetics`, cắt từ ảnh nguồn bằng `tools/slice_wing_pack.gd`.
+- Trước khi mua: chọn cánh/hào quang trong Cửa hàng là nhân vật linh vật mặc thử ngay.
+  Mua xong, nút đổi thành **MẶC NGAY**.
+- Sau khi mặc: nhân vật ở Sảnh, màn Trang bị và trong trận đeo cánh sau lưng (vỗ cánh khi
+  chạy, ở phía trước khi quay lưng) và hào quang lơ lửng trên đầu. Nút **THÁO** trong Trang
+  bị cho xem lại nhân vật lúc chưa mặc.
+- Trang bị mỹ phẩm vẫn lưu trên máy: trong phòng online chỉ nhân vật của mình có cánh,
+  người khác chưa thấy (protocol chưa gửi loadout).
+- Server: volume mới tự chạy `infra/postgres/012_wings.sql`; volume cũ chạy file đó một lần
+  rồi `python -m app.admin_cli import-icons <thư mục assets>`. Khi catalog server chưa có
+  các món này, client ẩn chúng khỏi cửa hàng (server quyết định món được bán).

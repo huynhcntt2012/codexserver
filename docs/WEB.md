@@ -9,7 +9,8 @@ docker compose up -d --build --wait
 docker compose ps
 ```
 
-Mở <http://127.0.0.1:8081>. Trang `#login` dành cho đăng nhập, `#register`
+Mở <http://127.0.0.1:8081/demo/> (trang gốc `/` là website quảng bá, xem
+[PORTAL.md](PORTAL.md)). Trang `#login` dành cho đăng nhập, `#register`
 dành cho đăng ký. Đăng ký thành công tự đăng nhập. Sau xác thực, trang `#rooms`
 hiển thị danh sách phòng chờ thật: mã phòng, số người (tối đa 8), số người sẵn sàng
 và nút **Vào phòng**. Danh sách tự làm mới mỗi 5 giây; có nút **Làm mới** và
@@ -81,7 +82,8 @@ SUNI_WEB_URL=http://127.0.0.1:18081 \
 
 ## Website kiểm tra qua Internet
 
-Website: <https://boom.sunifactory.com>. Tunnel/reverse proxy trỏ tới dịch vụ web
+Website quảng bá: <https://boom.sunifactory.com>, chơi thử: <https://boom.sunifactory.com/demo/>,
+chơi với bot: `/practice/`. Tunnel/reverse proxy trỏ tới dịch vụ web
 ở `127.0.0.1:8081`, chuyển tiếp API và WebSocket cùng hostname. Người chơi chỉ cần
 một URL website; API/PostgreSQL/Redis không cần công khai thêm cổng.
 

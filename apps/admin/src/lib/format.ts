@@ -48,6 +48,7 @@ export const CATEGORY: Record<string, string> = {
   consumable: 'Vật phẩm dùng',
   outfit: 'Trang phục',
   hat: 'Mũ',
+  wings: 'Cánh',
   bomb_skin: 'Skin bom',
   effect: 'Hiệu ứng',
   pet: 'Pet',

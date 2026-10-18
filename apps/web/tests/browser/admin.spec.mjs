@@ -9,10 +9,11 @@ const capture = process.env.SUNI_CAPTURE_DIR;
 const PAGES = [
   ['Dashboard', 'Tổng quan hệ thống', 'dashboard'],
   ['Người chơi', 'Quản lý người chơi', 'players'],
-  ['Sự kiện', 'Quản lý sự kiện', 'events'],
+  ['Sự kiện', 'Sự kiện LiveOps', 'events'],
   ['Vật phẩm', 'Quản lý vật phẩm', 'items'],
   ['Giftcode', 'Quản lý giftcode', 'giftcodes'],
   ['Shop', 'Quản lý shop', 'shop'],
+  ['Website', 'Website', 'website'],
   ['Phòng & trận', 'Phòng & trận đấu', 'matches'],
   ['Giao dịch', 'Giao dịch & kinh tế', 'economy'],
   ['Báo cáo', 'Báo cáo', 'reports'],

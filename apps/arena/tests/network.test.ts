@@ -570,3 +570,110 @@ test(
     }
   },
 );
+
+test(
+  'battle items over the wire: loadout from the API, accepted uses reported once',
+  { timeout: 20_000 },
+  async () => {
+    process.env.JWT_SECRET = secret;
+    const reported: {
+      type: string;
+      account_id?: string;
+      item_id?: string;
+      use_id?: string;
+    }[] = [];
+    const api = createHttpServer((req, res) => {
+      if (req.url?.startsWith('/internal/v1/arena/loadout/')) {
+        res.setHeader('Content-Type', 'application/json');
+        const who = decodeURIComponent(req.url.split('/').pop()!);
+        res.end(
+          JSON.stringify({
+            items: who === 'ana' ? { throw_bomb: 2 } : {},
+            pet: who === 'ana' ? 'pet_bunny' : null,
+          }),
+        );
+        return;
+      }
+      let raw = '';
+      req.on('data', (chunk) => (raw += chunk));
+      req.on('end', () => {
+        try {
+          reported.push(JSON.parse(raw));
+        } catch {
+          /* ignore */
+        }
+        res.statusCode = 204;
+        res.end();
+      });
+    });
+    await new Promise<void>((done) => api.listen(0, '127.0.0.1', done));
+    const apiAddress = api.address();
+    assert.ok(apiAddress && typeof apiAddress !== 'string');
+    process.env.API_URL = `http://127.0.0.1:${apiAddress.port}`;
+    const { server, httpServer, listen } = createArenaServer();
+    await listen(0, '127.0.0.1');
+    const address = httpServer.address();
+    assert.ok(address && typeof address !== 'string');
+    const base = `http://127.0.0.1:${address.port}`;
+    const clients: ReturnType<typeof wireClient>[] = [];
+    const join = async (id: string, route: string, extra = {}) => {
+      const response = await fetch(`${base}/matchmake/${route}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: await token(id), ...extra }),
+      });
+      const seat = (await response.json()) as Seat;
+      const client = wireClient(base, seat);
+      clients.push(client);
+      await waitUntil(() => client.state.joined && !!client.state.snapshot);
+      return { client, seat };
+    };
+    type Geared = {
+      id: string;
+      x: number;
+      items?: Record<string, number>;
+      pet?: string | null;
+      mounted?: boolean;
+    };
+    const me = (c: ReturnType<typeof wireClient>) =>
+      (c.state.snapshot?.players as unknown as Geared[]).find(
+        (p) => p.id === c.id,
+      )!;
+    try {
+      const { client: ana, seat } = await join('ana', 'create/arena2', {
+        map: 'park',
+      });
+      const { client: bo } = await join('bo', `joinById/${seat.roomId}`);
+      await waitUntil(
+        () => me(ana)?.items?.throw_bomb === 2 && me(ana).pet === 'pet_bunny',
+      );
+      ana.send('ready');
+      bo.send('ready');
+      await waitUntil(() => ana.state.snapshot?.phase === 'playing', 6000);
+      ana.send('right');
+      await waitUntil(() => me(ana).x === 2);
+      ana.send('use_dart'); // none in stock: refused, nothing reported
+      ana.send('use_throw_bomb');
+      await waitUntil(() => me(ana).items?.throw_bomb === 1);
+      await waitUntil(() => reported.some((e) => e.type === 'use'));
+      const uses = reported.filter((e) => e.type === 'use');
+      assert.equal(uses.length, 1);
+      assert.deepEqual(
+        [uses[0]!.account_id, uses[0]!.item_id],
+        ['ana', 'throw_bomb'],
+      );
+      assert.ok(ana.state.snapshot!.bombs.length >= 1);
+      ana.send('mount');
+      await waitUntil(() => me(ana).mounted === true);
+      bo.send('use_throw_bomb'); // bo has no items
+      await delay(300);
+      assert.equal(reported.filter((e) => e.type === 'use').length, 1);
+    } finally {
+      for (const c of clients) c.ws.close();
+      await delay(100);
+      await server.gracefullyShutdown(false);
+      api.close();
+      delete process.env.API_URL;
+    }
+  },
+);

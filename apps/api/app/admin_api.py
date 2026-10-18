@@ -64,7 +64,9 @@ from app.social import ChatMessage, FriendRequest, Guild, GuildMember, guild_of
 router = APIRouter(prefix="/admin/v1")
 player_router = APIRouter(prefix="/v1")
 STARTED = time.time()
-Category = Literal["consumable", "outfit", "hat", "bomb_skin", "effect", "pet", "accessory"]
+Category = Literal[
+    "consumable", "outfit", "hat", "wings", "bomb_skin", "effect", "pet", "accessory"
+]
 Rarity = Literal["common", "rare", "epic", "legendary"]
 Currency = Literal["gold", "gem"]
 
@@ -505,6 +507,8 @@ class ItemCatalog(Base):
     price: Mapped[int] = mapped_column(Integer, default=0)
     currency: Mapped[str] = mapped_column(String(8), default="gold")
     duration_days: Mapped[int | None] = mapped_column(Integer)
+    # Consumables: uses added to the stock per purchase ("×5" packs give 5).
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
     icon: Mapped[str | None] = mapped_column(String(120))
     # Server copy of the art clients download (content-addressed, see economy.ItemAsset).
     icon_sha256: Mapped[str | None] = mapped_column(String(64))
@@ -523,6 +527,7 @@ def item_view(item: ItemCatalog) -> dict:
         "price": item.price,
         "currency": item.currency,
         "duration_days": item.duration_days,
+        "quantity": item.quantity or 1,
         "icon": item.icon,
         "icon_sha256": item.icon_sha256,
         "status": item.status,
@@ -539,6 +544,7 @@ class ItemFields(BaseModel):
     price: int = Field(ge=0, le=10_000_000)
     currency: Currency = "gold"
     duration_days: int | None = Field(default=None, ge=1, le=3650)
+    quantity: int = Field(default=1, ge=1, le=99)
     icon: str | None = Field(default=None, max_length=120, pattern=r"^[a-z0-9_/.-]+\.png$")
 
 
@@ -554,6 +560,7 @@ class ItemPatch(BaseModel):
     price: int | None = Field(default=None, ge=0, le=10_000_000)
     currency: Currency | None = None
     duration_days: int | None = Field(default=None, ge=1, le=3650)
+    quantity: int | None = Field(default=None, ge=1, le=99)
     icon: str | None = Field(default=None, max_length=120, pattern=r"^[a-z0-9_/.-]+\.png$")
 
 

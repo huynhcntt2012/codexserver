@@ -9,7 +9,7 @@ import { SignJWT } from 'jose';
 export const processId = randomUUID().slice(0, 8);
 
 export type IngestEvent = {
-  type: 'room' | 'closed' | 'match';
+  type: 'room' | 'closed' | 'match' | 'use';
   room_id: string;
   phase?: string;
   players?: { account_id: string; name: string }[];
@@ -19,6 +19,9 @@ export type IngestEvent = {
   round?: number;
   duration_ms?: number;
   practice?: boolean;
+  account_id?: string;
+  item_id?: string;
+  use_id?: string;
   results?: {
     account_id: string | null;
     is_bot?: boolean;
@@ -67,4 +70,36 @@ async function send(event: IngestEvent, attempt: number): Promise<void> {
 
 export function report(event: IngestEvent): void {
   void send(event, 0);
+}
+
+/**
+ * A player's quick slot stock and pet from the API (service token). Missing API,
+ * timeouts or errors give an empty loadout: the round still plays, without items.
+ */
+export async function fetchLoadout(
+  accountId: string,
+): Promise<{ items: Record<string, number>; pet: string | null }> {
+  const base = process.env.API_URL;
+  const empty = { items: {}, pet: null };
+  if (!base) return empty;
+  try {
+    const response = await fetch(
+      `${base}/internal/v1/arena/loadout/${encodeURIComponent(accountId)}`,
+      {
+        headers: { Authorization: `Bearer ${await token()}` },
+        signal: AbortSignal.timeout(4000),
+      },
+    );
+    if (!response.ok) return empty;
+    const body = (await response.json()) as {
+      items?: Record<string, unknown>;
+      pet?: unknown;
+    };
+    const items: Record<string, number> = {};
+    for (const [k, v] of Object.entries(body.items ?? {}))
+      if (typeof v === 'number') items[k] = v;
+    return { items, pet: typeof body.pet === 'string' ? body.pet : null };
+  } catch {
+    return empty;
+  }
 }

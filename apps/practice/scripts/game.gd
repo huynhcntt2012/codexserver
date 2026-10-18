@@ -63,6 +63,7 @@ var reporter: Node = preload("res://scripts/practice_report.gd").new()
 ## Arena placement in viewport pixels; the PC HUD resizes it to fill the window.
 var arena_layout := Rect2(ARENA_POS, Vector2(15 * TILE, 11 * TILE))
 var background: Sprite2D
+var battle_items: Node = preload("res://scripts/battle_items.gd").new()
 var pc_screens: Dictionary = {}  # PC menus inside `menu`: lobby, matchmaking, room
 
 
@@ -70,6 +71,8 @@ func _ready() -> void:
 	rng.seed = 20261015
 	reporter.game = self
 	add_child(reporter)
+	battle_items.game = self
+	add_child(battle_items)
 	background = Sprite2D.new()
 	background.texture = load("res://assets/backdrop.png")
 	background.position = Vector2(640, 460)
@@ -366,6 +369,8 @@ func _new_round() -> void:
 	add_child(world)
 	_build_map()
 	player = _spawn_fighter(HEROES[selected_hero], spawn_cell(0), false)
+	player["sprite"].dress(UIState.profile.get("loadout", {}))
+	battle_items.start_round()
 	var enemy_names: Array = bot_heroes()
 	for i in 3:
 		_spawn_fighter(enemy_names[i], spawn_cell(i + 1), true)
@@ -499,6 +504,12 @@ func _input(event: InputEvent) -> void:
 		return
 	if key.keycode == KEY_SPACE:
 		_place_bomb(player)
+	elif key.keycode >= KEY_1 and key.keycode <= KEY_6:
+		battle_items.select(key.keycode - KEY_1)
+	elif key.keycode == KEY_CTRL:
+		battle_items.use_selected()
+	elif key.keycode == KEY_Q:
+		battle_items.toggle_mount()
 
 
 func _pause_game() -> void:
@@ -529,8 +540,10 @@ func _update_player_input() -> void:
 		direction = Vector2i.UP
 	elif Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S):
 		direction = Vector2i.DOWN
+	if direction != Vector2i.ZERO:
+		battle_items.facing = direction
 	if direction != Vector2i.ZERO and player_move_cooldown <= 0.0:
-		player_move_cooldown = 0.155 / float(player["speed"])
+		player_move_cooldown = 0.155 / (float(player["speed"]) * battle_items.speed_factor())
 		if _move_fighter(player, direction):
 			_sound("footstep")
 	elif direction == Vector2i.ZERO and player["action_time"] <= 0.0 and player["walk_time"] <= 0.0:
@@ -559,7 +572,7 @@ func _update_bots(delta: float) -> void:
 		actor["ai_clock"] -= delta
 		if actor["ai_clock"] > 0.0:
 			continue
-		var step_time: float = float(current_level["bot_step"])
+		var step_time: float = float(current_level["bot_step"]) * battle_items.bot_step_factor(actor)
 		actor["ai_clock"] = step_time + rng.randf_range(0.01, 0.08)
 		var now: Vector2i = actor["cell"]
 		# Bots react to the explosion forecast, not only already visible flames.
@@ -781,26 +794,75 @@ func _place_bomb(actor: Dictionary) -> void:
 		return
 	var active_count: int = 0
 	for b in bombs:
-		if b["owner"] == actor:
+		# A thrown bomb (Bom ném xa) does not take one of the player's bomb slots.
+		if b["owner"] == actor and not b.get("thrown", false):
 			active_count += 1
 		if b["cell"] == actor["cell"]:
 			return
 	if active_count >= actor["bomb_capacity"]:
 		return
+	_spawn_bomb(actor, actor["cell"], false)
+	actor["sprite"].action("place_bomb")
+	actor["action_time"] = 0.30
+	_sound("place_bomb")
+
+
+func _spawn_bomb(actor: Dictionary, cell: Vector2i, thrown: bool) -> void:
 	var sprite = Sprite2D.new()
 	sprite.texture = load("res://assets/bombs/%s.png" % current_level["bomb"])
 	sprite.position = _cell_center(actor["cell"])
 	sprite.scale = Vector2(0.68, 0.68)
 	sprite.z_index = 5
 	world.add_child(sprite)
+	if thrown:
+		# Short arc from the thrower to the landing cell.
+		var arc: Tween = sprite.create_tween()
+		arc.tween_property(sprite, "position", _cell_center(cell), 0.22).set_trans(Tween.TRANS_QUAD)
+	else:
+		sprite.position = _cell_center(cell)
 	bombs.append({
-		"owner":actor,"cell":actor["cell"],"timer":2.4,
-		"range":actor["bomb_range"],"node":sprite,"ticked":false
+		"owner":actor,"cell":cell,"timer":2.4,
+		"range":actor["bomb_range"],"node":sprite,"ticked":false,"thrown":thrown
 	})
 	actor["bombs_placed"] = int(actor.get("bombs_placed", 0)) + 1
-	actor["sprite"].action("place_bomb")
-	actor["action_time"] = 0.30
-	_sound("place_bomb")
+
+
+func _inside(cell: Vector2i) -> bool:
+	return cell.x >= 0 and cell.y >= 0 and cell.x < columns and cell.y < rows
+
+
+func _bomb_at(cell: Vector2i) -> Dictionary:
+	for bomb in bombs:
+		if bomb["cell"] == cell:
+			return bomb
+	return {}
+
+
+func _fighter_at(cell: Vector2i) -> bool:
+	for actor in fighters:
+		if actor["alive"] and actor["cell"] == cell:
+			return true
+	return false
+
+
+## Short frost flash on the 3x3 area hit by "Bom đóng băng".
+func _splash_at(center: Vector2i, _kind: String) -> void:
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			var cell := center + Vector2i(dx, dy)
+			if not _inside(cell):
+				continue
+			var frost := ColorRect.new()
+			frost.color = Color(0.62, 0.89, 1.0, 0.55)
+			frost.size = Vector2(TILE, TILE)
+			frost.position = _cell_center(cell) - Vector2(TILE, TILE) * 0.5
+			frost.z_index = 4
+			frost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			world.add_child(frost)
+			var fade: Tween = frost.create_tween()
+			fade.tween_property(frost, "modulate:a", 0.0, 0.7)
+			fade.tween_callback(frost.queue_free)
+	_sound("collect")
 
 
 func _update_bombs(delta: float) -> void:
@@ -906,6 +968,9 @@ func _update_bursts(delta: float) -> void:
 ## `attacker` is the bomb owner, credited with the knockout for the result table.
 func _hit_fighter(actor: Dictionary, attacker: Dictionary = {}) -> void:
 	if not actor["alive"] or actor["invulnerable"] > 0.0:
+		return
+	# Khiên / thú cưỡi đỡ đòn thay người chơi.
+	if is_same(actor, player) and battle_items.absorb_hit():
 		return
 	actor["lives"] -= 1
 	actor["sprite"].action("hit")

@@ -4,7 +4,7 @@ Mã, bản đồ Neon Garden và hình khối nhân vật Pilot được tạo r
 Copyright (c) 2026 Suni Bomb Arena contributors, theo [MIT](LICENSE).
 Không có nhạc, sprite, logo, source hoặc nhân vật từ Boom Online.
 
-Bộ SVG Bông, Mây, Lá, Nắng trong `apps/web/public/art` và `apps/client/art`
+Bộ SVG Bông, Mây, Lá, Nắng trong `apps/web/public/demo/art` và `apps/client/art`
 được vẽ bằng mã trong repository theo các ảnh tham chiếu Bụp Bụp do người dùng cung cấp.
 Bản nhân vật mới dùng PNG từ hai ZIP do người dùng cung cấp:
 `Game_Boom_Godot_Demo.zip` và `Game_Boom_Starter_Assets.zip`.
@@ -81,6 +81,16 @@ không gán lại giấy phép MIT cho các tài nguyên này.
 Scene/script Launch trong `apps/practice` lấy từ cùng ZIP người dùng cung cấp,
 được chỉnh để mở chế độ bot và Cửa hàng/Trang bị. Giữ nguồn tại
 `apps/practice/licenses/LAUNCH_ASSET_PROVENANCE.md`.
+
+## Gói cánh và hào quang do người dùng cung cấp
+
+Cánh (`apps/practice/assets/cosmetics/wings`) và hào quang
+(`apps/practice/assets/cosmetics/halos`) được cắt từ ảnh "Modular Wing Pack" chủ
+dự án gửi ngày 2026-10-18 (`apps/practice/tools/source/modular_wing_pack.webp`),
+bằng `apps/practice/tools/slice_wing_pack.gd`: chỉ đổi kênh alpha và xóa mảnh khung
+bên cạnh, không vẽ thêm. Ảnh có vẻ do công cụ tạo ảnh làm cho 5 nhân vật của dự án;
+nguồn gốc và quyền chưa được xác minh độc lập, không có tên/logo Boom Online.
+Hash và ghi chú tại `apps/practice/licenses/WING_PACK_SOURCE.txt`; không gán lại MIT.
 
 ## Bộ giao diện PC "Bubble Isles" do người dùng cung cấp
 

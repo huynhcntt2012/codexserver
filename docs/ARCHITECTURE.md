@@ -5,8 +5,8 @@ endpoint, cấu trúc snapshot, giới hạn và vị trí code/kiểm thử tư
 
 ## Client web (hướng phát triển hiện tại)
 
-`apps/web/public` là frontend HTML/CSS/Canvas và JavaScript modules. Nginx phục vụ
-website tại cổng 8081, proxy `/api/` tới FastAPI và `/arena/` tới Colyseus, gồm
+`apps/web/public/demo` là frontend HTML/CSS/Canvas và JavaScript modules (URL `/demo/`;
+`/` là website quảng bá, docs/PORTAL.md). Nginx phục vụ website tại cổng 8081, proxy `/api/` tới FastAPI và `/arena/` tới Colyseus, gồm
 WebSocket Upgrade. Browser dùng cùng origin nên không cần mở CORS trên API.
 Adapter `network.mjs` giữ wire protocol version 1 bên dưới, không thay luật server.
 Token tài khoản chỉ giữ trong RAM của tab; đăng xuất/tải lại trang xóa phiên client.

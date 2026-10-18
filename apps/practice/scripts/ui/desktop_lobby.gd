@@ -28,6 +28,7 @@ const ScreenFill := preload("res://scripts/ui/screen_fill.gd")
 const SocialClient := preload("res://scripts/ui/social/social_client.gd")
 const FriendsPanel := preload("res://scripts/ui/social/friends_panel.gd")
 const ChatPanel := preload("res://scripts/ui/social/chat_panel.gd")
+const HeroPreview := preload("res://scripts/ui/hero_preview.gd")
 
 ## Small vector icons so the lobby needs no unverified icon assets.
 class Glyph extends Control:
@@ -286,7 +287,7 @@ var xp: ProgressBar
 var xp_percent: Label
 var name_input: LineEdit
 var hero_line: Label
-var portrait: TextureRect
+var portrait: Control
 var presence: Label
 var summary: Label
 var empty: Label
@@ -466,6 +467,7 @@ func _ready() -> void:
 	build_toast()
 	UIState.toast_requested.connect(show_toast)
 	UIState.wallet_changed.connect(refresh)
+	UIState.loadout_changed.connect(refresh)
 	# Menus fill the monitor; the arena keeps its fixed 1280×920 frame while playing.
 	visibility_changed.connect(func(): ScreenFill.set_fill(get_tree(), is_visible_in_tree()))
 	ScreenFill.set_fill(get_tree(), is_visible_in_tree())
@@ -479,13 +481,8 @@ func build_top_bar(parent: Control) -> void:
 	parent.add_child(bar)
 	top_bar = bar
 	var line := row(14, bar)
-	# Top-left X: quit the game (asks first).
-	var quit := icon_button("close", confirm_quit, 64, Color("f4738d"), 32)
-	quit.name = "QuitGame"
-	quit.tooltip_text = "Thoát game"
-	line.add_child(quit)
 	var logo := card(Color("2a8fd8"), Color("bff2ff"), 30, 5, 6)
-	logo.custom_minimum_size = Vector2(300, 92)
+	logo.custom_minimum_size = Vector2(350, 92)
 	line.add_child(logo)
 	var brand := column(-6, logo)
 	brand.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -533,9 +530,13 @@ func build_top_bar(parent: Control) -> void:
 	spacer(line)
 	gold = wallet(line, "coin", 250)
 	gem = wallet(line, "gem", 210)
-	line.add_child(icon_button("people", func(): show_social(1)))
 	line.add_child(icon_button("mail", func(): notice("Hộp thư trống. Thư hệ thống sẽ có ở bản online.", "HỘP THƯ", "mail")))
 	line.add_child(icon_button("gear", open_settings))
+	# Far right X: quit the game (asks first). Friends live in the left column tab.
+	var quit := icon_button("close", confirm_quit, 58, Color("f4738d"), 29)
+	quit.name = "QuitGame"
+	quit.tooltip_text = "Thoát game"
+	line.add_child(quit)
 
 func wallet(parent: Control, icon: String, width: float) -> Label:
 	var holder := card(Color("0f5a9c"), Color("7fd9ef"), 36, 3, 6)
@@ -569,7 +570,8 @@ func build_left(parent: Control) -> void:
 	scene.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	scene.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	stage.add_child(scene)
-	portrait = picture("", Vector2.ZERO)
+	portrait = HeroPreview.new()
+	portrait.name = "HeroPreview"
 	portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	portrait.offset_top = 10
 	stage.add_child(portrait)
@@ -1416,7 +1418,7 @@ func refresh() -> void:
 	xp.value = float(UIState.profile.get("xp", 0))
 	xp_percent.text = "%d%%" % int(round(100.0 * xp.value / xp.max_value))
 	hero_line.text = game.HERO_NAMES[hero].capitalize()
-	portrait.texture = load("res://assets/characters/portraits/%s.png" % game.HEROES[hero])
+	portrait.show_hero(game.HEROES[hero], UIState.profile.get("loadout", {}))
 	presence.text = "ONLINE" if AuthSession.has_session() else "KHÁCH"
 	gold.text = grouped(int(UIState.profile.get("gold", 0)))
 	gem.text = grouped(int(UIState.profile.get("gem", 0)))

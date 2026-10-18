@@ -1,0 +1,75 @@
+# Modular Wing Pack (wings and halos)
+
+Source: one sheet image, "MODULAR WING PACK", supplied by the project owner in
+a Claude Code session on 2026-10-18, kept at `tools/source/modular_wing_pack.webp`
+(675x843 RGBA WebP).
+SHA-256: 8f9b69d5a13f30d18b126ce997bd68ef409612504deb191f52a78865f1e4b930
+
+The sheet looks like image-generator output made for this project's five heroes
+(the same owner sent a matching hero sheet with "wing attach point" notes). Its
+origin and rights were not independently verified; it carries no author, name,
+logo or text from Boom Online. Confirm ownership before a commercial release.
+
+Six sets: blue_angel, pink_heart, red_flame, golden_light, green_nature,
+white_classic. `tools/slice_wing_pack.gd` cut each set into:
+- `assets/cosmetics/halos/<set>.png`: the halo panel.
+- `assets/cosmetics/wings/<set>/idle/01-04.png` and `flap/01-04.png`.
+Only the alpha was remapped (the sheet's panels are ~0% alpha) and slivers of
+neighbouring frames were cleared; no pixels were painted. The "Front/Side/Back"
+and "Attach Point" panels were not used.
+
+Output SHA-256 (relative to assets/cosmetics):
+5d604073038310c3a8ee8a9d041706aa1d2e25dda30f5c1c0fd264670a2196da  ./halos/blue_angel.png
+651934010b03fe2c58e844765e99479b86a8d1a8d5e783a2131b7d08128cf698  ./halos/golden_light.png
+0ef05785421f15452a67734db7abd47fa104441ba0c844ff88a7dd43bc208e13  ./halos/green_nature.png
+d953ce39b492597c49926bee30b4ab61f38b616850352c0496db0a5377c7ce49  ./halos/pink_heart.png
+ce1944ae82726afc39e8c7fdc5215b6c24961ad34567b5fd369c39c4e2e81ccc  ./halos/red_flame.png
+b7ad09d1715ecbef2ee50265ea8ffc56ae75061ff903f381ce0003bf563bfc67  ./halos/white_classic.png
+12684e61e054927c432a05ff02cb9050fd986f8f2bd9882a090c0a65ecb9d6d8  ./wings/blue_angel/flap/01.png
+340273dbc8b14561d0dfe92dfa75d6fe0e7ac8283c85001c66565c7c2b3c0cb6  ./wings/blue_angel/flap/02.png
+29e66738c423d8224113e502b8eceea6bb21997a4a191d6a0e3b776b5ceea46d  ./wings/blue_angel/flap/03.png
+773013137dc581b0e1628b7abe8145df5a67c20beaf7bd529a6675a62ff148b2  ./wings/blue_angel/flap/04.png
+c201a4422c85d8799bf078cd576eeb8e7e384df13f8a3ecc627024afc652eb73  ./wings/blue_angel/idle/01.png
+c29ed1d9ca723946645a1512ffc8d14835030a7dbb4cd269fca75d5d9dad6e42  ./wings/blue_angel/idle/02.png
+f712b8d40ce7b2f023dee5c8c7ff21292f9ae798e02dd31d1b00804153c69f3c  ./wings/blue_angel/idle/03.png
+46141808c89a50355ead835e9961a565460f94ad7f7f81170f6d95e2b33c5ffb  ./wings/blue_angel/idle/04.png
+494112686dd6e882b77eeda045a3db42f1ac16ffe7d930d7cb6344ddbe06e734  ./wings/golden_light/flap/01.png
+aa5f9a89b27127799872d79f6d5bc9033ce5e1a26dda9e1deea08fedc482c5f7  ./wings/golden_light/flap/02.png
+b89dd64d94e5d5d86617ba25f57dc6eb1c235a71283ffa6f8cf11e75187d54b2  ./wings/golden_light/flap/03.png
+94ec7fec24c7ab5e2096271419f5d4f35a13270fb74dcce948ee22190d1053b8  ./wings/golden_light/flap/04.png
+776b90ec8a555dcf591ae16f24e0dd07c0535a873b1b02f61f55d739f14da702  ./wings/golden_light/idle/01.png
+0e54f176cd4a25fab47a0810ced79af349656e94de5b0773bf38ed2c01dddaae  ./wings/golden_light/idle/02.png
+d555fdb9ca749997d1195836282c186a485094346330f626bda26aada9311d79  ./wings/golden_light/idle/03.png
+1ea8e31cc55671bbda63f8bc9efc9111c8041cdab0ab3eb17068423045ecc3b4  ./wings/golden_light/idle/04.png
+85885ef5e2fcad17808cd9df8ee16d13300f2c5ce6b4d4e98a7e06d1992a2c0d  ./wings/green_nature/flap/01.png
+c9d7ee25d350f5009678d2981650638ba45f20bede7a5f1a7557d0001f38feda  ./wings/green_nature/flap/02.png
+4e7bddcac872c88ee751b6a2cf81512a6d43ca8e8a3bbbdf5822e9acea3c9422  ./wings/green_nature/flap/03.png
+7593f8d6fbf4be92b119b99aa9cc24e167e5fdc6efb5eef4cfc5d160024b5e8c  ./wings/green_nature/flap/04.png
+08a99b4f343e5227d7d1b164f8a79f5e7072269585bf71d9fac41ffb79f43af8  ./wings/green_nature/idle/01.png
+cd8d99f8cdcdd5133d52a2305161434d6121e5de7ce825d8bdaa1e54869e6853  ./wings/green_nature/idle/02.png
+1ccb4fb3b24456097bc2f319454a5b8aa16b0d91d2439524620fd8e4cd2b984e  ./wings/green_nature/idle/03.png
+f7bf55a5cc19666305626773a3c09c2591364dc9fdcc0d43c4f61464b174f97c  ./wings/green_nature/idle/04.png
+14b2c98e5801d94f9cdd2a746b97621ba7a86bb8ed269087ed88ed9f9075480b  ./wings/pink_heart/flap/01.png
+a279558056b7e75739f198c311bcdc1e7acbe0bbb32a3bf7382031850c9aad9c  ./wings/pink_heart/flap/02.png
+86551c0d189cd9277a68beefa242887512d8b4294d1bef7d45af6ef3c8c4f441  ./wings/pink_heart/flap/03.png
+f62975d2c295f4da1cb2df60befbdde1156d60f911890975ba349adfa3c0ae38  ./wings/pink_heart/flap/04.png
+c7ce7681b63627ffb6b11eeaad4d86514e4b4a6d3135a6200baaa21eb5ae4525  ./wings/pink_heart/idle/01.png
+e0de021378f3dd97212169b42ecdc8da527e229b7448800367bea9f2502dd382  ./wings/pink_heart/idle/02.png
+b99032d9c268a1c34913360b70b020f620292073f7ceb789cb4a5e0b0d94cad1  ./wings/pink_heart/idle/03.png
+4019261760afbf4f9e9296442f2ae8431b3e5f6dfd8fb878991745af19243a11  ./wings/pink_heart/idle/04.png
+079995e81b613acd6be43d22bcd17db109d1950ad04a305f2585403443a24d31  ./wings/red_flame/flap/01.png
+f6599de229833663b22d76b34f4e86693669fd994416e5c097e9969b011261da  ./wings/red_flame/flap/02.png
+22cf98622295b17a5f3a4f39f521da3ce7b5c0501d3fa3e0ace7c61ad9f59ecd  ./wings/red_flame/flap/03.png
+906392761e8f48f2caa2cd3d4f85afc1bfdda040104f94e5a18b1918a6eaec3c  ./wings/red_flame/flap/04.png
+373f60cd1fa9144d7fa3c17d4a747b105f94a8c9a15472aaa6efd327fefef148  ./wings/red_flame/idle/01.png
+c09e701082acc6567848aea379abff03abdb0d821d11346e1dc7634777e05d4c  ./wings/red_flame/idle/02.png
+753c3830e6ea149983599c1cb30fd2529eebe8c75371e854065fcd2bcb384d78  ./wings/red_flame/idle/03.png
+9e0068b0c0fa4f4a571ca217c139102d05ba97e17d6ef481eb97d097aa2a0948  ./wings/red_flame/idle/04.png
+04f81e485f323bc892d24bb2a8a30a5218b92568ba43b4704b799fb5012c157d  ./wings/white_classic/flap/01.png
+c0c7c10e9a9a22d6b8dc2c43e3d07c0ab746e3cc50ba095140afd5dda3370944  ./wings/white_classic/flap/02.png
+1562c01b58a301483be37c9887b6c72d7eedeaf389f33f82461891190d4de6a6  ./wings/white_classic/flap/03.png
+e11ab8ae54a0e5c5f62d1b6c8419052a061e7cf314cc7eb2dc9fa5505d380ac3  ./wings/white_classic/flap/04.png
+aee4074910bd8ab33a6454ef2ea68cd630117377da1dba25f33348d9f10b0be4  ./wings/white_classic/idle/01.png
+fd732332acf03cb1e5204a5d72d06846ade77c685f982a6496c22974b93981d3  ./wings/white_classic/idle/02.png
+de918818da80493d7d2b3a3c75ea84f79df198de0f1ff1197afae1991e24adf6  ./wings/white_classic/idle/03.png
+afc87b0bcf58a6a0fd76696bd5973a4cfe52f946e93121c456eeaa1d7fed6dd3  ./wings/white_classic/idle/04.png

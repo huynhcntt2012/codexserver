@@ -16,4 +16,9 @@ COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY apps/web/licenses /usr/share/licenses/suni-web
 COPY apps/web/public /usr/share/nginx/html
 COPY --from=admin /src/apps/admin/out /usr/share/nginx/html/admin
+# Promotion website art comes straight from the game (docs/PORTAL.md).
+COPY apps/practice/assets/characters/portraits /usr/share/nginx/html/assets/characters/portraits
+COPY apps/practice/assets/level_previews /usr/share/nginx/html/assets/level_previews
+COPY apps/practice/assets/items /usr/share/nginx/html/assets/items
+COPY apps/practice/assets/ui/launch /usr/share/nginx/html/assets/ui/launch
 EXPOSE 8080

@@ -26,9 +26,16 @@
     "effect": "effect_star",
     "pet": "pet_bunny",
     "accessory": "accessory_heart",
-    "hat": ""
+    "hat": "",
+    "wings": ""
   },
   "consumables": {
-    "bomb_basic_pack": 5
+    "bomb_basic_pack": 5,
+    "throw_bomb": 3,
+    "dart": 2,
+    "blue_shield": 1,
+    "speed_shoes": 1,
+    "freeze_bomb": 2,
+    "push_glove": 1
   }
 }

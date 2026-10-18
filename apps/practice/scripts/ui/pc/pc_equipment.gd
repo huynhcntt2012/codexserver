@@ -1,24 +1,25 @@
 extends "res://scripts/ui/pc/pc_kit.gd"
 ## PC equipment ("TRANG BỊ"): category menu on the left; the hero on a podium in
-## the middle with the six loadout slots around it and the hero switcher; on the
+## the middle, wearing its wings and halo, with the seven loadout slots around it and the hero switcher; on the
 ## right the hero's stats (segmented bars) and the owned-item list with rarity,
 ## stars and a TRANG BỊ button. Only real data: catalog items, the demo/server
 ## inventory and the hero stats from characters.json (items give no stat bonus).
 signal navigate(destination: String)
-const SLOTS := [["hat", "Mũ"], ["outfit", "Trang phục"], ["bomb_skin", "Bom skin"], ["effect", "Hiệu ứng nổ"], ["pet", "Pet"], ["accessory", "Phụ kiện"]]
-const LEFT_SLOTS := ["hat", "outfit", "pet"]
+const SLOTS := [["hat", "Mũ"], ["wings", "Cánh"], ["outfit", "Trang phục"], ["bomb_skin", "Bom skin"], ["effect", "Hiệu ứng nổ"], ["pet", "Pet"], ["accessory", "Phụ kiện"]]
+const LEFT_SLOTS := ["hat", "wings", "outfit", "pet"]
 const RIGHT_SLOTS := ["bomb_skin", "effect", "accessory"]
-const TABS := [["", "Tất cả"], ["outfit", "Tr.Phục"], ["bomb_skin", "Bom"], ["effect", "Hiệu ứng"], ["accessory", "Phụ kiện"]]
+const TABS := [["", "Tất cả"], ["wings", "Cánh"], ["outfit", "Tr.Phục"], ["bomb_skin", "Bom"], ["effect", "Hiệu ứng"], ["accessory", "Phụ kiện"]]
 const STATS := [["speed", "Tốc độ", "res://assets/items/shoe.png", Color("ffbe3c")], ["bombs", "Số bom", "res://assets/items/extra_bomb.png", Color("3aa6e6")], ["range", "Tầm nổ", "res://assets/items/flame.png", Color("ff6959")]]
 const STAT_MAX := 5
 const RARITY := {"common": ["Thường", Color("8fa3bf"), 1], "rare": ["Hiếm", Color("3aa6e6"), 2], "epic": ["Epic", Color("a98bf0"), 3], "legendary": ["Huyền thoại", Color("f4738d"), 3]}
+const HeroPreview := preload("res://scripts/ui/hero_preview.gd")
 const PANEL := Color("1567ae")
 const PANEL_EDGE := Color("74d3f0")
 
 var parts: Dictionary
 var category := ""
 var saved: Dictionary = {}
-var hero_art: TextureRect
+var hero_art: Control
 var hero_name: Label
 var hero_desc: Label
 var stat_bars: Dictionary = {}  # key -> {segments: Array[Panel], value: Label}
@@ -144,6 +145,7 @@ func build_stage(body: Control) -> void:
 	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var left := column(10, middle)
 	left.alignment = BoxContainer.ALIGNMENT_CENTER
+	left.z_index = 1  # slot cards stay above the hero's wings
 	for key in LEFT_SLOTS:
 		left.add_child(slot_card(key))
 	# Hero stands on a glowing podium in front of a soft spotlight.
@@ -174,17 +176,17 @@ func build_stage(body: Control) -> void:
 		disc.anchor_bottom = ring[3]
 		disc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		center.add_child(disc)
-	hero_art = picture("", Vector2(260, 280))
+	hero_art = HeroPreview.new()
 	hero_art.name = "HeroArt"
-	hero_art.custom_minimum_size = Vector2.ZERO
 	hero_art.anchor_left = 0.0
 	hero_art.anchor_right = 1.0
-	# Near-square rect so the portrait (square art) ends on the podium.
-	hero_art.anchor_top = 0.1
+	# The portrait's feet end on the podium; the halo uses the room above.
+	hero_art.anchor_top = 0.0
 	hero_art.anchor_bottom = 0.87
 	center.add_child(hero_art)
 	var right := column(10, middle)
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	right.z_index = 1
 	for key in RIGHT_SLOTS:
 		right.add_child(slot_card(key))
 	var plate := card(NAVY, PANEL_EDGE, 22, 3, 6)
@@ -214,7 +216,7 @@ func slot_card(key: String) -> Control:
 	holder.add_child(tag.get_parent())
 	var slot := candy("", func(): set_category(key), "ghost", 12)
 	slot.name = "Slot_" + key
-	slot.custom_minimum_size = Vector2(118, 104)
+	slot.custom_minimum_size = Vector2(118, 84)
 	slot.tooltip_text = label + " · bấm để xem vật phẩm loại này"
 	holder.add_child(slot)
 	var inner := column(2)
@@ -223,7 +225,7 @@ func slot_card(key: String) -> Control:
 	inner.offset_bottom = -12
 	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	slot.add_child(inner)
-	var icon := picture("", Vector2(62, 62))
+	var icon := picture("", Vector2(48, 48))
 	icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inner.add_child(icon)
 	var caption := text("Trống", 12, MUTED, inner)
@@ -332,7 +334,7 @@ func refresh() -> void:
 	if not parts.is_empty():
 		refresh_top_bar(parts, hero)
 	var info := UIState.get_character(hero)
-	hero_art.texture = load(str(info.get("portrait", "")))
+	hero_art.show_hero(hero, UIState.profile.get("loadout", {}))
 	hero_name.text = str(info.get("name", hero)).capitalize()
 	hero_desc.text = str(info.get("desc", ""))
 	for key in stat_bars:
@@ -390,12 +392,13 @@ func item_tile(item: Dictionary, hero: String) -> PanelContainer:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.clip_text = true
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	var action := candy("TRANG BỊ", func(): equip(id), "mint", 13)
+	# Taking an item off shows the hero as it was before the item.
+	var slot := str(item.get("category", ""))
+	var action := candy("THÁO" if in_use else "TRANG BỊ", (func(): UIState.unequip(slot)) if in_use else (func(): equip(id)), "coral" if in_use else "mint", 13)
 	action.name = "Equip"
 	action.custom_minimum_size = Vector2(0, 34)
 	if in_use:
-		action.text = "Đang trang bị"
-		action.disabled = true
+		action.tooltip_text = "Đang trang bị · bấm để tháo"
 	elif locked:
 		action.text = "Chỉ cho " + bound.to_upper()
 		action.disabled = true

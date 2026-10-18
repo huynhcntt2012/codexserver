@@ -219,7 +219,7 @@ class ArenaPlayer(BaseModel):
 
 
 class ArenaEvent(BaseModel):
-    type: Literal["room", "closed", "match"]
+    type: Literal["room", "closed", "match", "use"]
     room_id: str = Field(min_length=1, max_length=64)
     process_id: str = Field(default="", max_length=64)
     phase: str = Field(default="waiting", max_length=12)
@@ -232,6 +232,10 @@ class ArenaEvent(BaseModel):
     duration_ms: int = Field(default=0, ge=0, le=3_600_000)
     # Practice room with server bots: verified, but counts as practice for missions.
     practice: bool = False
+    # type "use": one accepted quick slot item use (consumed from the stock once).
+    account_id: str | None = Field(default=None, max_length=36)
+    item_id: str | None = Field(default=None, max_length=64)
+    use_id: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9_.:-]+$")
     results: list[ParticipantIn] = Field(default_factory=list, max_length=8)
 
 
@@ -256,6 +260,16 @@ def arena_room(db: Session, event: ArenaEvent) -> GameRoom:
 
 @router.post("/internal/v1/arena/events", status_code=204, dependencies=[Depends(arena_service)])
 def arena_event(event: ArenaEvent, db: Db):
+    if event.type == "use":
+        from app.battle_items import SLOTS, consume
+
+        if not (event.account_id and event.item_id in SLOTS and event.use_id):
+            raise HTTPException(422, "Incomplete use event")
+        try:
+            consume(db, event.account_id, event.item_id, f"arena:{event.use_id}", "online")
+        except HTTPException:
+            pass  # stock already empty elsewhere: the round keeps the server's count
+        return
     room = arena_room(db, event)
     room.updated_at = now()
     if event.type == "closed":

@@ -311,3 +311,102 @@ test('server bots plant bombs, escape their own blasts and only send intents', a
   assert.ok(planted >= 4, `bots planted ${planted} bombs`);
   assert.equal(survived, 4);
 });
+
+test('v2 items: throw, dart, shield, speed, freeze, push and the mount follow the rules', () => {
+  // Open test map: walls only on the border and even-even pillars.
+  const map = {
+    ...MAPS.park!,
+    id: 'test',
+    layout: MAPS.park!.layout.map((row) => row.replace(/C/g, '.')),
+  };
+  const g = new Arena(map);
+  g.addPlayer('a', 'A');
+  g.addPlayer('b', 'B');
+  const used: string[] = [];
+  g.onItemUsed = (_id, item) => used.push(item);
+  g.setLoadout(
+    'a',
+    {
+      throw_bomb: 1,
+      dart: 2,
+      blue_shield: 1,
+      speed_shoes: 1,
+      freeze_bomb: 1,
+      push_glove: 1,
+    },
+    'pet_bunny',
+  );
+  g.input('a', 'ready');
+  g.input('b', 'ready');
+  g.tick(3000);
+  const a = g.players.get('a')!;
+  const b = g.players.get('b')!;
+  const gear = g.gear.get('a')!;
+  // Face right from (1,1): a move sets the facing.
+  act(g, 'a', 'right');
+  assert.equal(gear.facing, 'right');
+  // Throw: lands 3 cells ahead, does not use the normal bomb.
+  act(g, 'a', 'use_throw_bomb', 50);
+  const thrown = [...g.bombs.values()].find((x) => x.thrown)!;
+  assert.deepEqual([thrown.x, thrown.y], [a.x + 3, a.y]);
+  assert.equal(gear.items.throw_bomb, 0);
+  // Out of stock or on cooldown: nothing happens, nothing is reported.
+  act(g, 'a', 'use_throw_bomb', 50);
+  assert.equal([...g.bombs.values()].filter((x) => x.thrown).length, 1);
+  act(g, 'a', 'bomb', 50);
+  assert.equal(g.bombs.size, 2);
+  // Dart: the thrown bomb on its path explodes at once.
+  act(g, 'a', 'use_dart', 50);
+  assert.ok(!g.bombs.has(thrown.id));
+  assert.equal(gear.items.dart, 1);
+  act(g, 'a', 'use_dart', 50); // still on cooldown (0.8 s)
+  assert.equal(gear.items.dart, 1);
+  // Shield: one hit absorbed. Stand on the own bomb's blast.
+  act(g, 'a', 'use_blue_shield', 50);
+  assert.ok(gear.shieldUntil > g.now);
+  g.tick(2000);
+  assert.ok(a.alive && gear.shieldUntil === 0);
+  // Speed: shorter steps for 5 s.
+  act(g, 'a', 'use_speed_shoes', 50);
+  assert.ok(g.moveMs(a) < 150);
+  // Freeze: B two cells ahead is slowed (after the last flames are gone).
+  g.tick(600);
+  b.x = a.x + 2;
+  b.y = a.y;
+  act(g, 'a', 'use_freeze_bomb', 50);
+  assert.ok(g.moveMs(b) > 150);
+  // Push: a bomb right in front slides until blocked.
+  b.x = 13;
+  b.y = 9;
+  g.bombs.clear();
+  g.bombs.set(99, {
+    id: 99,
+    owner: 'b',
+    x: a.x + 1,
+    y: a.y,
+    explodeAt: g.now + 1500,
+  });
+  act(g, 'a', 'use_push_glove', 50);
+  assert.ok(g.bombs.get(99)!.x > a.x + 1);
+  // Mount: faster, absorbs one hit, then cannot be ridden again this round.
+  act(g, 'a', 'mount', 50);
+  assert.ok(gear.mounted);
+  g.flames.set(`${a.x},${a.y}`, { x: a.x, y: a.y, expiresAt: g.now + 400 });
+  g.tick(50);
+  assert.ok(a.alive && !gear.mounted && gear.petUsed);
+  act(g, 'a', 'mount', 50);
+  assert.ok(!gear.mounted);
+  assert.deepEqual(used, [
+    'throw_bomb',
+    'dart',
+    'blue_shield',
+    'speed_shoes',
+    'freeze_bomb',
+    'push_glove',
+  ]);
+  const view = g
+    .snapshot()
+    .players.find((p) => p.id === 'a') as unknown as Record<string, unknown>;
+  assert.equal((view.items as Record<string, number>).dart, 1);
+  assert.equal(view.petUsed, true);
+});

@@ -7,6 +7,7 @@ const TILE := 64
 const MOVE_SECONDS := 0.15
 const RESEND := 0.09
 const CHAT_POLL := 3.0
+const ItemUi := preload("res://scripts/ui/pc/battle_item_ui.gd")
 
 var game: Node
 var parts: Dictionary
@@ -64,6 +65,9 @@ var invite_on_open := false
 var seats_title: Label
 var resend := 0.0
 var last_phase := ""
+var item_ui: RefCounted
+var selected_slot := 0
+var seen_effects: Dictionary = {}  # "<by>:<at>:<kind>" -> true
 
 func _init() -> void:
 	super("sky")
@@ -350,26 +354,30 @@ func build_battle(root: VBoxContainer) -> void:
 	build_stats_bar(left)
 	build_sidebar(battle_view)
 
-## CHỈ SỐ: the server's fixed rules (one bomb, range 2, one tile per 150 ms; no
-## items online yet), the round, and a status line.
+## CÁ NHÂN quick slots 1-6 (counts and cooldowns from the server), the server's
+## fixed rules (one bomb, range 2), the round and a status line.
 func build_stats_bar(parent: Control) -> void:
 	var bar := card(Color("1567ae", 0.96), Color("74d3f0"), 20, 4, 8)
-	bar.custom_minimum_size = Vector2(0, 66)
+	bar.custom_minimum_size = Vector2(0, 78)
 	parent.add_child(bar)
 	var line := row(10, bar)
-	title_text("CHỈ SỐ", 18, Color.WHITE, line)
-	for spec in [["Bom ×1", "res://assets/items/extra_bomb.png"], ["Tầm 2", "res://assets/items/flame.png"], ["Tốc độ 1.0", "res://assets/items/shoe.png"]]:
+	item_ui = ItemUi.new(self, select_slot, use_slot, toggle_mount)
+	item_ui.build_bar(line)
+	for spec in [["×1", "res://assets/items/extra_bomb.png", "Bom đặt cùng lúc"], ["2", "res://assets/items/flame.png", "Tầm nổ"]]:
 		var chip := card(Color("e9f6ff"), Color("9fd7ff"), 14, 2, 4)
+		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		chip.tooltip_text = spec[2]
 		line.add_child(chip)
-		var chip_line := row(4, chip)
-		chip_line.add_child(picture(spec[1], Vector2(30, 30)))
-		text(spec[0], 15, INK, chip_line)
+		var chip_line := row(2, chip)
+		chip_line.add_child(picture(spec[1], Vector2(26, 26)))
+		text(spec[0], 14, INK, chip_line)
 	var round_chip := card(Color("fff4d4"), SUN, 14, 2, 4)
+	round_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	line.add_child(round_chip)
 	var round_line := row(6, round_chip)
 	text("Ván", 14, INK, round_line)
 	stat_round = title_text("1", 22, SUN, round_line)
-	stat_status = stretch(text("", 15, Color.WHITE, line))
+	stat_status = stretch(text("", 14, Color.WHITE, line))
 	stat_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func build_sidebar(parent: Control) -> void:
@@ -419,13 +427,12 @@ func build_sidebar(parent: Control) -> void:
 		var who := stretch(text("", 15, INK, words))
 		var state := text("", 12, MINT, words)
 		side_cards.append({"line": entry, "face": face, "name": who, "state": state})
-	var keys := text("WASD / mũi tên: di chuyển · Space: đặt bom\nEsc: rời phòng · M: âm thanh", 11, Color("d5f3ff"), stack)
-	keys.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	item_ui.build_panel(stack)
 	var leave_button := candy("THOÁT RA", ask_leave, "coral", 22)
 	leave_button.name = "Leave"
 	leave_button.tooltip_text = "Rời phòng online, về sảnh"
 	leave_button.focus_mode = Control.FOCUS_NONE
-	leave_button.custom_minimum_size = Vector2(0, 56)
+	leave_button.custom_minimum_size = Vector2(0, 48)
 	stack.add_child(leave_button)
 
 func fit_board() -> void:
@@ -506,14 +513,24 @@ func render_battle(snap: Dictionary) -> void:
 	for b in snap.get("bombs", []):
 		var id := int(b.id)
 		seen[id] = true
+		var bomb_cell := Vector2i(int(b.x), int(b.y))
 		if not bombs.has(id):
 			var sprite := Sprite2D.new()
 			sprite.texture = load("res://assets/bombs/%s.png" % level.get("bomb", "water_blue"))
 			sprite.scale = Vector2(0.68, 0.68)
-			sprite.position = cell_center(Vector2i(int(b.x), int(b.y)))
+			sprite.position = cell_center(bomb_cell)
+			sprite.set_meta("cell", bomb_cell)
 			piece_layer.add_child(sprite)
 			bombs[id] = sprite
 			game._sound("place_bomb")
+			if bool(b.get("thrown", false)):
+				var thrower: Dictionary = fighters.get(str(b.get("owner", "")), {})
+				if not thrower.is_empty():
+					sprite.position = thrower.root.position
+					sprite.create_tween().tween_property(sprite, "position", cell_center(bomb_cell), 0.22).set_trans(Tween.TRANS_QUAD)
+		elif bombs[id].get_meta("cell", bomb_cell) != bomb_cell:
+			bombs[id].set_meta("cell", bomb_cell)
+			bombs[id].create_tween().tween_property(bombs[id], "position", cell_center(bomb_cell), 0.18)
 	for id in bombs.keys():
 		if not seen.has(id):
 			bombs[id].queue_free()
@@ -550,14 +567,117 @@ func render_battle(snap: Dictionary) -> void:
 			f.rest = 0.0
 			f.sprite.action("walk_right" if step.x > 0 else "walk_left" if step.x < 0 else "walk_down" if step.y > 0 else "walk_up")
 		f.alive = bool(p.alive)
-		f.root.modulate = Color.WHITE if f.alive else Color(1, 1, 1, 0.35)
+		f.root.modulate = (Color("9fe4ff") if bool(p.get("slow", false)) else Color.WHITE) if f.alive else Color(1, 1, 1, 0.35)
+		gear_marks(f.root, p)
 		if not f.alive:
 			f.sprite.action("lose")
 	for id in fighters.keys():
 		if not present.has(id):
 			fighters[id].root.queue_free()
 			fighters.erase(id)
+	play_effects(snap.get("effects", []))
 	render_side(snap)
+	render_items()
+
+## Item marks every player can see: shield bubble, mount under the feet, speed.
+func gear_marks(holder: Node2D, p: Dictionary) -> void:
+	var pet := str(p.get("pet", "")) if p.get("pet") != null else ""
+	var marks := [
+		["ItemShield", "res://assets/items/shield.png", bool(p.get("shield", false)) and bool(p.alive), Vector2(0, -26), -1],
+		["ItemMount", str(UIState.get_item(pet).get("icon", "")), bool(p.get("mounted", false)) and bool(p.alive), Vector2(0, 22), -1],
+		["ItemSpeed", "res://assets/items/shoe.png", bool(p.get("fast", false)) and bool(p.alive), Vector2(26, 18), 1],
+	]
+	for spec in marks:
+		var mark: Sprite2D = holder.get_node_or_null(spec[0])
+		if not spec[2]:
+			if mark:
+				mark.queue_free()
+			continue
+		if mark == null:
+			var texture := icon_texture(str(spec[1]))
+			if texture == null:
+				continue
+			mark = Sprite2D.new()
+			mark.name = spec[0]
+			mark.texture = texture
+			mark.scale = Vector2.ONE * (44.0 / float(texture.get_width()))
+			mark.position = spec[3]
+			mark.z_index = spec[4]
+			mark.modulate.a = 0.6
+			holder.add_child(mark)
+
+## One-shot visuals for item events the server broadcast (~1 s window).
+func play_effects(effects: Array) -> void:
+	var live := {}
+	for e in effects:
+		var key := "%s:%d:%s" % [e.by, int(e.at), e.kind]
+		live[key] = true
+		if seen_effects.has(key):
+			continue
+		seen_effects[key] = true
+		var from := Vector2i(int(e.from[0]), int(e.from[1]))
+		var to := Vector2i(int(e.to[0]), int(e.to[1]))
+		match str(e.kind):
+			"dart":
+				var dart := Sprite2D.new()
+				dart.texture = icon_texture(ItemUi.icon_path("dart"))
+				if dart.texture:
+					dart.scale = Vector2.ONE * (36.0 / float(dart.texture.get_width()))
+				dart.position = cell_center(from)
+				dart.z_index = 8
+				piece_layer.add_child(dart)
+				var fly := dart.create_tween()
+				fly.tween_property(dart, "position", cell_center(to), 0.16)
+				fly.tween_callback(dart.queue_free)
+			"freeze_bomb":
+				for dx in range(-1, 2):
+					for dy in range(-1, 2):
+						var frost := ColorRect.new()
+						frost.color = Color(0.62, 0.89, 1.0, 0.55)
+						frost.size = Vector2(TILE, TILE)
+						frost.position = cell_center(to + Vector2i(dx, dy)) - Vector2(TILE, TILE) * 0.5
+						frost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+						block_layer.add_child(frost)
+						var fade := frost.create_tween()
+						fade.tween_property(frost, "modulate:a", 0.0, 0.7)
+						fade.tween_callback(frost.queue_free)
+				game._sound("collect")
+			"guard", "mount", "blue_shield", "speed_shoes":
+				game._sound("hit" if str(e.kind) == "guard" else "collect")
+	for key in seen_effects.keys():
+		if not live.has(key):
+			seen_effects.erase(key)
+
+## The CÁ NHÂN bar and VẬT PHẨM panel from this player's server state.
+func render_items() -> void:
+	var me: Dictionary = OnlineArena.me()
+	var counts: Dictionary = me.get("items", {}) if me.get("items") is Dictionary else {}
+	var waits: Dictionary = me.get("cooldowns", {}) if me.get("cooldowns") is Dictionary else {}
+	var slots := []
+	for id in ItemUi.SLOTS:
+		slots.append({"id": id, "count": int(counts.get(id, 0)), "cooldown": float(waits.get(id, 0)) / 1000.0})
+	item_ui.render({
+		"slots": slots,
+		"selected": selected_slot,
+		"pet": str(me.get("pet", "")) if me.get("pet") != null else "",
+		"mounted": bool(me.get("mounted", false)),
+		"pet_used": bool(me.get("petUsed", false)),
+		"shield": bool(me.get("shield", false)),
+		"fast": bool(me.get("fast", false)),
+	})
+
+func select_slot(index: int) -> void:
+	selected_slot = clampi(index, 0, ItemUi.SLOTS.size() - 1)
+	if not OnlineArena.snapshot.is_empty():
+		render_items()
+
+## Intent only: the server checks stock, cooldown, range and target, and
+## reports the use to the API, which takes it from the player's stock.
+func use_slot() -> void:
+	OnlineArena.send_action("use_" + str(ItemUi.SLOTS[selected_slot]))
+
+func toggle_mount() -> void:
+	OnlineArena.send_action("mount")
 
 func splash(cell: Vector2i, effect: String) -> AnimatedSprite2D:
 	var node := AnimatedSprite2D.new()
@@ -580,10 +700,13 @@ func spawn_fighter(p: Dictionary, cell: Vector2i) -> Dictionary:
 	var holder := Node2D.new()
 	holder.position = cell_center(cell)
 	piece_layer.add_child(holder)
-	var visual: AnimatedSprite2D = game.HERO_SCRIPT.new()
+	var visual = game.HERO_SCRIPT.new()
 	holder.add_child(visual)
 	visual.configure(hero_of(p))
 	var mine := str(p.id) == OnlineArena.session_id
+	# Cosmetics stay on this machine, so only our own hero is dressed.
+	if mine:
+		visual.dress(UIState.profile.get("loadout", {}))
 	var tag := Label.new()
 	tag.text = ("▼ " if mine else "") + str(p.name)
 	tag.add_theme_font_size_override("font_size", 18)
@@ -817,8 +940,19 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		else:
 			ask_leave()
 		get_viewport().set_input_as_handled()
-	elif event.keycode == KEY_SPACE and battle_view.visible:
+	elif not battle_view.visible or chat_input.has_focus():
+		return
+	elif event.keycode == KEY_SPACE:
 		OnlineArena.send_action("bomb")
+		get_viewport().set_input_as_handled()
+	elif event.keycode >= KEY_1 and event.keycode <= KEY_6:
+		select_slot(event.keycode - KEY_1)
+		get_viewport().set_input_as_handled()
+	elif event.keycode == KEY_CTRL:
+		use_slot()
+		get_viewport().set_input_as_handled()
+	elif event.keycode == KEY_Q:
+		toggle_mount()
 		get_viewport().set_input_as_handled()
 
 func held_direction() -> String:

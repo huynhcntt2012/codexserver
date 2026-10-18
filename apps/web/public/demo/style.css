@@ -189,7 +189,8 @@ h2[tabindex='-1'] {
   --muted: #b8d9ed;
 }
 body {
-  background: #123959 url('/art/boom/backdrop.png') center top / cover fixed;
+  background: #123959 url('/demo/art/boom/backdrop.png') center top / cover
+    fixed;
 }
 .topbar {
   background: #0e365ded;

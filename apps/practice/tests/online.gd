@@ -66,6 +66,10 @@ func run() -> void:
 	check(reg_a.status == 201 and reg_b.status == 201, "Two players registered")
 	var b_token: String = reg_b.data.access_token
 	check(await account.authenticate(a_name, "online-password-1"), "Player A signs in")
+	# Battle items: A buys a "Giày tăng tốc ×5" pack before sitting down (the arena
+	# reads the stock when A joins).
+	var bought: Dictionary = await account.api(HTTPClient.METHOD_POST, "/v1/shop/purchase", {"item_id": "speed_shoes", "request_id": "items-" + tag})
+	check(bought.status == 200 and int(bought.data.stock.get("speed_shoes", 0)) == 5, "A bought 5 speed shoes: %s" % [bought.data])
 	# Friends: A asks, B accepts (through the API, as B).
 	var b_me := await http(HTTPClient.METHOD_GET, "/v1/me", null, b_token)
 	var b_id: String = str(b_me.data.get("id", b_me.data.get("account_id", "")))
@@ -173,6 +177,21 @@ func run() -> void:
 	arena.send_action(step)
 	check(await until(func(): return Vector2i(int(arena.me().x), int(arena.me().y)) != start_cell, 3.0), "Server moved A after a move intent")
 	await capture("online-battle.png")
+	# Quick slot 4 + Ctrl: the server applies the boots, counts down and reports the use.
+	check(int(arena.me().get("items", {}).get("speed_shoes", 0)) == 5, "Server loaded A's stock")
+	online.select_slot(3)
+	online.use_slot()
+	check(await until(func(): return bool(arena.me().get("fast", false)) and int(arena.me().items.speed_shoes) == 4, 3.0), "Server accepted the boots")
+	check(await until(func(): return online.item_ui.slots[3].count.text == "x4" and online.item_ui.active_name.text == "GIÀY TĂNG TỐC", 2.0), "HUD shows x4 on slot 4")
+	await capture("online-battle-items.png")
+	var stock_left := -1
+	for attempt in 20:
+		var mine: Dictionary = await account.api(HTTPClient.METHOD_GET, "/v1/inventory/loadout")
+		stock_left = int(mine.data.items.speed_shoes) if mine.status == 200 else -1
+		if stock_left == 4:
+			break
+		await create_timer(0.3).timeout
+	check(stock_left == 4, "API took one boots use from A's stock")
 	# A bombs itself in place: the server explodes it and B wins.
 	arena.send_action("bomb")
 	check(await until(func(): return arena.snapshot.get("bombs", []).size() == 1 and online.bombs.size() == 1, 3.0), "Bomb comes back in the snapshot and is drawn")
