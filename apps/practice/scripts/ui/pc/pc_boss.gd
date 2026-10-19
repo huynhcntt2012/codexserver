@@ -14,6 +14,13 @@ const SKILLS := {
 	"boss_block_lane": "Chặn ô bằng vật cản tạm 3 s",
 	"boss_wave_push": "Sóng đẩy người và bom 2 ô",
 	"boss_weak_point": "Lộ điểm yếu: ×1,5 sát thương trong 3 s",
+	"robot_bomb_launch": "Bom Bật Sau Lưng: 1 bom trước mặt, nổ + 2 ô",
+	"robot_bomb_chain": "Chuỗi Boom: 3 bom trước / trái / phải, nổ lần lượt",
+	"robot_mini_chaser": "Bom Đuổi: bom mini đuổi theo, dừng rồi nổ + 1 ô",
+	"robot_recoil_dash": "Phản Lực Boom: lướt tối đa 4 ô, để lại 1 bom",
+	"robot_magnet_pull": "Hút Boom Về Lưng: nổ + 2 ô quanh thân",
+	"robot_overheat": "Quá Tải Dây Cót: 8 bom quanh Boss",
+	"robot_reactor": "ULTIMATE Lò Bom: 2 đợt theo hàng / cột, luôn chừa lối né",
 }
 const ITEM_NAMES := {"throw_bomb": "Bom ném xa", "dart": "Phi tiêu", "blue_shield": "Khiên", "speed_shoes": "Giày", "freeze_bomb": "Bom băng", "push_glove": "Găng đẩy"}
 
@@ -107,43 +114,67 @@ func render() -> void:
 	if e.is_empty():
 		header.text = ""
 		return message("Hiện chưa có sự kiện Đại Chiến Boss. Hãy quay lại khi sự kiện mở!")
-	var me: Dictionary = e.get("me", {})
-	tokens_label.text = "%s: %d" % [str(e.get("badge_name", "Huy Hiệu")), int(me.get("badges", 0))]
-	tokens_label.get_parent().show()
-	match str(e.get("phase", "")):
-		"scheduled":
-			show_timer("Mở sau ", e.start_at)
-		"running":
-			show_timer("Kết thúc sau ", e.end_at)
-		_:
-			if e.window == "claim":
-				show_timer("Nhận thưởng còn ", e.claim_end_at)
-	header.text = "%s · Giờ Việt Nam (UTC+7)" % str(e.name)
+	var many := events.size() > 1
+	if many:
+		# Every boss event at once (e.g. Slime King and the robot): one card / section each.
+		header.text = "%d sự kiện Boss · Giờ Việt Nam (UTC+7)" % events.size()
+	else:
+		var me: Dictionary = e.get("me", {})
+		tokens_label.text = "%s: %d" % [str(e.get("badge_name", "Huy Hiệu")), int(me.get("badges", 0))]
+		tokens_label.get_parent().show()
+		match str(e.get("phase", "")):
+			"scheduled":
+				show_timer("Mở sau ", e.start_at)
+			"running":
+				show_timer("Kết thúc sau ", e.end_at)
+			_:
+				if e.window == "claim":
+					show_timer("Nhận thưởng còn ", e.claim_end_at)
+		header.text = "%s · Giờ Việt Nam (UTC+7)" % str(e.name)
 	match current_tab:
 		"raid":
-			list.add_child(raid_card(e))
+			for one in events:
+				list.add_child(raid_card(one))
 		"quests":
-			var quests: Array = e.get("quests", [])
-			if quests.is_empty():
-				message("Sự kiện chưa có nhiệm vụ Boss.")
-			for quest in quests:
-				list.add_child(quest_card(quest, str(e.get("badge_name", "Huy Hiệu"))))
+			for one in events:
+				section(one, many)
+				var quests: Array = one.get("quests", [])
+				if quests.is_empty():
+					message("Sự kiện chưa có nhiệm vụ Boss.")
+				for quest in quests:
+					list.add_child(quest_card(quest, str(one.get("badge_name", "Huy Hiệu"))))
 		"shop":
-			if e.get("shop", []).is_empty():
-				message("Sự kiện chưa mở Event Shop.")
-			else:
-				list.add_child(shop_card(as_mission_event(e)))
+			for one in events:
+				section(one, many)
+				if one.get("shop", []).is_empty():
+					message("Sự kiện chưa mở Event Shop.")
+				else:
+					list.add_child(shop_card(as_mission_event(one)))
 		"rewards":
 			if rewards.is_empty():
 				message("Không có phần thưởng nào đang chờ. Thắng Boss để nhận thưởng!")
 			for grant in rewards:
-				list.add_child(grant_card(grant, str(e.get("badge_name", "Huy Hiệu"))))
+				list.add_child(grant_card(grant, badge_of(str(grant.get("event_id", "")))))
+
+## Section title of one event (only when several are shown).
+func section(e: Dictionary, many: bool) -> void:
+	if not many:
+		return
+	var me: Dictionary = e.get("me", {})
+	var label := title_text("%s · %s: %d" % [str(e.name), str(e.get("badge_name", "Huy Hiệu")), int(me.get("badges", 0))], 24, Color.WHITE, list)
+	label.name = "Section_" + str(e.id)
+
+func badge_of(event_id: String) -> String:
+	for one in events:
+		if str(one.id) == event_id:
+			return str(one.get("badge_name", "Huy Hiệu"))
+	return str(event().get("badge_name", "Huy Hiệu"))
 
 func raid_card(e: Dictionary) -> PanelContainer:
 	var rules: Dictionary = e.get("rules", {})
 	var me: Dictionary = e.get("me", {})
 	var holder := card(Color("2a1640"), Color("ff9ec0"), 22, 4, 16)
-	holder.name = "BossRaid"
+	holder.name = "BossRaid" if events.size() <= 1 else "BossRaid_" + str(e.id)
 	var stack := column(10, holder)
 	var head := row(14, stack)
 	var titles := column(4, head)
@@ -176,6 +207,11 @@ func raid_card(e: Dictionary) -> PanelContainer:
 		"Thắng: %s · Thua/hết giờ: %s" % [reward_text(rules.get("win_rewards", []), str(e.get("badge_name", ""))), reward_text(rules.get("lose_rewards", []), str(e.get("badge_name", "")))],
 		"Lượt thưởng đầy đủ hôm nay: %d/%d · Đã thắng %d trận · Chờ nhận %d" % [int(me.get("full_rewards_today", 0)), int(rules.get("full_reward_limit_per_day", 3)), int(me.get("wins", 0)), int(me.get("pending_rewards", 0))],
 	]
+	if events.size() > 1:
+		# The page header shows one event's badges and timer; with several, each card does.
+		var until := parse_time(e.end_at if phase != "scheduled" else e.start_at)
+		var when := ("Mở sau " if phase == "scheduled" else "Kết thúc sau ") + countdown(until - server_now()) if until > 0.0 else ""
+		facts.append("%s: %d%s" % [str(e.get("badge_name", "Huy Hiệu")), int(me.get("badges", 0)), " · " + when if when != "" else ""])
 	for fact in facts:
 		var label := text("• " + fact, 16, Color.WHITE, stack)
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

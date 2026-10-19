@@ -4,10 +4,20 @@ import {
   BLOCK_MS,
   BossArena,
   bossHp,
+  CHAIN_GAP,
+  CHASE_MS,
+  CHASER_CAST,
+  DASH_BOMB_MS,
   DEFAULT_RULES,
+  OVERHEAT_GAP,
+  REACTOR_WAVE_GAP,
+  ROBOT_RULES,
+  ROBOT_SKILLS,
   SKILL_TIMING,
+  TIRED_MS,
   WEAK_MS,
   type BossRules,
+  type BossSkill,
   type RaidSummary,
 } from '../src/boss.js';
 import { FUSE_MS, Tile } from '../src/game.js';
@@ -298,4 +308,244 @@ test('the snapshot carries the boss, casts and raid state', () => {
   );
   assert.equal(snap.boss.casts[0]!.skill, 'boss_basic_hit');
   assert.equal(snap.raid.result, null);
+});
+
+// ------------------------------------------------------------ Clockwork Bomb Robot
+
+/** The robot (2 x 2 at x 7-8, y 5-6 on Harbor) with one skill; walking off unless asked. */
+function robot(skill: BossSkill | null, players = 1, walk = false) {
+  const r = raid(
+    { ...ROBOT_RULES, minPlayers: 1, skills: skill ? [skill] : [] },
+    players,
+  );
+  if (!walk) r.g.rules.walkMs = 0;
+  r.g.bossPhase = skill ? SKILL_TIMING[skill].phase : 1;
+  return r;
+}
+
+const has = (tiles: [number, number][], x: number, y: number) =>
+  tiles.some(([tx, ty]) => tx === x && ty === y);
+
+test('robot preset: 2 x 2 footprint, spec HP 6 000 x (1 + 0.55 (n - 1)), factory floor', () => {
+  const { g } = robot(null, 2);
+  assert.equal(g.size, 2);
+  assert.deepEqual([g.bossX, g.bossY], [7, 5]);
+  assert.equal(g.hpMax, 9300);
+  assert.equal(bossHp({ ...DEFAULT_RULES, ...ROBOT_RULES }, 6), 22500);
+  assert.ok(!g.isWalkable(8, 6) && g.isWalkable(9, 6));
+  // Pillars stay only on every fourth cell, the border stays closed.
+  assert.equal(g.grid[2]![2], Tile.Wall);
+  assert.equal(g.grid[2]![4], Tile.Floor);
+  assert.equal(g.grid[0]![4], Tile.Wall);
+  const snap = g.snapshot();
+  assert.deepEqual(
+    [snap.boss.size, snap.boss.facing, snap.boss.walkMs],
+    [2, 'down', 0],
+  );
+});
+
+test('robot skills open by phase: SK01-02, then SK03-04, then SK05-07', () => {
+  const { g } = robot(null);
+  g.rules.skills = [...ROBOT_SKILLS];
+  assert.deepEqual(g.pool(), ['robot_bomb_launch', 'robot_bomb_chain']);
+  g.bossPhase = 2;
+  assert.deepEqual(g.pool(), ROBOT_SKILLS.slice(0, 4));
+  g.bossPhase = 3;
+  assert.deepEqual(g.pool(), [...ROBOT_SKILLS]);
+});
+
+test('SK01 Bomb Launch: one bomb 1-2 cells in front, its + of 2 is the warned set', () => {
+  const { g, p } = robot('robot_bomb_launch');
+  [p.x, p.y] = [8, 10]; // below the robot
+  g.tick(1600);
+  const cast = g.casts[0]!;
+  assert.equal(cast.skill, 'robot_bomb_launch');
+  assert.equal(g.facing, 'down');
+  assert.equal(cast.resolveAt - cast.castAt, 1950);
+  const [bx, by] = cast.bombs![0]!;
+  assert.ok(by === 8 || by === 9, `lands 1-2 cells below: ${by}`);
+  assert.deepEqual(cast.tiles, g.blast(bx, by, 2));
+  // Stand on a warned cell (not the bomb) until it goes off.
+  const [hx, hy] = cast.tiles.find(([x, y]) => x !== bx || y !== by)!;
+  [p.x, p.y] = [hx, hy];
+  const hp = g.hp;
+  g.tick(cast.resolveAt - g.now);
+  assert.equal(p.alive, false);
+  assert.equal(g.hp, hp, 'its own bombs never hurt the robot');
+  assert.ok(g.snapshot().flames.some((f) => f.x === bx && f.y === by));
+});
+
+test('robot blasts stop at walls, crates and the robot itself', () => {
+  const { g } = robot(null);
+  g.grid[3]![10] = Tile.Crate;
+  const tiles = g.blast(10, 5, 2);
+  assert.ok(!has(tiles, 10, 3) && has(tiles, 10, 4), 'crate stops it');
+  assert.ok(!has(tiles, 8, 5), 'the robot stops it');
+  assert.ok(!has(tiles, 9 - 1, 5));
+  assert.ok(has(tiles, 9, 5) && has(tiles, 12, 5));
+});
+
+test('SK02 Bomb Chain: front, left and right bombs go off 0.4 s apart', () => {
+  const { g, p } = robot('robot_bomb_chain');
+  [p.x, p.y] = [8, 10];
+  g.tick(1600);
+  assert.equal(g.casts.length, 3);
+  const times = g.casts.map((c) => c.resolveAt - c.castAt);
+  assert.deepEqual(times, [2400, 2400 + CHAIN_GAP, 2400 + 2 * CHAIN_GAP]);
+  assert.ok(g.casts.every((c) => c.bombs!.length === 1));
+  // Out of the way; no new cast while the chain is on the board.
+  [p.x, p.y] = [1, 1];
+  g.tick(2400);
+  assert.equal(g.casts.length, 2);
+  g.tick(2 * CHAIN_GAP);
+  assert.equal(g.casts.length, 0);
+  assert.ok(p.alive);
+});
+
+test('SK03 Mini Chaser runs after its target, stops and warns 0.8 s before its + of 1', () => {
+  const { g, p } = robot('robot_mini_chaser');
+  [p.x, p.y] = [8, 11];
+  g.tick(1600);
+  const cast = g.casts[0]!;
+  assert.equal(cast.skill, 'robot_mini_chaser');
+  assert.deepEqual(cast.tiles, []);
+  const start = cast.mini!;
+  const distance = () =>
+    Math.abs(cast.mini![0] - p.x) + Math.abs(cast.mini![1] - p.y);
+  const before = distance();
+  // Runs (one cell per 0.3 s) until it reaches its target or the chase ends.
+  for (
+    let t = 0;
+    t < CHASER_CAST + CHASE_MS + 100 && !cast.tiles.length;
+    t += 50
+  )
+    g.tick(50);
+  assert.ok(cast.tiles.length > 0);
+  assert.ok(distance() < before, `${start} -> ${cast.mini} closed in`);
+  assert.equal(
+    cast.resolveAt - g.now,
+    SKILL_TIMING.robot_mini_chaser.telegraph,
+  );
+  const [mx, my] = cast.mini!;
+  assert.deepEqual(cast.bombs, [[mx, my]]);
+  assert.ok(has(cast.tiles, mx, my));
+  // The snapshot shows the mini bomb where the server has it.
+  assert.deepEqual(g.snapshot().boss.casts[0]!.mini, [mx, my]);
+});
+
+test('SK04 Recoil Dash: warned lane, raider in it is hit, bomb left on the start cells', () => {
+  const { g, p } = robot('robot_recoil_dash', 2);
+  const b = g.players.get('b')!;
+  [p.x, p.y] = [7, 11]; // below: the robot dashes down columns 7-8
+  [b.x, b.y] = [1, 1];
+  g.tick(1600);
+  const cast = g.casts[0]!;
+  assert.equal(cast.skill, 'robot_recoil_dash');
+  assert.equal(cast.dir, 'down');
+  assert.equal(cast.resolveAt - cast.castAt, 900);
+  const [tx, ty] = cast.to!;
+  assert.ok(tx === 7 && ty - 5 >= 2 && ty - 5 <= 4, `${tx},${ty}`);
+  assert.ok(has(cast.tiles, 8, ty + 1) && !has(cast.tiles, 8, 6));
+  // b walks into the warned lane and stays there.
+  [b.x, b.y] = [8, 7];
+  g.tick(cast.resolveAt - g.now);
+  assert.deepEqual([g.bossX, g.bossY], [tx, ty]);
+  assert.equal(b.alive, false);
+  assert.ok(g.movedAt === g.now && g.facing === 'down');
+  const follow = g.casts[0]!;
+  assert.equal(follow.skill, 'robot_recoil_dash');
+  assert.deepEqual(follow.bombs, [[7, 5]]);
+  assert.equal(follow.resolveAt - g.now, DASH_BOMB_MS);
+  assert.ok(has(follow.tiles, 7, 5) && !g.isBoss(7, 5));
+});
+
+test('SK05 Magnet Pull: a + reaching 2 cells out of every side, after 2.2 s', () => {
+  const { g } = robot('robot_magnet_pull');
+  g.tick(1600);
+  const cast = g.casts[0]!;
+  assert.equal(cast.resolveAt - cast.castAt, 2200);
+  for (const [x, y] of [
+    [7, 4],
+    [7, 3],
+    [9, 5],
+    [10, 5],
+    [8, 7],
+    [6, 5],
+  ] as const)
+    assert.ok(has(cast.tiles, x, y), `${x},${y}`);
+  assert.ok(!has(cast.tiles, 9, 4), 'not the corners');
+});
+
+test('SK06 Overheat: eight bombs around the robot, warned 2.9 s, one after another', () => {
+  const { g } = robot('robot_overheat');
+  g.tick(1600);
+  assert.equal(g.casts.length, 8);
+  g.casts.forEach((c, i) =>
+    assert.equal(c.resolveAt - c.castAt, 2900 + i * OVERHEAT_GAP),
+  );
+  const bombs = g.casts.map((c) => c.bombs![0]!);
+  assert.equal(new Set(bombs.map((b) => b.join())).size, 8);
+});
+
+test('SK07 Reactor: two waves on rows then columns, safe lanes left, then tired', () => {
+  const { g, p } = robot('robot_reactor');
+  g.tick(1600);
+  assert.equal(g.casts.length, 2);
+  const [rows, cols] = g.casts;
+  assert.equal(rows!.resolveAt - rows!.castAt, 3500);
+  assert.equal(cols!.resolveAt - rows!.resolveAt, REACTOR_WAVE_GAP);
+  const lines = new Set([...rows!.tiles, ...cols!.tiles].map((t) => t.join()));
+  let floor = 0;
+  for (let y = 0; y < g.grid.length; y++)
+    for (let x = 0; x < g.grid[0]!.length; x++)
+      if (g.grid[y]![x] === Tile.Floor && !g.isBoss(x, y)) floor++;
+  assert.ok(lines.size < floor * 0.75, 'never the whole board');
+  assert.ok(!has([...rows!.tiles, ...cols!.tiles], p.x, p.y) || p.alive);
+  g.tick(rows!.resolveAt - g.now);
+  assert.equal(g.weakUntil > g.now, false);
+  g.tick(REACTOR_WAVE_GAP);
+  assert.equal(g.weakUntil, g.now + TIRED_MS);
+});
+
+test('no robot cast without a way out: a boxed-in raider is never on a reactor line', () => {
+  const { g, p } = robot('robot_reactor');
+  g.grid[1]![2] = Tile.Wall;
+  g.grid[2]![1] = Tile.Wall;
+  assert.deepEqual([p.x, p.y], [1, 1]);
+  for (let i = 0; i < 5; i++) {
+    const waves = g.plan('robot_reactor');
+    assert.ok(waves);
+    assert.ok(waves.every((w) => !has(w.tiles, 1, 1)));
+  }
+});
+
+test('the robot walks toward the team between casts, around pillars, up to crates', () => {
+  const { g, p } = robot(null, 1, true);
+  [p.x, p.y] = [7, 11];
+  const gap = () =>
+    Math.max(g.bossX - p.x, p.x - (g.bossX + 1), 0) +
+    Math.max(g.bossY - p.y, p.y - (g.bossY + 1), 0);
+  g.tick(1600);
+  assert.deepEqual([g.bossX, g.bossY, g.facing], [7, 6, 'down']);
+  assert.equal(g.movedAt, g.now);
+  for (let i = 0; i < 10; i++) g.tick(ROBOT_RULES.walkMs!);
+  // Close enough to throw: it stops 2 cells away.
+  assert.equal(gap(), 2);
+  assert.equal(g.snapshot().boss.y, g.bossY);
+  // Walled off by crates (Harbor's x 10-11): it gets as close as it can.
+  [p.x, p.y] = [15, 6];
+  for (let i = 0; i < 20; i++) g.tick(ROBOT_RULES.walkMs!);
+  assert.ok(g.bossX + 1 >= 9, `${g.bossX},${g.bossY}`);
+});
+
+test('robot event rules from the API: footprint and walk_ms are clamped', () => {
+  const rules = parseRules('evt', {
+    skills: ['robot_bomb_launch', 'robot_reactor', 'nope'],
+    footprint: 9,
+    walk_ms: -5,
+  });
+  assert.deepEqual(rules.skills, ['robot_bomb_launch', 'robot_reactor']);
+  assert.equal(rules.footprint, 3);
+  assert.equal(rules.walkMs, 0);
+  assert.equal(parseRules('evt', { footprint: 2, walk_ms: 700 }).footprint, 2);
 });

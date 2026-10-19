@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from app import admin_api, boss
+from app import admin_api, boss, liveops
 from tests.test_liveops import ARENA, INGEST, arena_round, db_session, quests, seed
 from tests.test_sync import item, overrides, owner, player, service_token  # noqa: F401
 
@@ -105,6 +105,44 @@ def test_admin_validation_blocks_bad_boss_config(client):
     story["config"]["quests"].append(template["config"]["quests"][0])
     errors = client.post("/admin/v1/events/validate", json=story, headers=admin).json()
     assert any("Boss" in e for e in errors["errors"])
+
+
+def test_robot_template_validates_and_reaches_the_arena(client):
+    admin = owner(client)
+    reward_items(client, admin)
+    template = client.get("/admin/v1/events/template?kind=robot", headers=admin).json()
+    rules = template["config"]["boss"]
+    assert template["kind"] == "boss" and rules["display_name"] == "Robot Bom Dây Cót"
+    assert rules["skills"] == list(liveops.ROBOT_SKILLS) and len(rules["skills"]) == 7
+    assert (rules["footprint"], rules["walk_ms"], rules["base_hp"]) == (2, 700, 6000)
+    assert (rules["min_players"], rules["max_players"], rules["duration_seconds"]) == (1, 6, 360)
+    check = client.post("/admin/v1/events/validate", json=template, headers=admin).json()
+    assert check["ok"], check
+
+    def broken(**boss_rules):
+        config = {**template["config"], "boss": {**rules, **boss_rules}}
+        return client.post(
+            "/admin/v1/events/validate", json={**template, "config": config}, headers=admin
+        )
+
+    assert broken(skills=["robot_reactor"]).json()["ok"]  # every robot skill hits
+    assert not broken(walk_ms=100).json()["ok"]
+    assert broken(footprint=4).status_code == 422
+    # The arena gets the footprint and the walking speed.
+    event_id = boss_event(client, admin, **{k: v for k, v in rules.items() if k != "sessions"})
+    info = client.get(f"/internal/v1/boss/events/{event_id}", headers=ARENA_SERVICE).json()
+    assert info["rules"]["footprint"] == 2 and info["rules"]["walk_ms"] == 700
+    assert info["rules"]["skills"][0] == "robot_bomb_launch"
+
+
+def test_players_see_the_newest_running_boss_event_first(client):
+    admin = owner(client)
+    older = boss_event(client, admin)
+    newer = boss_event(client, admin, display_name="Robot Bom Dây Cót")
+    _, headers = player(client, "boss_pick")
+    ids = [e["id"] for e in client.get("/v1/boss/events", headers=headers).json()["events"]]
+    assert {older, newer} <= set(ids)
+    assert ids.index(newer) < ids.index(older)
 
 
 def test_arena_reads_rules_and_open_state_from_the_schedule(client, monkeypatch):

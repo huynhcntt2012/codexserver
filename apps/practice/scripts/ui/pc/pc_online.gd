@@ -15,6 +15,9 @@ const BossHpBar := preload("res://scripts/ui/pc/boss_hp_bar.gd")
 const SKILL_NAMES := {
 	"boss_basic_hit": "Đánh thường", "boss_aoe_mark": "Đánh dấu vùng", "boss_block_lane": "Chặn ô",
 	"boss_wave_push": "Sóng đẩy", "boss_weak_point": "Lộ điểm yếu",
+	"robot_bomb_launch": "Bom Bật Sau Lưng", "robot_bomb_chain": "Chuỗi Boom", "robot_mini_chaser": "Bom Đuổi",
+	"robot_recoil_dash": "Phản Lực Boom", "robot_magnet_pull": "Hút Boom Về Lưng", "robot_overheat": "Quá Tải Dây Cót",
+	"robot_reactor": "ULTIMATE Lò Bom",
 }
 const RAID_TITLES := {"WIN": "ĐÃ HẠ BOSS!", "LOSE": "CẢ ĐỘI BỊ HẠ", "TIMEOUT": "HẾT GIỜ!", "ABORT": "TRẬN BỊ HỦY"}
 

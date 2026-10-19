@@ -447,7 +447,7 @@ export class Arena {
     }
   }
 
-  private ignite(x: number, y: number, owner: string): void {
+  protected ignite(x: number, y: number, owner: string): void {
     this.flames.set(key(x, y), { x, y, expiresAt: this.now + FLAME_MS });
     this.flameOwners.set(key(x, y), owner);
   }

@@ -166,13 +166,25 @@ class ShopEntry(BaseModel):
     per_player: int = Field(default=1, ge=1, le=99)
 
 
-BOSS_SKILLS = (
+SLIME_SKILLS = (
     "boss_basic_hit",
     "boss_aoe_mark",
     "boss_block_lane",
     "boss_wave_push",
     "boss_weak_point",
 )
+# Robot Bom Dây Cót, SK01-SK07 (docs/BOSS.md): every one of them hits.
+ROBOT_SKILLS = (
+    "robot_bomb_launch",
+    "robot_bomb_chain",
+    "robot_mini_chaser",
+    "robot_recoil_dash",
+    "robot_magnet_pull",
+    "robot_overheat",
+    "robot_reactor",
+)
+BOSS_SKILLS = SLIME_SKILLS + ROBOT_SKILLS
+HITTING_SKILLS = {"boss_basic_hit", "boss_aoe_mark", *ROBOT_SKILLS}
 BOSS_ITEMS = ("throw_bomb", "dart", "blue_shield", "speed_shoes", "freeze_bomb", "push_glove")
 
 
@@ -206,7 +218,7 @@ class BossRules(BaseModel):
     base_hp: int = Field(default=1000, ge=50, le=1_000_000)
     hp_per_extra_player: float = Field(default=0.55, ge=0, le=5)
     phase_thresholds: list[float] = Field(default=[0.7, 0.35], max_length=4)
-    skills: list[Literal[BOSS_SKILLS]] = Field(default=list(BOSS_SKILLS), min_length=1)
+    skills: list[Literal[BOSS_SKILLS]] = Field(default=list(SLIME_SKILLS), min_length=1)
     bomb_damage: int = Field(default=50, ge=1, le=10_000)
     weak_multiplier: float = Field(default=1.5, ge=1, le=5)
     min_players: int = Field(default=1, ge=1, le=8)
@@ -214,6 +226,9 @@ class BossRules(BaseModel):
     duration_seconds: int = Field(default=300, ge=30, le=1800)
     items: list[Literal[BOSS_ITEMS]] = Field(default=list(BOSS_ITEMS))
     mount: bool = True
+    # Footprint side in cells (Slime King 3, robot 2) and ms per walking step (0 = stays put).
+    footprint: int = Field(default=3, ge=2, le=3)
+    walk_ms: int = Field(default=0, ge=0, le=5000)
     reward_private_room: bool = False
     # Empty = playable for the whole event window.
     sessions: list[BossSession] = Field(default_factory=list, max_length=7)
@@ -429,6 +444,42 @@ def seed_defaults(db: Session) -> int:
             added += 1
     db.commit()
     return added
+
+
+def template_robot_event() -> dict:
+    """The Clockwork Bomb Robot event (spec "Robot Bom Dây Cót" v1.0, sample numbers)."""
+    event = template_boss_event()
+    event.update(
+        name="Nhà Máy Bom Dây Cót",
+        description="1-6 người (chơi một mình được) hạ Robot Bom Dây Cót ở Bến Cảng Bong Bóng.",
+    )
+    event["config"].update(
+        banner="Robot sửa chữa lỡ kích hoạt kho bom dây cót!",
+        intro=(
+            "Một chú robot sửa chữa trong nhà máy vô tình kích hoạt kho bom dây cót và rủ "
+            "mọi người “thử pháo hoa”. Hợp sức đặt bom, né các ô cảnh báo và vô hiệu hóa "
+            "lò bom sau lưng nó."
+        ),
+        npc="Robot Bom Dây Cót",
+    )
+    event["config"]["boss"].update(
+        boss_id="boss_clockwork_bot",
+        asset_pack_id="clockwork_bot",
+        display_name="Robot Bom Dây Cót",
+        map_id="harbor",
+        base_hp=6000,
+        hp_per_extra_player=0.55,
+        phase_thresholds=[0.7, 0.4],
+        skills=list(ROBOT_SKILLS),
+        bomb_damage=150,
+        min_players=1,
+        max_players=6,
+        duration_seconds=360,
+        footprint=2,
+        walk_ms=700,
+        full_reward_limit_per_day=3,
+    )
+    return event
 
 
 def template_boss_event() -> dict:
@@ -823,8 +874,12 @@ def validate_boss(db: Session, boss: BossRules, maps: set[str], days: int):
         errors.append("Boss: ngưỡng phase bị trùng")
     if len(set(boss.skills)) != len(boss.skills):
         errors.append("Boss: kỹ năng bị trùng")
-    if not {"boss_basic_hit", "boss_aoe_mark"} & set(boss.skills):
-        errors.append("Boss: cần ít nhất một đòn gây sát thương (Basic Hit hoặc AOE)")
+    if not HITTING_SKILLS & set(boss.skills):
+        errors.append("Boss: cần ít nhất một đòn gây sát thương (Basic Hit, AOE hoặc Robot)")
+    if 0 < boss.walk_ms < 300:
+        errors.append("Boss: bước đi tối thiểu 300 ms (0 = đứng yên)")
+    if boss.walk_ms and boss.footprint == 3:
+        warnings.append("Boss 3×3 biết đi khó lách giữa các cột; nên dùng thân 2×2")
     for session in boss.sessions:
         if any(d < 1 or d > 7 for d in session.days_of_week):
             errors.append("Boss: ngày trong tuần là 1 (thứ Hai) đến 7 (Chủ nhật)")
@@ -1591,7 +1646,9 @@ def admin_validate_event(body: EventCheck, _: Reader, db: Db):
 
 
 @router.get("/admin/v1/events/template")
-def admin_event_template(_: Reader, kind: Literal["story", "boss"] = "story"):
+def admin_event_template(_: Reader, kind: Literal["story", "boss", "robot"] = "story"):
+    if kind == "robot":
+        return template_robot_event()
     return template_boss_event() if kind == "boss" else template_event()
 
 

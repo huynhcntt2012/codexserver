@@ -145,6 +145,45 @@ func run() -> void:
 	arena._reconnect_token = ""
 	arena.snapshot = {}
 
+	# Robot Bom Dây Cót: directional art, its bombs on the server's cells, the mini chaser, walking.
+	var chain: Dictionary = fixtures.robotChain
+	arena.snapshot = chain
+	online._on_snapshot(chain)
+	await frames()
+	view = online.boss_view
+	check(view.walks.size() == 4 and view.walks.down.size() == 4, "Robot pack: 4 directions x 4 frames")
+	check(view.walks[str(chain.boss.facing)].has(view.art), "Robot drawn turned to the server's facing (%s)" % chain.boss.facing)
+	footprint = view.footprint()
+	check(footprint.position == Vector2(float(chain.boss.x), float(chain.boss.y)) * 64 and footprint.size == Vector2(128, 128), "Footprint 2x2: %s" % footprint)
+	check(view.boss.casts.size() == 3, "Bomb Chain: three bombs")
+	for i in 3:
+		check(view.boss.casts[i].bombs == chain.boss.casts[i].bombs and view.boss.casts[i].tiles == chain.boss.casts[i].tiles, "Same bomb cells and warned cells as the server")
+	check(online.boss_note.text == "⚠ Chuỗi Boom", "Robot skill named: " + online.boss_note.text)
+	check(online.walls.size() == 68, "Factory floor: border + 12 of 35 pillars (%d walls)" % online.walls.size())
+	view.set_process(false)
+	view.now = float(chain.boss.casts[0].castAt) + 150.0  # bombs in the air
+	view.queue_redraw()
+	await capture("robot-throw.png")
+	view.now = float(chain.boss.casts[0].resolveAt) - 200.0  # landed, blinking
+	view.queue_redraw()
+	await capture("robot-chain.png")
+	view.set_process(true)
+	var chaser: Dictionary = fixtures.robotChaser
+	online._on_snapshot(chaser)
+	await frames()
+	var mini: Array = chaser.boss.casts[0].mini
+	check(view.minis_at.has(int(chaser.boss.casts[0].id)), "Mini chaser tracked")
+	check(view.mini_drawn(view.minis_at[int(chaser.boss.casts[0].id)]) == (Vector2(float(mini[0]), float(mini[1])) + Vector2(0.5, 0.5)) * 64, "Mini chaser on the server's cell")
+	await capture("robot-chaser.png")
+	var walk: Dictionary = fixtures.robotWalk
+	online._on_snapshot(walk)
+	await frames()
+	check(view.walking() and view.slide_t < 1.0, "Robot slides to its new cell")
+	check(view.walks.down.has(view.art) and str(walk.boss.facing) == "down", "Walking frames face the step")
+	await create_timer(float(walk.boss.walkMs) / 1000.0 + 0.2).timeout
+	check(view.footprint().position == Vector2(float(walk.boss.x), float(walk.boss.y)) * 64, "Slide ends on the server cell")
+	await capture("robot-walk.png")
+
 	# SĂN BOSS page (popup of the lobby): open event -> three ways in; closed -> disabled.
 	game.show_pc_screen("lobby")
 	var lobby = game.pc_screens["lobby"]
@@ -181,8 +220,31 @@ func run() -> void:
 	await frames()
 	check(page.find_child("Grant_g1", true, false) != null, "Pending raid reward listed")
 	page.set_tab("raid")
+	# Two boss events at once (Slime King + robot): both cards on the page together.
+	var robot_event := boss_event(true)
+	robot_event.id = "evt_robot"
+	robot_event.name = "Nhà Máy Bom Dây Cót"
+	robot_event.rules = robot_event.rules.duplicate()
+	robot_event.rules.display_name = "Robot Bom Dây Cót"
+	page.events = [robot_event, boss_event(true)]
+	page.render()
+	await frames()
+	var robot_card: Control = page.find_child("BossRaid_evt_robot", true, false)
+	var slime_card: Control = page.find_child("BossRaid_evt_ui", true, false)
+	check(robot_card != null and slime_card != null, "Both boss events shown at once")
+	check(page.header.text.begins_with("2 sự kiện Boss"), "Header counts the events: " + page.header.text)
+	robot_card.find_child("Play_team", true, false).pressed.emit()
+	slime_card.find_child("Play_solo", true, false).pressed.emit()
+	check(played.slice(-2) == [["evt_robot", "team"], ["evt_ui", "solo"]], "Each card joins its own event: %s" % [played.slice(-2)])
+	page.set_tab("quests")
+	await frames()
+	check(page.find_child("Section_evt_robot", true, false) != null and page.find_child("Section_evt_ui", true, false) != null, "Quests grouped per event")
+	page.set_tab("raid")
+	await capture("boss-page-two.png")
 	page.events = [boss_event(true)]
 	page.render()
+	await frames()
+	check(page.find_child("BossRaid", true, false) != null and page.find_child("Section_evt_ui", true, false) == null, "One event: the single layout")
 	await capture("boss-page.png")
 	if not failed:
 		print("BOSS_UI_OK checks=", checks)

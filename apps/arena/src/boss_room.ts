@@ -67,6 +67,8 @@ export function parseRules(
         )
       : d.items,
     mount: typeof raw.mount === 'boolean' ? raw.mount : d.mount,
+    footprint: Math.round(number(raw.footprint, 2, 3, d.footprint)),
+    walkMs: Math.round(number(raw.walk_ms, 0, 5000, d.walkMs)),
   };
 }
 

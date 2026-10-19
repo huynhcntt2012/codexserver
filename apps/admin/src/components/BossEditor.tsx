@@ -6,12 +6,32 @@ import { dateTime } from '@/lib/format';
 
 // Boss raid block of an event (docs/BOSS.md, apps/api/app/liveops.py BossRules).
 
-export const SKILLS: Record<string, string> = {
+export const SLIME_SKILLS: Record<string, string> = {
   boss_basic_hit: 'Đánh thường (ô quanh Boss, báo 0,6 s)',
   boss_aoe_mark: 'Đánh dấu vùng (3×3 / 5×5, báo 1,2 s)',
   boss_block_lane: 'Chặn ô (vật cản 3 s, báo 1 s)',
   boss_wave_push: 'Sóng đẩy (đẩy người/bom 2 ô, báo 1,5 s)',
   boss_weak_point: 'Lộ điểm yếu (×1,5 sát thương 3 s, phase 3)',
+};
+
+/** Robot Bom Dây Cót, SK01-SK07: bombs blast in a + along the grid. */
+export const ROBOT_SKILLS: Record<string, string> = {
+  robot_bomb_launch:
+    'SK01 Bom Bật Sau Lưng (1 bom trước mặt, + 2 ô, báo 1,95 s)',
+  robot_bomb_chain: 'SK02 Chuỗi Boom (3 bom trước/trái/phải, nổ cách 0,4 s)',
+  robot_mini_chaser: 'SK03 Bom Đuổi (bom mini đuổi 3 s, báo 0,8 s, phase 2)',
+  robot_recoil_dash:
+    'SK04 Phản Lực Boom (lướt tối đa 4 ô, để lại bom, phase 2)',
+  robot_magnet_pull:
+    'SK05 Hút Boom Về Lưng (+ 2 ô quanh thân, báo 2,2 s, phase 3)',
+  robot_overheat: 'SK06 Quá Tải Dây Cót (8 bom quanh Boss, báo 2,9 s, phase 3)',
+  robot_reactor:
+    'SK07 Lò Bom (2 đợt hàng/cột, chừa hành lang, mệt 2,5 s, phase 3)',
+};
+
+export const SKILLS: Record<string, string> = {
+  ...SLIME_SKILLS,
+  ...ROBOT_SKILLS,
 };
 
 export const ITEMS: Record<string, string> = {
@@ -48,6 +68,8 @@ export type BossConfig = {
   duration_seconds: number;
   items: string[];
   mount: boolean;
+  footprint: number;
+  walk_ms: number;
   reward_private_room: boolean;
   sessions: BossSession[];
   eligibility: {
@@ -73,7 +95,7 @@ export function defaultBoss(): BossConfig {
     base_hp: 1000,
     hp_per_extra_player: 0.55,
     phase_thresholds: [0.7, 0.35],
-    skills: Object.keys(SKILLS),
+    skills: Object.keys(SLIME_SKILLS),
     bomb_damage: 50,
     weak_multiplier: 1.5,
     min_players: 1,
@@ -81,6 +103,8 @@ export function defaultBoss(): BossConfig {
     duration_seconds: 300,
     items: Object.keys(ITEMS),
     mount: true,
+    footprint: 3,
+    walk_ms: 0,
     reward_private_room: false,
     sessions: [],
     eligibility: {
@@ -354,6 +378,29 @@ export default function BossEditor({
               onChange={num('bomb_damage')}
             />
           </Field>
+          <Field label="Thân Boss (ô)" hint="Vua Slime 3×3, Robot 2×2">
+            <select
+              className="input"
+              value={boss.footprint}
+              onChange={num('footprint')}
+            >
+              <option value={3}>3 × 3</option>
+              <option value={2}>2 × 2</option>
+            </select>
+          </Field>
+          <Field
+            label="Bước đi (ms, 0 = đứng yên)"
+            hint="Boss biết đi: bản đồ chỉ giữ 1/4 số cột để Boss có đường"
+          >
+            <input
+              className="input"
+              type="number"
+              min={0}
+              step={100}
+              value={boss.walk_ms}
+              onChange={num('walk_ms')}
+            />
+          </Field>
           <Field label="Hệ số khi lộ điểm yếu">
             <input
               className="input"
@@ -387,15 +434,25 @@ export default function BossEditor({
 
       <Card title="Kỹ năng Boss (ô cảnh báo do server quyết định)">
         <div className="stack">
-          {Object.entries(SKILLS).map(([key, label]) => (
-            <label className="check" key={key}>
-              <input
-                type="checkbox"
-                checked={boss.skills.includes(key)}
-                onChange={() => set({ skills: toggle(boss.skills, key) })}
-              />
-              {label}
-            </label>
+          {(
+            [
+              ['Vua Slime', SLIME_SKILLS],
+              ['Robot Bom Dây Cót', ROBOT_SKILLS],
+            ] as const
+          ).map(([group, skills]) => (
+            <div className="stack" key={group}>
+              <strong>{group}</strong>
+              {Object.entries(skills).map(([key, label]) => (
+                <label className="check" key={key}>
+                  <input
+                    type="checkbox"
+                    checked={boss.skills.includes(key)}
+                    onChange={() => set({ skills: toggle(boss.skills, key) })}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
           ))}
         </div>
       </Card>

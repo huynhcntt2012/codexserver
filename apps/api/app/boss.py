@@ -209,6 +209,8 @@ def arena_rules(event) -> dict:
             "duration_seconds",
             "items",
             "mount",
+            "footprint",
+            "walk_ms",
         }
     )
     return data
@@ -466,6 +468,8 @@ def player_boss_events(account: Identity, db: Db):
         for e in boss_events(db)
         if e.status == "paused" or event_window(e, at) != "closed" or aware(e.start_at) > at
     ]
+    # Running events first, newest first: older apps only show the first one.
+    shown.sort(key=lambda e: (event_window(e, at) != "progress", -aware(e.start_at).timestamp()))
     return {
         "enabled": True,
         "events": [boss_event_view(db, account.id, e, at) for e in shown],

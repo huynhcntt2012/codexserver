@@ -244,7 +244,7 @@ export default function Events() {
     setCheck(null);
   }
 
-  async function fromTemplate(kind: 'story' | 'boss' = 'story') {
+  async function fromTemplate(kind: 'story' | 'boss' | 'robot' = 'story') {
     try {
       const template = await api<GameEvent>(`/events/template?kind=${kind}`);
       open(toDraft(template));
@@ -354,6 +354,12 @@ export default function Events() {
               onClick={() => fromTemplate('boss')}
             >
               Tạo từ mẫu “Đại Chiến Boss”
+            </button>
+            <button
+              className="btn secondary"
+              onClick={() => fromTemplate('robot')}
+            >
+              Tạo từ mẫu “Robot Bom Dây Cót”
             </button>
             <button className="btn warn" onClick={() => open(blank())}>
               + Sự kiện mới

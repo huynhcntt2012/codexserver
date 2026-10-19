@@ -44,19 +44,58 @@ là **số mẫu** để chơi thử, cần Product Owner duyệt trước khi m
 | `boss_wave_push`  |     1,5 s | Đẩy người và bom trong dải ngang/dọc qua Boss 2 ô theo hướng | 2-3   |
 | `boss_weak_point` |     0,4 s | Lộ điểm yếu 3 s (×1,5 sát thương), mỗi lần cast thứ 3        | 3     |
 
-- Mỗi lúc chỉ có **một** ô cảnh báo; nghỉ giữa hai chiêu 1,6 / 1,2 / 0,8 s theo phase.
+- Mỗi lúc chỉ có **một** chiêu trên sàn (một chiêu có thể gồm nhiều quả bom); nghỉ giữa hai
+  chiêu 1,6 / 1,2 / 0,8 s theo phase. Kỹ năng mở theo phase (`SKILL_TIMING[].phase`).
 - **Bảo đảm lối thoát:** trước mỗi đòn gây sát thương, máy chủ kiểm tra (BFS theo tốc độ đi
   của từng người) mọi người còn sống đều tới được một ô an toàn trước khi trúng. Không có
   lối thì không cast chiêu đó. Chặn ô không bao giờ nhốt ai (mỗi người còn ≥ 4 ô đi được).
 - Client vẽ đúng danh sách ô server gửi (`boss.casts[].tiles`), có gạch chéo và ký hiệu
   (!, !!, ▣, mũi tên, ★) để đọc được cả khi không phân biệt màu.
 
+### Boss Robot Bom Dây Cót (gói `GameBoom_Robot_Boss_Event_DevPack.zip`, đặc tả v1.0)
+
+Mẫu admin **“Robot Bom Dây Cót”** (`/admin/v1/events/template?kind=robot`, `ROBOT_RULES` trong
+arena): `boss_clockwork_bot`, art `clockwork_bot`, 1-6 người (đặc tả gợi ý 2-6; cho chơi một mình), 360 s, HP `6000 × (1 + 0,55 (n − 1))`,
+phase 70 % / 40 %, sát thương bom 150, thân **2×2** (`footprint`), **đi bộ** 700 ms/ô (`walk_ms`).
+Số liệu là số mẫu, cần playtest. API/DB đề xuất trong gói **không** làm thêm: dùng sự kiện
+LiveOps, phần thưởng và nhiệm vụ Boss sẵn có ở trên.
+
+- **Đi 4 hướng:** giữa hai chiêu, Boss đi theo đường ngắn nhất (BFS cho cả thân 2×2, không qua
+  tường / thùng / bom / người) tới khi cách người gần nhất 2 ô; bị thùng chắn thì tới chỗ gần
+  nhất có thể. Không chọn một người quá 2 lần liền khi ra chiêu.
+- **Sàn nhà máy:** Boss biết đi (`walk_ms > 0`) thì máy chủ chỉ giữ 1/4 số cột trong bản đồ
+  (ô x, y chia 4 dư 2) để Boss có đường đi và lướt; viền bản đồ giữ nguyên. App vẽ theo grid
+  của server.
+- **Bom của Robot** nổ dấu **+** theo ô, dừng ở tường, thùng (không phá) và thân Boss; không trừ
+  HP Boss, không kích nổ bom người chơi. Khi nổ, server bắt trúng người trong ô và đặt lửa
+  (`flames`) trên đúng các ô đó, nên app dùng hiệu ứng nổ chung.
+
+| Skill ID            | Spec | Báo trước                  | Tác dụng                                                                    | Phase |
+| ------------------- | ---- | -------------------------- | --------------------------------------------------------------------------- | ----- |
+| `robot_bomb_launch` | SK01 | 0,45 + 1,5 s               | 1 bom cách thân 2 (hoặc 1) ô về phía mục tiêu, + 2 ô                        | 1-3   |
+| `robot_bomb_chain`  | SK02 | 0,8 + 1,6 s, +0,4 s        | 3 bom trước / trái / phải, nổ lần lượt cách 0,4 s, + 2 ô                    | 1-3   |
+| `robot_mini_chaser` | SK03 | 0,6 s + đuổi ≤ 3 s + 0,8 s | Bom mini đuổi (0,3 s/ô), dừng sát mục tiêu hoặc hết giờ, + 1 ô              | 2-3   |
+| `robot_recoil_dash` | SK04 | 0,9 s                      | Lướt 2-4 ô theo lane, trúng người trên lane, để lại bom + 2 ô (1,5 s)       | 2-3   |
+| `robot_magnet_pull` | SK05 | 1,2 + 1,0 s                | + 2 ô ra từ mỗi cạnh thân (không kéo bom người chơi: bản dễ)                | 3     |
+| `robot_overheat`    | SK06 | 1,6 + 1,3 s, +0,15 s       | 8 bom quanh Boss (8 hướng), nổ lần lượt, + 1 ô                              | 3     |
+| `robot_reactor`     | SK07 | 2,0 + 1,5 s, +1,0 s        | Đợt 1 hàng `(y + r) % 3 = 0`, đợt 2 cột `(x + c) % 3 = 0`; mệt 2,5 s (×1,5) | 3     |
+
+- Hồi chiêu 6 / 12 / 16 / 14 / 20 / 30 / 45 s theo bảng đặc tả.
+- **Công bằng:** trước mỗi chiêu (cả nhóm bom, cả 2 đợt Lò Bom), mọi người còn sống phải tới
+  được một ô ngoài _tất cả_ các ô nổ trước quả nổ sớm nhất (BFS theo tốc độ đi). Không đạt thì
+  chọn hướng / làn / offset khác hoặc không ra chiêu. Bom mini khi dừng: thu + 1 ô về đúng ô của
+  nó, vẫn không đạt thì xịt. Bom để lại sau Phản Lực: + 2, + 1, chỉ ô đó, hoặc bỏ.
+- Phản Lực: bom người chơi đặt trong lúc cảnh báo làm Boss dừng sớm; người có khiên bị Boss
+  chạy qua được đặt sang ô trống gần nhất. Hết trận: mọi cảnh báo và bom mini bị dọn.
+
 ### Snapshot (phòng `boss`, giao thức v2)
 
 Thêm vào snapshot v2: `mode: "boss"`,
-`boss: {id, assetPack, name, x, y, size, hp, maxHp, phase, thresholds, weak, seq, casts}`,
+`boss: {id, assetPack, name, x, y, size, facing, movedAt, walkMs, hp, maxHp, phase, thresholds, weak, seq, casts}`,
 `raid: {eventId, matchId, private, items, mount, open, result, minPlayers, maxPlayers, damage}`.
-`casts[]` = `{id, skill, tiles, castAt, resolveAt, dir?}` (ms theo đồng hồ server `now`).
+`casts[]` = `{id, skill, tiles, castAt, resolveAt, dir?, bombs?, mini?, to?}` (ms theo đồng hồ
+server `now`): `bombs` ô có bom Robot, `mini` ô hiện tại của bom đuổi (`tiles` rỗng khi đang
+đuổi), `to` góc trên-trái của thân sau cú lướt.
 
 ### Phòng và kết nối lại (`apps/arena/src/boss_room.ts`)
 
@@ -144,6 +183,18 @@ vị/p95, người tham gia, phát thưởng, lý do bị từ chối, chi tiế
 - Cắt bằng `tools/slice_slimes.gd` (Vua Slime, Mini Slime Bomb, Sticky Slime). 5 slime còn lại
   trong ảnh chưa dùng.
 
+## Art Boss: Robot Bom Dây Cót
+
+- `assets/boss/clockwork_bot/walk_<down|left|right|up>/01..04.png` + `idle/01.png`, cắt từ ảnh
+  model master của gói (`tools/slice_robot.gd`, nguồn `tools/source/clockwork_bot_directional.webp`,
+  ghi chú `licenses/CLOCKWORK_BOT_SOURCE.txt`). Gói ghi rõ đây là **concept AI, chưa phải atlas
+  production**: chưa có frame tấn công / trúng đòn / gục, chưa tách layer bình bom / dây cót.
+- App quay Robot theo `facing`, chạy 4 frame khi vừa đi, trượt mượt sang ô mới (một bước
+  `walkMs`, cú lướt 0,22 s), art rộng 1,4× thân 2×2, chân trên mép dưới thân, có bóng.
+- Bom Robot (`assets/bombs/strong_black.png`) bay từ lưng tới ô, nhấp nháy nhanh dần tới lúc nổ;
+  bom mini nhảy theo ô server gửi; lane lướt có mũi tên; Hút Boom có bom xoay quanh thân. Bị hạ:
+  nghiêng, mờ dần, một làn khói.
+
 ## Triển khai
 
 1. Sao lưu DB, chạy `infra/postgres/014_boss.sql` (3 bảng `boss_raid_*`, `boss_reward_grants`).
@@ -153,7 +204,7 @@ vị/p95, người tham gia, phát thưởng, lý do bị từ chối, chi tiế
 ## Kiểm thử
 
 ```bash
-npm test   # apps/arena: tests/boss.test.ts (17) + "boss raid over the wire" (reconnect)
+npm test   # apps/arena: tests/boss.test.ts (30, gồm 13 test Robot) + "boss raid over the wire"
 cd apps/api && uv run pytest tests/test_boss.py
 godot --headless --path apps/practice --script res://tests/boss.gd
 # Snapshot mẫu cho boss.gd sinh từ mô phỏng thật:

@@ -130,6 +130,15 @@ Slime) cắt từ ảnh khung hình slime chủ dự án gửi ngày 2026-10-19
 công cụ tạo ảnh làm; nguồn gốc và quyền chưa được xác minh độc lập, không có tên/logo Boom
 Online. Hash tại `apps/practice/licenses/SLIME_KING_SOURCE.txt`; không gán lại MIT.
 
+## Hình Boss Robot Bom Dây Cót do người dùng cung cấp
+
+Robot Bom Dây Cót (`apps/practice/assets/boss/clockwork_bot`: 4 hướng × 4 khung đi) cắt từ ảnh
+`03_robot_boss_directional_original.png` trong gói `GameBoom_Robot_Boss_Event_DevPack.zip` chủ dự
+án gửi ngày 2026-10-19 (giữ tại `apps/practice/tools/source/clockwork_bot_directional.webp`) bằng
+`apps/practice/tools/slice_robot.gd`: chỉ tách khung, xóa đốm viền và thu nhỏ, không vẽ thêm. Gói
+ghi rõ đây là concept do AI tạo; nguồn gốc và quyền chưa được xác minh độc lập, không có tên/logo
+Boom Online. Hash tại `apps/practice/licenses/CLOCKWORK_BOT_SOURCE.txt`; không gán lại MIT.
+
 ## Bộ giao diện PC "Bubble Isles" do người dùng cung cấp
 
 Màn Tìm trận, Phòng, HUD, Kết quả, Cửa hàng và Trang bị của app PC
