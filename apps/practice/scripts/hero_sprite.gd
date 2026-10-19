@@ -3,6 +3,9 @@ extends AnimatedSprite2D
 ## remain the source for idle / hit / win / lose / place_bomb / throw_item.
 ## dress() adds the loadout's wings (behind the body, in front when walking
 ## away from the camera) and a floating halo above the head.
+## While `riding` (on a pet, see pet_sprite.gd) idle and walking use the sitting
+## rider frames in assets/riders/<hero>/ride_* when the hero has them; `pose`
+## keeps the action asked for (idle, walk_left, ...) either way.
 
 const Cosmetics = preload("res://scripts/cosmetics.gd")
 const ACTIONS = [
@@ -10,6 +13,8 @@ const ACTIONS = [
 	"place_bomb", "throw_item", "hit", "win", "lose"
 ]
 const WALK_ACTIONS = ["walk_down", "walk_up", "walk_left", "walk_right"]
+const RIDE = {"idle": "ride_idle", "walk_down": "ride_down", "walk_up": "ride_up", "walk_left": "ride_left", "walk_right": "ride_right"}
+const RIDE_FRAMES = [1, 2, 3, 2]
 const WING_WIDTH := 72.0
 const WING_Y := 4.0
 const HALO_WIDTH := 34.0
@@ -18,6 +23,8 @@ var step_phase: float = 0.0
 var halo_phase: float = 0.0
 var wings: AnimatedSprite2D
 var halo: Sprite2D
+var pose := "idle"
+var riding := false
 
 
 func configure(hero_id: String) -> void:
@@ -36,6 +43,15 @@ func configure(hero_id: String) -> void:
 			else:
 				texture_path = "res://assets/characters/%s/%s/%02d.png" % [hero_id, action_name, index]
 			frameset.add_frame(action_name, load(texture_path))
+	for pose_name in RIDE:
+		var ride: String = RIDE[pose_name]
+		var folder := "res://assets/riders/%s/%s" % [hero_id, ride]
+		if not ResourceLoader.exists(folder + "/01.png"):
+			continue
+		frameset.add_animation(ride)
+		frameset.set_animation_speed(ride, 5.0 if ride == "ride_idle" else 9.0)
+		for index in RIDE_FRAMES:
+			frameset.add_frame(ride, load("%s/%02d.png" % [folder, index]))
 	sprite_frames = frameset
 	centered = true
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -71,7 +87,7 @@ func dress(loadout: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
-	if animation in WALK_ACTIONS and is_playing():
+	if pose in WALK_ACTIONS and is_playing() and not riding:
 		step_phase += delta * 20.0
 		offset = Vector2(0, -1.5 * abs(sin(step_phase)))
 	else:
@@ -86,9 +102,20 @@ func _process(delta: float) -> void:
 func action(name: String) -> void:
 	if sprite_frames == null or not sprite_frames.has_animation(name):
 		return
-	if animation != name or not is_playing():
-		play(name)
+	pose = name
+	var shown: String = RIDE.get(name, name) if riding else name
+	if not sprite_frames.has_animation(shown):
+		shown = name
+	if animation != shown or not is_playing():
+		play(shown)
 	_wear(name)
+
+## Gets on or off a pet: the current pose switches to / from the rider frames.
+func ride(on: bool) -> void:
+	if riding == on:
+		return
+	riding = on
+	action(pose)
 
 
 ## Wings flap while walking and sit behind the body except from the back; side

@@ -1,8 +1,13 @@
 import { Room, type Client, ServerError } from '@colyseus/core';
 import { authenticate } from './auth.js';
 import { Arena, TICK_MS, type RoundResult } from './game.js';
-import { fetchLoadout, processId as ingestProcess, report } from './ingest.js';
-import { findMap, HEROES } from './maps.js';
+import {
+  choosePet,
+  fetchLoadout,
+  processId as ingestProcess,
+  report,
+} from './ingest.js';
+import { findMap, HEROES, type MapDef } from './maps.js';
 import { BotBrain } from './bots.js';
 
 /** Practice rooms: humans plus server bots up to this many seats. */
@@ -27,7 +32,7 @@ export class ArenaRoom extends Room {
   maxMessagesPerSecond = 40;
   game = new Arena();
   /** sessionId -> account, from the verified JWT; never from client messages. */
-  private accounts = new Map<string, { accountId: string; name: string }>();
+  protected accounts = new Map<string, { accountId: string; name: string }>();
   private reported = '';
   /** Practice room: private (invite only), bots fill the empty seats. */
   practice = false;
@@ -39,7 +44,7 @@ export class ArenaRoom extends Room {
       // Built-in maps or a map an admin published through the API.
       const map = await findMap(options?.map);
       if (!map) throw new ServerError(400, 'Unknown map');
-      this.game = new Arena(map);
+      this.game = this.makeGame(map);
       this.number = takeNumber();
       void this.setMetadata({ map: map.id, number: this.number });
       if (options?.practice === true) {
@@ -158,7 +163,7 @@ export class ArenaRoom extends Room {
 
   onJoin(
     client: Client,
-    options: { hero?: unknown } | undefined,
+    options: { hero?: unknown; pet?: unknown } | undefined,
     auth: { accountId: string; name: string },
   ) {
     if (
@@ -175,8 +180,12 @@ export class ArenaRoom extends Room {
       throw new ServerError(409, 'Round already starting');
     this.accounts.set(client.sessionId, auth);
     if (this.protocol === 2)
-      void fetchLoadout(auth.accountId).then(({ items, pet }) =>
-        this.game.setLoadout(client.sessionId, items, pet),
+      void fetchLoadout(auth.accountId).then((owned) =>
+        this.game.setLoadout(
+          client.sessionId,
+          owned.items,
+          choosePet(options?.pet, owned),
+        ),
       );
     client.sendBytes(1, this.snapshotBytes());
     this.reportRoom();
@@ -221,7 +230,12 @@ export class ArenaRoom extends Room {
     });
   }
 
-  private reportRound(result: RoundResult) {
+  /** The simulation for a v2 room (boss rooms use BossArena). */
+  protected makeGame(map: MapDef): Arena {
+    return new Arena(map);
+  }
+
+  protected reportRound(result: RoundResult) {
     report({
       type: 'match',
       room_id: this.roomId,

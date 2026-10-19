@@ -3,8 +3,8 @@
   "name": "THÁP ĐỒNG HỒ",
   "subtitle": "Khó • Tháp máy thời gian",
   "theme": "clock",
-  "crate": "metal_barrel",
-  "wall": "special_wall",
+  "crate": "wood_box",
+  "wall": "brick_wall",
   "bomb": "strong_black",
   "fx": "fire_horizontal",
   "bot_step": 0.29,
@@ -46,5 +46,15 @@
     ]
   ],
   "pack_id": "008",
-  "story": "Đồng hồ thị trấn mắc kẹt ở phút thứ mười ba, lặp lại cùng một ngày. Mỗi tiếng chuông khiến nhịp nổ của bom thay đổi trong vùng bánh răng."
+  "story": "Đồng hồ thị trấn mắc kẹt ở phút thứ mười ba, lặp lại cùng một ngày. Mỗi tiếng chuông khiến nhịp nổ của bom thay đổi trong vùng bánh răng.",
+  "walls": [
+    "brick_wall",
+    "metal_crate",
+    "stone_lantern"
+  ],
+  "crates": [
+    "wood_box",
+    "broken_box",
+    "treasure_chest"
+  ]
 }

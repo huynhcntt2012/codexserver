@@ -218,8 +218,20 @@ class ArenaPlayer(BaseModel):
     name: str = Field(max_length=24)
 
 
+class Raider(BaseModel):
+    """One raider of a boss_raid event (app/boss.py)."""
+
+    account_id: str = Field(min_length=1, max_length=36)
+    name: str = Field(default="", max_length=24)
+    damage: int = Field(default=0, ge=0, le=100_000_000)
+    support: int = Field(default=0, ge=0, le=100_000)
+    actions: int = Field(default=0, ge=0, le=1_000_000)
+    active_ms: int = Field(default=0, ge=0, le=7_200_000)
+    alive: bool = False
+
+
 class ArenaEvent(BaseModel):
-    type: Literal["room", "closed", "match", "use"]
+    type: Literal["room", "closed", "match", "use", "boss_raid"]
     room_id: str = Field(min_length=1, max_length=64)
     process_id: str = Field(default="", max_length=64)
     phase: str = Field(default="waiting", max_length=12)
@@ -237,6 +249,15 @@ class ArenaEvent(BaseModel):
     item_id: str | None = Field(default=None, max_length=64)
     use_id: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9_.:-]+$")
     results: list[ParticipantIn] = Field(default_factory=list, max_length=8)
+    # type "boss_raid": one settled raid (app/boss.py).
+    event_id: str | None = Field(default=None, max_length=36)
+    match_id: str | None = Field(default=None, max_length=120, pattern=r"^[A-Za-z0-9_.:-]+$")
+    result: str | None = Field(default=None, max_length=8)
+    boss_id: str = Field(default="", max_length=32)
+    boss_hp_max: int = Field(default=0, ge=0, le=100_000_000)
+    boss_hp_left: int = Field(default=0, ge=0, le=100_000_000)
+    private: bool = False
+    raiders: list[Raider] = Field(default_factory=list, max_length=8)
 
 
 def arena_room(db: Session, event: ArenaEvent) -> GameRoom:
@@ -266,6 +287,12 @@ def arena_room(db: Session, event: ArenaEvent) -> GameRoom:
 
 @router.post("/internal/v1/arena/events", status_code=204, dependencies=[Depends(arena_service)])
 def arena_event(event: ArenaEvent, db: Db):
+    if event.type == "boss_raid":
+        from app.boss import record_raid
+
+        record_raid(db, event)
+        db.commit()
+        return
     if event.type == "use":
         from app.battle_items import SLOTS, consume
 

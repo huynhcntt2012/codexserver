@@ -18,6 +18,7 @@ def add_battle_items(client, admin):
         assert client.post("/admin/v1/items", json=body, headers=admin).status_code == 201
         client.post(f"/admin/v1/items/{item_id}/publish", headers=admin)
     item(client, admin, "pet_bunny", price=1, currency="gold", category="pet")
+    item(client, admin, "pet_fox", price=1, currency="gold", category="pet")
 
 
 def test_packs_fill_stock_and_uses_consume_once(client):
@@ -49,6 +50,14 @@ def test_packs_fill_stock_and_uses_consume_once(client):
     assert client.get(f"/internal/v1/arena/loadout/{ana}", headers=LOADOUT).json()["pet"] == (
         "pet_bunny"
     )
+    # Every owned pet is listed, so the arena can show the one the player equipped.
+    client.post(
+        "/v1/shop/purchase",
+        json={"item_id": "pet_fox", "request_id": "buy-pet-02"},
+        headers=ana_h,
+    )
+    pets = client.get(f"/internal/v1/arena/loadout/{ana}", headers=LOADOUT).json()["pets"]
+    assert sorted(pets) == ["pet_bunny", "pet_fox"]
     use_event = {
         "type": "use",
         "room_id": "r1",

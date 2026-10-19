@@ -19,6 +19,7 @@ const LEVEL_FILES = [
 ]
 const DIRECTIONS = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 const HERO_SCRIPT = preload("res://scripts/hero_sprite.gd")
+const MapBlocks = preload("res://scripts/map_blocks.gd")
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var selected_hero: int = 0
@@ -178,7 +179,7 @@ func _create_ui() -> void:
 	for i in range(ids.size()):
 		var card = _panel(menu, Vector2(153 + i * 333, 501), Vector2(316, 146), Color("18527d"), colors[i])
 		var preview = TextureRect.new()
-		preview.texture = load("res://assets/level_previews/%s.png" % ids[i])
+		preview.texture = MapCatalog.preview(ids[i])
 		preview.position = Vector2(10, 9)
 		preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -396,14 +397,10 @@ func _build_map() -> void:
 	obstacles.name = "Obstacles"
 	world.add_child(obstacles)
 	var floor_theme: String = str(current_level["theme"])
-	var wall_name: String = str(current_level["wall"])
-	var crate_name: String = str(current_level["crate"])
 	var floors: Array = []
 	for n in range(2):
 		for m in range(4):
 			floors.append(load("res://assets/tiles/%s/%d_%d.png" % [floor_theme, n, m]))
-	var wall_tex = load("res://assets/obstacles/%s/00.png" % wall_name)
-	var crate_tex = load("res://assets/obstacles/%s/00.png" % crate_name)
 	for y in range(rows):
 		var line: String = str(current_level["layout"][y])
 		for x in range(columns):
@@ -413,14 +410,12 @@ func _build_map() -> void:
 			ground.position = _cell_center(cell)
 			floor_layer.add_child(ground)
 			if line.substr(x, 1) == "#":
-				var wall = Sprite2D.new()
-				wall.texture = wall_tex
+				var wall: Sprite2D = MapBlocks.sprite(current_level, "wall", cell, TILE)
 				wall.position = _cell_center(cell)
 				obstacles.add_child(wall)
 				terrain[cell] = wall
 			elif line.substr(x, 1) == "C":
-				var crate = Sprite2D.new()
-				crate.texture = crate_tex
+				var crate: Sprite2D = MapBlocks.sprite(current_level, "crate", cell, TILE)
 				crate.position = _cell_center(cell)
 				obstacles.add_child(crate)
 				crates[cell] = crate

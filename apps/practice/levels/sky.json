@@ -3,8 +3,8 @@
   "name": "ĐỀN GIÓ TRÊN MÂY",
   "subtitle": "Khó • Ngôi đền trên trời",
   "theme": "sky",
-  "crate": "wood_crate",
-  "wall": "stone_wall",
+  "crate": "flower_bush",
+  "wall": "stone_block",
   "bomb": "classic_blue",
   "fx": "water_splash",
   "bot_step": 0.29,
@@ -46,5 +46,13 @@
     ]
   ],
   "pack_id": "011",
-  "story": "Chuông gió trên đỉnh mây vang lệch nhịp, khiến các quả bom tự lăn khỏi chỗ đặt. Thần Gió nhỏ đang cố giữ đền khỏi bị gió thổi bay."
+  "story": "Chuông gió trên đỉnh mây vang lệch nhịp, khiến các quả bom tự lăn khỏi chỗ đặt. Thần Gió nhỏ đang cố giữ đền khỏi bị gió thổi bay.",
+  "walls": [
+    "stone_block",
+    "mossy_stone"
+  ],
+  "crates": [
+    "flower_bush",
+    "wood_box"
+  ]
 }

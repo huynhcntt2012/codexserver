@@ -3,8 +3,8 @@
   "name": "ĐẢO NẮNG VÀNG",
   "subtitle": "Khó • Bùng nổ liên hoàn",
   "theme": "sand",
-  "crate": "barrel",
-  "wall": "stone_wall",
+  "crate": "sandbags",
+  "wall": "stone_block",
   "bomb": "star",
   "fx": "fire_horizontal",
   "bot_step": 0.29,
@@ -42,5 +42,15 @@
       1,
       9
     ]
+  ],
+  "walls": [
+    "stone_block",
+    "mossy_stone",
+    "bamboo"
+  ],
+  "crates": [
+    "sandbags",
+    "wood_box",
+    "water_barrel"
   ]
 }

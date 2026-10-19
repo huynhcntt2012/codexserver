@@ -19,6 +19,7 @@ const SHIELD_TIME := 8.0
 const SPEED_TIME := 5.0
 const SLOW_TIME := 3.0
 const GRACE_TIME := 0.6
+const PetSprite := preload("res://scripts/pet_sprite.gd")
 
 var game: Node
 var selected := 0
@@ -28,6 +29,7 @@ var facing := Vector2i.DOWN
 var pet := ""
 var mounted := false
 var pet_used := false
+var pet_node: AnimatedSprite2D  # the pet skin trailing the player, if it has art
 var shield_until := 0.0
 var speed_until := 0.0
 var grace_until := 0.0
@@ -38,12 +40,10 @@ func start_round() -> void:
 		counts[id] = clampi(int(stock.get(id, 0)), 0, 99)
 	cooldowns.clear()
 	facing = Vector2i.DOWN
-	pet = ""
-	for item in UIState.items:
-		if str(item.get("category", "")) == "pet" and UIState.owned(str(item.id)):
-			pet = str(item.id)
-			break
-	mounted = false
+	pet = UIState.round_pet()
+	pet_node = PetSprite.attach(game.player.root, game.player.sprite, pet) if pet != "" and not game.player.is_empty() else null
+	# A round starts on the pet's back (same as the arena).
+	mounted = pet != ""
 	pet_used = false
 	shield_until = 0.0
 	speed_until = 0.0
@@ -202,14 +202,19 @@ func view() -> Dictionary:
 		"fast": speed_until > now(),
 	}
 
-## Marks on the player's own sprite: shield bubble, mount under the feet, speed glow.
+## Marks on the player's own sprite: shield bubble, mount under the feet, speed glow;
+## the pet skin follows `mounted`.
 func _process(_delta: float) -> void:
 	if game == null or game.player.is_empty() or not is_instance_valid(game.player.root):
 		return
 	var holder: Node2D = game.player.root
 	_mark(holder, "ItemShield", "res://assets/items/shield.png", shield_until > now(), Vector2(0, -26), 0.42, -1)
+	# A pet with art is ridden as itself; others show their icon under the feet.
+	var has_skin := pet_node != null and is_instance_valid(pet_node)
+	if has_skin:
+		pet_node.mounted = mounted
 	var pet_icon := str(UIState.get_item(pet).get("icon", "")) if pet != "" else ""
-	_mark(holder, "ItemMount", pet_icon, mounted and pet_icon != "", Vector2(0, 22), 0.5, -1)
+	_mark(holder, "ItemMount", pet_icon, mounted and pet_icon != "" and not has_skin, Vector2(0, 22), 0.5, -1)
 	var fast := speed_until > now()
 	_mark(holder, "ItemSpeed", "res://assets/items/shoe.png", fast, Vector2(26, 18), 0.32, 1)
 

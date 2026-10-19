@@ -686,6 +686,7 @@ func build_right(parent: Control) -> void:
 		["TÌM TRẬN NHANH", "Vào phòng online còn chỗ", Color("ffd56b"), "res://assets/ui/launch/mascot_pip.png", quick_play],
 		["TẠO PHÒNG", "Mở phòng online, tối đa 8 người", Color("8fdcf5"), "res://assets/ui/launch/mascot_nop.png", open_create],
 		["LUYỆN TẬP", "Chọn bản đồ, chơi offline", Color("d4bdf7"), "", open_practice],
+		["SĂN BOSS", "Cả đội 1-8 người hạ Boss sự kiện", Color("ff9ec0"), "", open_boss],
 	]
 	for spec in mode_specs:
 		var big := button("", spec[4], spec[2], INK, 20, 26)
@@ -695,17 +696,17 @@ func build_right(parent: Control) -> void:
 		modes.add_child(big)
 		var inner := row(18, big)
 		inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		inner.offset_left = 26
+		inner.offset_left = 18
 		inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if spec[3] != "":
-			inner.add_child(picture(spec[3], Vector2(84, 84)))
+			inner.add_child(picture(spec[3], Vector2(72, 72)))
 		else:
-			inner.add_child(Glyph.new("star", Color("ffd84d"), 78))
+			inner.add_child(Glyph.new("star", Color("ff4d6a") if spec[0] == "SĂN BOSS" else Color("ffd84d"), 66))
 		var words := column(4, inner)
 		words.alignment = BoxContainer.ALIGNMENT_CENTER
 		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		text(spec[0], 30, Color("8a4b1f") if spec[0] == "TÌM TRẬN NHANH" else INK, words)
-		stretch(text(spec[1], 17, Color("6a5a7a"), words))
+		stretch(text(spec[0], 25, Color("8a4b1f") if spec[0] == "TÌM TRẬN NHANH" else INK, words))
+		stretch(text(spec[1], 15, Color("6a5a7a"), words))
 	var filters := card(Color("1660a6"), LINE, 30, 4, 12)
 	main.add_child(filters)
 	var bar := row(14, filters)
@@ -1022,7 +1023,7 @@ func sync_nav() -> void:
 		for key in store_pages:
 			if store_pages[key].visible:
 				shown = key
-		set_nav({"equipment": NAV_EQUIPMENT, "missions": NAV_MISSIONS}.get(shown, NAV_SHOP))
+		set_nav({"equipment": NAV_EQUIPMENT, "missions": NAV_MISSIONS, "boss": NAV_HOME}.get(shown, NAV_SHOP))
 	else:
 		set_nav(NAV_HOME)
 
@@ -1100,10 +1101,12 @@ func build_store() -> void:
 ## Pages are built on first use; the kit scales them to the popup's rect.
 func store_page(target: String) -> Control:
 	if not store_pages.has(target):
-		var scripts := {"shop": preload("res://scripts/ui/pc/pc_shop.gd"), "equipment": preload("res://scripts/ui/pc/pc_equipment.gd"), "missions": preload("res://scripts/ui/pc/pc_missions.gd")}
+		var scripts := {"shop": preload("res://scripts/ui/pc/pc_shop.gd"), "equipment": preload("res://scripts/ui/pc/pc_equipment.gd"), "missions": preload("res://scripts/ui/pc/pc_missions.gd"), "boss": preload("res://scripts/ui/pc/pc_boss.gd")}
 		var page_node = scripts[target].new()
 		if target == "missions":
 			page_node.claimable_changed.connect(set_mission_dot)
+		if target == "boss":
+			page_node.play.connect(play_boss)
 		page_node.embedded = true
 		page_node.navigate.connect(_on_store_navigate)
 		store_area.add_child(page_node)
@@ -1121,7 +1124,7 @@ func open_shop(target: String) -> void:
 	var shown := store_page(target)
 	for key in store_pages:
 		store_pages[key].visible = store_pages[key] == shown
-	store_title.text = {"shop": "CỬA HÀNG", "equipment": "TRANG BỊ", "missions": "NHIỆM VỤ & SỰ KIỆN"}[target]
+	store_title.text = {"shop": "CỬA HÀNG", "equipment": "TRANG BỊ", "missions": "NHIỆM VỤ & SỰ KIỆN", "boss": "ĐẠI CHIẾN BOSS"}[target]
 	store.show()
 	sync_nav()
 
@@ -1565,6 +1568,17 @@ func map_choice(map: Dictionary, prefix: String, action: Callable) -> Button:
 	if map.custom:
 		pill("Mới", Color("ff7083"), Color.WHITE, 13, meta).tooltip_text = "Bản đồ do admin thêm"
 	return option
+
+## SĂN BOSS (docs/BOSS.md): the event page; Solo / Ghép đội / Phòng riêng from it.
+func open_boss() -> void:
+	if not can_play_online():
+		return
+	open_shop("boss")
+
+func play_boss(event_id: String, mode: String) -> void:
+	close_store()
+	var message: String = {"solo": "Đang mở phòng Boss…", "team": "Đang ghép đội săn Boss…", "private": "Đang tạo phòng Boss riêng…"}.get(mode, "Đang vào phòng Boss…")
+	await go_online(func(): return await OnlineArena.boss_room(event_id, hero_id(), mode == "team", mode == "private"), message)
 
 func create_room(map_id: String) -> void:
 	await go_online(func(): return await OnlineArena.create_room(map_id, hero_id()), "Đang tạo phòng…")

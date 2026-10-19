@@ -6,6 +6,7 @@ import { WebSocketTransport } from '@colyseus/ws-transport';
 import { authenticate } from './auth.js';
 import { ArenaRoom, ArenaRoomV2 } from './room.js';
 import { registerDocuments } from './documents.js';
+import { BossRoom } from './boss_room.js';
 
 export function createArenaServer() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -119,6 +120,8 @@ export function createArenaServer() {
   server.define('arena', ArenaRoom);
   // joinOrCreate/arena2 with { map } only matches rooms of that map.
   server.define('arena2', ArenaRoomV2).filterBy(['map']);
+  // Boss raids (docs/BOSS.md): joinOrCreate/boss { event } teams up publicly.
+  server.define('boss', BossRoom).filterBy(['event']);
   async function listen(port: number, hostname = '0.0.0.0') {
     await server.listen(port, hostname);
     // Colyseus 0.17 binds its router ahead of Express. Wrap the bound handlers

@@ -7,6 +7,7 @@ extends Node
 signal changed
 
 const GAME := preload("res://scripts/game.gd")
+const MapBlocks := preload("res://scripts/map_blocks.gd")
 const REFRESH_GAP_MS := 10_000
 const PREVIEW_CELL := 16
 
@@ -126,21 +127,23 @@ static func usable(level: Dictionary) -> bool:
 
 static func art_paths(level: Dictionary) -> Array[String]:
 	var paths: Array[String] = [
-		"res://assets/obstacles/%s/00.png" % level.get("wall", ""),
-		"res://assets/obstacles/%s/00.png" % level.get("crate", ""),
 		"res://assets/bombs/%s.png" % level.get("bomb", ""),
 		"res://assets/effects/%s/00.png" % level.get("fx", ""),
 	]
+	for kind in ["wall", "crate"]:
+		for name in MapBlocks.names(level, kind):
+			paths.append(MapBlocks.path(str(name)))
 	for n in 2:
 		for m in 4:
 			paths.append("res://assets/tiles/%s/%d_%d.png" % [level.get("theme", ""), n, m])
 	return paths
 
-## Card art: the shipped PNG, or a render of an admin map (cached per revision).
+## Card art: the shipped render with the map's blocks (tools/render_level_previews.gd),
+## the original ZIP preview, or a render of an admin map (cached per revision).
 func preview(map_id: String) -> Texture2D:
-	var path := "res://assets/level_previews/%s.png" % map_id
-	if ResourceLoader.exists(path):
-		return load(path)
+	for path in ["res://assets/map_previews/%s.png" % map_id, "res://assets/level_previews/%s.png" % map_id]:
+		if ResourceLoader.exists(path):
+			return load(path)
 	var entry := find(map_id)
 	if entry.is_empty():
 		return null
@@ -157,15 +160,18 @@ static func render(level: Dictionary) -> Image:
 	for n in 2:
 		for m in 4:
 			floors.append(cell_image("res://assets/tiles/%s/%d_%d.png" % [level.theme, n, m]))
-	var wall := cell_image("res://assets/obstacles/%s/00.png" % level.wall)
-	var crate := cell_image("res://assets/obstacles/%s/00.png" % level.crate)
+	var props := {}  # obstacle name -> preview-sized image
+	for kind in ["wall", "crate"]:
+		for name in MapBlocks.names(level, kind):
+			props[str(name)] = cell_image(MapBlocks.path(str(name)))
 	for y in rows:
 		var line: String = level.layout[y]
 		for x in columns:
 			var at := Vector2i(x, y) * PREVIEW_CELL
 			var ground: Image = floors[(y % 2) * 4 + ((x + y) % 4)]
 			out.blit_rect(ground, Rect2i(Vector2i.ZERO, ground.get_size()), at)
-			var piece: Image = wall if line[x] == "#" else (crate if line[x] == "C" else null)
+			var kind := "wall" if line[x] == "#" else ("crate" if line[x] == "C" else "")
+			var piece: Image = props[MapBlocks.pick(level, kind, Vector2i(x, y))] if kind != "" else null
 			if piece:
 				out.blend_rect(piece, Rect2i(Vector2i.ZERO, piece.get_size()), at)
 	return out

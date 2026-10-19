@@ -671,7 +671,9 @@ class GameEvent(Base):
     version: Mapped[int] = mapped_column(Integer, default=0)
 
 
-EventKind = Literal["login", "match", "rank", "collect", "shop", "custom", "story", "challenge"]
+EventKind = Literal[
+    "login", "match", "rank", "collect", "shop", "custom", "story", "challenge", "boss"
+]
 
 
 def event_phase(event: GameEvent) -> str:

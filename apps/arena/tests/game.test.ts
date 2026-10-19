@@ -342,6 +342,10 @@ test('v2 items: throw, dart, shield, speed, freeze, push and the mount follow th
   const a = g.players.get('a')!;
   const b = g.players.get('b')!;
   const gear = g.gear.get('a')!;
+  // A pet owner starts the round riding; Q gets off and back on.
+  assert.ok(gear.mounted && !g.gear.get('b')!.mounted);
+  act(g, 'a', 'mount', 50);
+  assert.ok(!gear.mounted);
   // Face right from (1,1): a move sets the facing.
   act(g, 'a', 'right');
   assert.equal(gear.facing, 'right');

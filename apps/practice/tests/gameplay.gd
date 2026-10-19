@@ -15,6 +15,8 @@ func check(value: bool, message: String) -> void:
 func fresh() -> void:
 	game._new_round()
 	game.set_process(false)
+	# Core rules without the pet mount (it would absorb the first hit; see battle_items.gd).
+	game.battle_items.mounted = false
 
 func _run() -> void:
 	game = load("res://scenes/main.tscn").instantiate()

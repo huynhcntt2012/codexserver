@@ -387,6 +387,8 @@ Cửa sổ Nhiệm vụ (4 tab, nhận thưởng, Event Shop): xem [LIVEOPS.md](
 
 Mời bạn bè vào phòng online và từ phòng Luyện tập: xem [INVITES.md](INVITES.md).
 
+Đại Chiến Boss (nút **SĂN BOSS**, cả đội 1-8 người đánh Boss online): xem [BOSS.md](BOSS.md).
+
 ### Cánh và hào quang (trước / sau khi mua)
 
 - 6 bộ cánh (ô mới **Cánh**, category `wings`) và 6 hào quang (ô **Mũ**, category `hat`):
@@ -402,3 +404,42 @@ Mời bạn bè vào phòng online và từ phòng Luyện tập: xem [INVITES.m
 - Server: volume mới tự chạy `infra/postgres/012_wings.sql`; volume cũ chạy file đó một lần
   rồi `python -m app.admin_cli import-icons <thư mục assets>`. Khi catalog server chưa có
   các món này, client ẩn chúng khỏi cửa hàng (server quyết định món được bán).
+
+### Khối bản đồ (tường và thùng)
+
+- 28 khối trong `apps/practice/assets/obstacles` (cắt bằng `tools/slice_map_blocks.gd`).
+  Tường (`#`, không phá): gạch, đá, đá rêu, thùng sắt, thùng cảnh báo, cây tròn, cây thông,
+  xương rồng, tre, đèn đá, khối băng, khối pha lê, rào chắn. Thùng (`C`, phá được): thùng
+  gỗ, thùng vỡ, thùng phuy (gỉ, nước, TNT), gốc cây, bụi hoa, bao cát, nấm, bí ngô, rương,
+  cọc giao thông, gạch/băng/đá nứt.
+- Mỗi bản đồ có `walls` / `crates` (danh sách) trong `levels/<id>.json`; viền ngoài dùng
+  khối đầu tiên, ô bên trong chọn theo vị trí ô nên bản đồ luôn giống nhau ở Luyện tập,
+  Online và ảnh thẻ. `wall` / `crate` (một khối) vẫn dùng được cho bản đồ admin.
+- Ảnh thẻ bản đồ: `assets/map_previews/<id>.png`, vẽ lại bằng
+  `godot --headless --path apps/practice --script res://tools/render_level_previews.gd`.
+  Ảnh gốc `assets/level_previews` giữ nguyên (hash nguồn trong PROVENANCE.json) và vẫn là
+  ảnh trên website portal.
+
+### Skin thú cưng (pet)
+
+- 10 pet (category `pet`): Thỏ bông (`pet_bunny`, có sẵn), Rồng Lửa Nhỏ, Cừu Sao Hồng,
+  Tuần Lộc Chuông Vàng, Lạc Đà Bông Trăng Xanh, Mèo Tam Thể, Cún Corgi, Khủng Long Lá,
+  Rùa Kem Anh Đào, Cáo Lá Xanh. Mỗi pet có dáng đứng và đi 4 hướng (4 khung) trong
+  `apps/practice/assets/cosmetics/pets`, cắt bằng `tools/slice_pet_sheets.gd`.
+- Cửa hàng: chọn pet là linh vật mặc thử (nhân vật ngồi trên lưng pet), mua xong bấm
+  **MẶC NGAY**. Sảnh và Trang bị hiện nhân vật cưỡi pet đang trang bị; Trang bị có tab
+  **Pet**.
+- Trong trận (Luyện tập và Online): có pet là **vào ván đã cưỡi sẵn**; pet đi dưới nhân
+  vật, quay theo hướng chạy (nhìn thẳng thì đầu pet ở trước, nhân vật ngồi sau). Luật thú
+  cưỡi giữ nguyên: +25% tốc độ, đỡ 1 đòn; đỡ xong pet biến mất tới ván sau. **Q** xuống /
+  lên lại pet. Pet không đi bộ bên cạnh khi không được cưỡi.
+- Khi cưỡi, nhân vật dùng hình ngồi riêng (`assets/riders/<nhân vật>/ride_*`: đứng yên và
+  4 hướng, 3 khung, cắt bằng `tools/slice_rider_sheet.gd`); xuống pet hoặc bị đỡ đòn thì về
+  hình đứng/chạy thường. Ảnh xem trước ở Sảnh/Cửa hàng vẫn dùng chân dung lớn.
+- Pet mang vào trận = pet đang trang bị, không có thì pet đầu tiên đã sở hữu. Online,
+  client gửi `pet` khi vào phòng; arena chỉ nhận nếu API báo tài khoản sở hữu nó
+  (`pets` trong `/internal/v1/arena/loadout`), sai thì dùng pet mặc định. Snapshot có
+  `pet` của mọi người nên **ai cũng thấy pet của nhau**.
+- Server: volume mới tự chạy `infra/postgres/013_pets.sql`; volume cũ chạy file đó một lần
+  rồi `python -m app.admin_cli import-icons <thư mục assets>` (icon thỏ đổi từ trái tim
+  sang ảnh thỏ). Trước đó cửa hàng chỉ bán các pet server đang có.

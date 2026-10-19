@@ -1,0 +1,235 @@
+# Pet sheets (pet skins)
+
+Source: `asset.7z` supplied by the project owner in a Claude Code session on
+2026-10-19 (SHA-256 959afb9f50293d9b5299ea4af470c00c2ba4926345bf06d915866d92dbeebad7),
+holding ten sprite sheets 229.png-238.png (1122x1402 RGBA PNG, ~2 MB each). The
+sheets are not committed; keep the archive to re-cut them.
+
+Each sheet is 4 columns x 5 rows: idle, walk_down, walk_up, walk_left,
+walk_right. They look like image-generator output (cute animals with saddles);
+their origin and rights were not independently verified, and they carry no
+author, name, logo or text from Boom Online. Confirm ownership before a
+commercial release.
+
+Sheet -> pet: 229 bunny, 230 dragon, 231 sheep, 232 deer, 233 alpaca, 234 cat,
+235 corgi, 236 dino, 237 turtle, 238 fox.
+
+`tools/slice_pet_sheets.gd` cut every cell into
+`assets/cosmetics/pets/<pet>/<anim>/01-04.png` (128x128). Only the alpha was
+remapped (faint glow and specks removed), small blobs and slivers of
+neighbouring cells were cleared, edge colour was bled into transparent pixels
+before scaling; no pixels were painted.
+
+Source SHA-256:
+3377e5de72dbebfdbe857af860da686505bf209f098df75d37f7d7979530f1dc  229.png
+0efbb58a17150f9647d08bbccbcf56113ce120c728f84fdbe2f7f002e7d167e8  230.png
+bb64d622e11008e584a2e26d6573676762fe6414af27b9bb61e22329590050ab  231.png
+5c2a555beb914ae7aca13744fc9413225cb16701a83071a2cb590f9eb3601648  232.png
+bad4e8787821de8737b08a3b7304b6d88e21ca4394901175d1623db1e1a8c669  233.png
+d89e7de648d0bebc8eb4ac4d108bdf0411ff1db511db984c6942e85539bbe0e2  234.png
+b0e8b4ef2987bc0a312d073aef2d7e9b3f62d9704e8b13b6d5fa929ae6064f19  235.png
+cc667008145e2a18348e088adc2817a9ea8d91780812b56f0374072a5d4771f4  236.png
+ff7eb2f3872f94a6509facf72e4b5b8d41f66679d0b32f31be5db503837570d0  237.png
+f903d88c248dc052e15fade421079ea07df842d7c275f743e7b324c8d22af4a6  238.png
+
+Output SHA-256 (relative to assets/cosmetics/pets):
+a7f58c1a5fd022ac99f637fac0e23c6750e02f8e0860a57bb64150c798178f4a  ./alpaca/idle/01.png
+1036c699fd4de1f9988015d2213d391aa02336440ea0d01ecceac889dfdf738a  ./alpaca/idle/02.png
+666d154df0d4208720c37832982574ee9ca878716d88044c593e56658fa836aa  ./alpaca/idle/03.png
+db980724be0c524a12b830327442c5b3ec37eaec30a8c784e53455713e14d1f2  ./alpaca/idle/04.png
+b4778df6598aacc1c65e60b1b21460b716be42701eaacb0f28d00db8190a9543  ./alpaca/walk_down/01.png
+84d5d9d896e6e1048b855113ed317e1454b13970556897c19eceb8ce707519ee  ./alpaca/walk_down/02.png
+3d7738f053616c7ba1d0801d796094b579029c01af08a8fae7b26727e3a6bc0e  ./alpaca/walk_down/03.png
+85f62c5d69d2707cce0719c45ba31e249642298c73be74bf8917946bdccf2d10  ./alpaca/walk_down/04.png
+b808ea615a12d967a03c1afb28d3084df8684cc26ef9c93dc316b52bab660f96  ./alpaca/walk_left/01.png
+8a44fea189642afd702adf06e371d4c557011a011983dd97e19dbd47b053f6bb  ./alpaca/walk_left/02.png
+e317e5d8edf6cf699de28581f3e8d7d4c7f8ba51fd57649390d909f650ad5873  ./alpaca/walk_left/03.png
+c50655076561498c12e59ea2b589d15d98393ee0c0de4afb5270d20948e97a20  ./alpaca/walk_left/04.png
+1bce2030e0985c5907263f80d2543cac4d4c29c44d4b8fd71e0e2550f2269ddb  ./alpaca/walk_right/01.png
+9934b5db0ba4104134d7f9699e1e59537ecc9c4f9028ed8278975d883d1b4b3d  ./alpaca/walk_right/02.png
+eb626501b83f6990e6148d15176ebabff93390ee55ecff64312f75ee92cf62ce  ./alpaca/walk_right/03.png
+7baa846e0fd855329717d50ba3d7f4110b13b73348ca8b2f83c29d840d04b7a1  ./alpaca/walk_right/04.png
+8dd69918e76d0e96bb19ea452eea861262971d055f8dff5cfb814cca1010c9df  ./alpaca/walk_up/01.png
+96c780bd415091156c96cf562711aef4476834b270ef567710623c916b97b869  ./alpaca/walk_up/02.png
+5b2265ec1b04e23721c6781ab99dcd89564a0563f1713206c62cb5c4ff35f784  ./alpaca/walk_up/03.png
+0e66034c8ed7e4c2aac33806dc5486e2a43fe9c8fbce2e667d0ff2ac070c371c  ./alpaca/walk_up/04.png
+ec67e7ed35094488aa1eb24c97d6168fd83ae9f68d68e3e3617d6919350da7f3  ./bunny/idle/01.png
+4cc8d243eeedc621b567f51ba60d99e60024e2962ee00df96e6ad6acd1fc3685  ./bunny/idle/02.png
+48dfa429d938652b55a1f052928e929fb5b8c14e68b7a120e6a5e54380d082fa  ./bunny/idle/03.png
+62e0ef178d7361c17cce971bc86de129d6f60cac0de52b79547278553e2ba1ce  ./bunny/idle/04.png
+49595b81f521a6713de1a70655603e02b82dc85a223a07aeeb8f75e648fa6034  ./bunny/walk_down/01.png
+9998809da970635de0c75539739b3042c63e20f99826b97e2b1131b310444219  ./bunny/walk_down/02.png
+5591dd9fddeda28d87ad21c5697dc84604976a8e253f44a4c5917a62fbb2dea8  ./bunny/walk_down/03.png
+21c6398ff690ea0158575d91cda56a746f6db6d02b3064bbd327aa7aea4573e1  ./bunny/walk_down/04.png
+e9f25ea221a6c6de9b6c6c24710d61403507916b3ecadc2ad5977c81cbd64079  ./bunny/walk_left/01.png
+4625c4023873043c88db42e3f9361de82d979f18c05fed9025c8da43093e82b2  ./bunny/walk_left/02.png
+71787cbfc9c7626e1fc030dda92175e3e7a0b1e379cb2b50265e2e246cae8e8e  ./bunny/walk_left/03.png
+6bea9467c17cb4c2686999c923dc4c3e843076a022252ca61f5fac35c666f01b  ./bunny/walk_left/04.png
+21739db4894c6b3f52abdbdef5e8277d7c136ef29190918f6a1a39ffddf737d0  ./bunny/walk_right/01.png
+612a2e72f8a239ec22963ce9c2b7ceb591b7e9fff1b42ef6043f1bd3693b6fe3  ./bunny/walk_right/02.png
+6d0f1da6a8651240e4d5ce4cee196c56c67026cbffc99afb682360a10abe5141  ./bunny/walk_right/03.png
+f855715067bf1791ddc8eb6ca31e8877ae52f1f5f5e7943b43b3bfd570a4481d  ./bunny/walk_right/04.png
+717ddfdfcd6d12918022a77698194b75cf7e33f784f5e45ee7d9a1ebeb5ad336  ./bunny/walk_up/01.png
+72b058fa0fdcd85a874799ab3c79886cce131e1f9d85cfe1420f98b1c54f7d42  ./bunny/walk_up/02.png
+1e219fc3f6b2d9f49b9b70e46e4cfac6a72491188de12c483e44b1f48b0fe3e7  ./bunny/walk_up/03.png
+8c468f1e56df1b217cc74aca22ac669e491fb7d89bfeadf08ea1f85019f51a55  ./bunny/walk_up/04.png
+79c2dc5ad17589a886f682580219af2d57a0e74d8fc807ae47a68346bba87cba  ./cat/idle/01.png
+d6e81d0e07015f577a5c587fa8d814bdab9056ce28249e2478b310c3bfe84b7c  ./cat/idle/02.png
+276f806d73898bc5d18869924981a3a87f28ae2977a8a4ccfd34d1ab2b27fd6e  ./cat/idle/03.png
+cd9dcbe2edd04e9cf3db9f5ce7bec8b52438b2a372da10eb1c88d3fd0b3d22f6  ./cat/idle/04.png
+8ce2796210a645cb9ca16ed013f011b0f8e43e48d069583d106784ce38829742  ./cat/walk_down/01.png
+12539ae0c12fa8362190f4914c923c63583d106c5155915376f63e9cd4aae809  ./cat/walk_down/02.png
+8408fb26c77e92379875af04d98e252e17764cc20e14a438196e40bf84408582  ./cat/walk_down/03.png
+06a4057a7e9649979800f9f2668596ab45d1a5ac319ab1e2efa894f0e34c7f4a  ./cat/walk_down/04.png
+4371f4a048467e807dc80d8c742dcc8141c0f3799ae07ed6eeb15e0c8aa4761c  ./cat/walk_left/01.png
+fb177267cd53111c7cebadee07b6e3d27ccebda93cf08aa512a3630997127ecd  ./cat/walk_left/02.png
+f09ff705b197275f1b48787a840f685839ece273d7854b812ae776ccd36b8be4  ./cat/walk_left/03.png
+27abc8e53265bfc686606f8127bc0a19272ab50941c1b09093d60ec4b5befd4f  ./cat/walk_left/04.png
+a5920d4e2af7bc666989739577685fecdc62ba0bb093025d7d6632a07c18222d  ./cat/walk_right/01.png
+35c212b79bca3a9d6a2f3d6a897427add39f52e0b5d65789c2c4b253586acc61  ./cat/walk_right/02.png
+2db251d7cd5d42f0c8a87d82679169f692cbaeb3c4804b915d609d1a31ef0231  ./cat/walk_right/03.png
+d3bada5c304c56adc48e54ba823ab8bda4036736f6038df1f9c6e4c20319c877  ./cat/walk_right/04.png
+d445f60d6edbf429c5a7d447ceb973fda821092c8e54641c64b07aa439c120f2  ./cat/walk_up/01.png
+ae97fd98d58ee8c542dc732491ba4ba4f30abcfd866093b8dfc0f2902fb0992b  ./cat/walk_up/02.png
+07256fd24d44e9f11393cd9dfccd1a03ed53a9eec32b0ff72951738ab16490e2  ./cat/walk_up/03.png
+5bfd442059e41854c9a89805edb98c2e93f039d8d66a7dc245b6935bf2a2d5ca  ./cat/walk_up/04.png
+b183268c860d8b534a2a4f73cda92c9174df579cce798f857690cf461806c28f  ./corgi/idle/01.png
+34c64316a72b22c1cacb7944da29e2c391a48f59b36ed6b0971a46a2fc7af397  ./corgi/idle/02.png
+ac0e580bd639f782d3d40b138e6b6f5226cceece5af626c66f113949f5fd7e46  ./corgi/idle/03.png
+50184f214522fbdf3eeb7b8d052732f74a8b461dbffef9d02cf4e7e5432590b1  ./corgi/idle/04.png
+dd3e794cb517986e16e9ebabaa0da145eac59fd59450f341853d49429e3e0c28  ./corgi/walk_down/01.png
+5f32f3cb79a0c15b4c2bbc0f04ada4a01c9db234a84413ba2684403b81c24498  ./corgi/walk_down/02.png
+09b2d1a379b4f52f49173159a2284c4afd8c708d07bece368e8bdb072b7b9be5  ./corgi/walk_down/03.png
+01050e0e30bb02a49fdd8b2decc2361ae0fbb9c0accfffb88638287316e98b3b  ./corgi/walk_down/04.png
+466ff48ace524bf3923ff44092bbb1f5ba412a4dae140a050443dbc2ebd687fe  ./corgi/walk_left/01.png
+2efefd71bd1f771c9f0d931eec8ed2f298d8cc42d5aeaa71342b27af75834edd  ./corgi/walk_left/02.png
+aeb646783d8722da8c4bb7352d7889fb53b2192c7d89b5a124edad0d944a7170  ./corgi/walk_left/03.png
+815c885ee7c3741fdcb458c45be7d4570b794f4049ff132b4bcf561bcd54e1da  ./corgi/walk_left/04.png
+691c9d1b857050c23d98f15f0578917fa5903c591a170dbb909b0e8907c44291  ./corgi/walk_right/01.png
+90e101f419d300df9defbf4d332525dde9c4c7565a42c7713be33e63f71e470f  ./corgi/walk_right/02.png
+67d1df8f68c3eaac68d38b9079453c4ec5a832a02c6010f9a27d9b54fff7cb3f  ./corgi/walk_right/03.png
+a408bc92646a00e97aac31510a1bf3e6921407ab96ab427e1676f843184b4346  ./corgi/walk_right/04.png
+e300d886c43e339c773e6a74a75b058283e2ea5cc20eeba55095ffbec2ee4160  ./corgi/walk_up/01.png
+e57faf244ba438cb43820663b17fec41a58b4812393c31ffd6d4125e05349abc  ./corgi/walk_up/02.png
+ec0c64cb4693810e733155e3f47d990feb7997ae7e4e2643e6a86676abc054a4  ./corgi/walk_up/03.png
+5d1ebde9191f78419478626a390f7398a9670f02de603422f41a08ccceff587e  ./corgi/walk_up/04.png
+073a9956e31170786d3445d28eea815cc50bc589e94b53e923bdbc83fccb48ac  ./deer/idle/01.png
+b71335ab47f9209b0cdf691ec2a211d48985b78f0105646c8c3f47fdbfac05f1  ./deer/idle/02.png
+eaf760020624ff19dc9c219b6e6d868e686973b5eda677f87a1ebd27b155130d  ./deer/idle/03.png
+9ab1b2ecb6b5f38e67e0ff5670d78ae5f18a53f7edbc1065b202f2b34847f5ac  ./deer/idle/04.png
+3c0581c87bf2caafa5bc5b2e5429f0c2c362ec961b2c358958de1b3a54a22fde  ./deer/walk_down/01.png
+cb4349e89a870e960174ae649e88df6ca56ba649e136c1af5dfd8c7ee8f29387  ./deer/walk_down/02.png
+02ddc59bf9a81ccb9df173fb38f3c25b829eeddadca193c85e58101b2db0cd4b  ./deer/walk_down/03.png
+887ab108fe3d149a65adbb0d33b0d770b8c183b49c38e2f878ff235882ccd417  ./deer/walk_down/04.png
+cb3e522e1cc2eeb1bd9f306f7fc46f17abc138f780c5142c1465ccd660f37a7f  ./deer/walk_left/01.png
+2b42075f745a3b8df6e50a61b00d4f67d47dc683105f916cf9d7359956334d6a  ./deer/walk_left/02.png
+dbf48c4a0e43c2f5fd69c2ebe9d36dba34fad8de09121d7b4959f5dfbe99af5f  ./deer/walk_left/03.png
+0a549365845a2e1cfffaf00bb70c319890115d4c8733f7a2f42a93f09a87e531  ./deer/walk_left/04.png
+18f8c8b74f8c59180854ae9819663a84ff82a3f813f597d94ce2b4517c859fdb  ./deer/walk_right/01.png
+62aa798b1efa28f836e3049937c681434d2759b406cf53eff688a8474d83d767  ./deer/walk_right/02.png
+edc3c33871cea26f79d45360674fff8c544ef2c475fcd824b19eb0998b3778d9  ./deer/walk_right/03.png
+bcb1be25b011ebd0a130cef584672aa8905b0366c53518d2178e075c437109ab  ./deer/walk_right/04.png
+1917c6dbf26b95bc68f0d887b140e672ee9e7af6d45557ad8664da1a8d7b5dee  ./deer/walk_up/01.png
+fe47f2a1ed7f6c714f2a51e7141a2f8d1b853ae6284faf52e661d15efe3b53b7  ./deer/walk_up/02.png
+cc2360d21bb8348a388c16de38432a6cf239a8385c952cf77ef2147d3bc7bc15  ./deer/walk_up/03.png
+d0411a9efc81997937866e8651c3cdb53301a90e45b047229c0af05a16d748db  ./deer/walk_up/04.png
+940c9d296a37a16c17a2e8c029ee8ab6e0bc948eb31758718345c43c6b3fbf8d  ./dino/idle/01.png
+6f51a96c09112adc094604d3bddb2347120f3e474986c3c6ec9371a2ce45af99  ./dino/idle/02.png
+0df96a2a2fcee3a4bd3659f2a654d3b962c3256a6f2ed7e9f421a4365754cb64  ./dino/idle/03.png
+0208beb5aecdb65cda007020f6e680056c9e45cf530ef30bb03e48a1f759fddb  ./dino/idle/04.png
+73f75a19e46f5f09d6d70b6988660d56d6fd1d6cd0e5e823e756dcc365ac0a51  ./dino/walk_down/01.png
+ded2328800bb4a55d4354d6448303d2c3d4ae45527afeb3d0c9a107727f45869  ./dino/walk_down/02.png
+ed280522723a57cfd34aab125c4c959e868416daaea7427e1464d38613f65c7d  ./dino/walk_down/03.png
+e00d8d16fdf2104f5dc13bc3e1197bcec3527f942200ec6caa7ebc8dd67d627d  ./dino/walk_down/04.png
+9d9e8c77f9076f131f7c17fbbc1e48cca971bb920d7c6fe28ca11510f9863545  ./dino/walk_left/01.png
+5598d4fda7e4f26b7d755844e818cc19cfd711a6c515e9f6e1ba3bce101814df  ./dino/walk_left/02.png
+ff93b2b1e7ea58c92f5e2873ce71559d897b3345937a2ef9c9f08a69534d23a0  ./dino/walk_left/03.png
+05304f4b3d44898926fd017b199fac1e0d69e8d1ee73939eea6366f674a979a9  ./dino/walk_left/04.png
+1b9941c83314c22f753efb91eecc11914261dada8285712c1177806172e9c1fc  ./dino/walk_right/01.png
+e069e122be6eeea36f234149667d88fa86a17d026daeb165f8fd108332201feb  ./dino/walk_right/02.png
+aec8723da4a06b18cb07e586bf8fdda085ccfeffaec2d423312584afe454ae02  ./dino/walk_right/03.png
+d6a32d57dfc3bd9f7b8a97d9daae6115e9dd0b60e5cec780f92fc0a402418819  ./dino/walk_right/04.png
+731588046a86e02e0cd3d6310eb59e5bf0a13dd9d495e78db0a969b2e24c2b31  ./dino/walk_up/01.png
+7ab398025a07a4bc9b99e0bac3b65d0ae0579cf0fef627ff41f055366de1231d  ./dino/walk_up/02.png
+98c482fcc78201e8ebb5ebf61368d8c83e91bb88d8f67e23b1eef5f105587097  ./dino/walk_up/03.png
+f3ca318d8d9a2da343e972c586518c4d9677d1d5aab5104bb8a2258fba66ba92  ./dino/walk_up/04.png
+d33a3912ec12ba9ef712a53b035428cd0c0518cd99c594595b9cddc5f698b38f  ./dragon/idle/01.png
+e0dcda579a524b8a11c40ef7bd1294500dbe8b45dbc1fb6588c67fbfbcb65fee  ./dragon/idle/02.png
+7e098ef270c7b09ac635319d19d42ff825f32481805535cf38f1e35066e2be20  ./dragon/idle/03.png
+20284d56d77de990e6e6ff0571b348758e1b9395b0e5903b722a1296a91f647b  ./dragon/idle/04.png
+cfd62feba894698dd3cbcc1ae94c10920b3fba07be4de1255017647ea98cc8e8  ./dragon/walk_down/01.png
+0f4f94cbfb073a74520834886289acfc771d558b365d0a4bdfdcb4da086cb8bf  ./dragon/walk_down/02.png
+4206b65811f15c0fed5fd7279542ef4b8708973a116e53a5198608fc8d5280ef  ./dragon/walk_down/03.png
+51538cc437ad7f547c94eff6d832b7f241336ebbb33e794215e72b1334aa13b6  ./dragon/walk_down/04.png
+a21432e6645eea3b1bcdd9f66b31b7cd73023b18091ed7c4b0a87b345fae3b8f  ./dragon/walk_left/01.png
+bc827e52a91b4ae9fc8b98f69187c8e0ceb683ef87cd06012201bd69e77c6b5b  ./dragon/walk_left/02.png
+e963bd4036079a48249109019c13190516b9d7f03eaaeaf917931a2699e012f9  ./dragon/walk_left/03.png
+9868fbf44b135304035ca3f64552cd2427195379164cd809604bbe6dfd16b1ec  ./dragon/walk_left/04.png
+d87965eff2b2ddeef20de9bbfacf8d7f3347987deb3a81fd114565d8c64b0935  ./dragon/walk_right/01.png
+2af771eb521fadcaacd56efcdae555b72926324ebb8971024259ede9568e85cf  ./dragon/walk_right/02.png
+232a1de298b915cb6ade98756e19e6b1414b656f5d95464167031f3772924f26  ./dragon/walk_right/03.png
+cf97e6533635f691b1ffa11f61cf5026a749f89573866432db10062072022cdd  ./dragon/walk_right/04.png
+0012e35c39b67365f8034a7c4c5a716be9fe49d9ddfd62005a9f7b2cd51e4a89  ./dragon/walk_up/01.png
+2eff3527fc168a43199b531ae45b8b126087249db5a829a552e4f04c1bdf29d6  ./dragon/walk_up/02.png
+18cd9d2ab17b57fa2c8e8e410d2b3f6b90ecea0ce629cb5f3b38779bf63e6285  ./dragon/walk_up/03.png
+3f18bdf1bc027efce9c6452d03c955f07791105ffd4f6f42227cf15ff6b68d0d  ./dragon/walk_up/04.png
+0f2707c0618dd5e54c526f016c09282e8a0d3cda7e3003560f77e20fde446357  ./fox/idle/01.png
+d3e2e4810ee2071e63769d37f6d080730f9fd4e17190d5e0c7a8de7297824a56  ./fox/idle/02.png
+ae6386f77756acc2b4cfd78ebf2ad1a8bae2563b0c9045f9b0b45e5da96e7e64  ./fox/idle/03.png
+cca02b9c7e12a6846a01630a644427d0e442840d8fb162400d1f414e54345b28  ./fox/idle/04.png
+023d78c9d89abf1da73e0903a060fb9a6c760dced38df0a7196e5c218bb2df7e  ./fox/walk_down/01.png
+b233a03b388a007cbcea2fd20178d209ab92125222459cb0030d366cf935f44a  ./fox/walk_down/02.png
+806b16b46ab6c296f14999fb051bfe8ba389d55dd845da5868d3d1052a1c9c86  ./fox/walk_down/03.png
+029632e9c31bf39396a2e39f4c81d5d5f11c65e52a9fe4939ff19a768eb0c192  ./fox/walk_down/04.png
+b25a591883e16d32ce2d3d03196903cb0a2be6bbfa6bb22025a0bf5e0d92ac36  ./fox/walk_left/01.png
+3093367bedac94aacb69639561c9d67be687a1524093a913ccb1706b0e84e42b  ./fox/walk_left/02.png
+415a74a7798cdde593586fb8577d7066d4a8715a6cfbd6b2fed9273c4524a91e  ./fox/walk_left/03.png
+a437786f182c8bfdf58b3ddb6ce290bccf9a3085e308f21f5e10995a773bc0bc  ./fox/walk_left/04.png
+a3cbf78c70f259904beabdc98f1a99375530e91814cb6150e0110324c2bf0d66  ./fox/walk_right/01.png
+28c787bc3f784a9a8caec6f0557b15d55164c4e666d418c0556b44904f3d9574  ./fox/walk_right/02.png
+e6e0655b6926a79e2aec226a3492071b690d65c1a311aedaf22e2ec59aa5157f  ./fox/walk_right/03.png
+3754459f5f7c8d1d3f20f7c1f05f0a9974bcd09f7e1e201a8654ce16488e6fe0  ./fox/walk_right/04.png
+f2293dea734ae270dd90c6c0c87655943823c2e6a42d74c71abbc6b93a1db63b  ./fox/walk_up/01.png
+cdf06684151ca7edd468019c1deb24ba6d24e26345d900cb7aef300ebb2b9bf8  ./fox/walk_up/02.png
+e75f29d95552ea553b55bbd042b3991d49f253cb21bdcefcbdcbebfc2b0f35b7  ./fox/walk_up/03.png
+f2058f46e2e1ca1e8263e1238c1759f79d8a08dd0149f8b414a7ce1544b53105  ./fox/walk_up/04.png
+7e4addb0826777dde82718c46f247afcb5cdfd75d36f266de0e7b53ab44997a1  ./sheep/idle/01.png
+44edd069a81c098a6994740cc22ecf7053dbdfbb7a97c1585bb588e050c38d6b  ./sheep/idle/02.png
+895a2f7c8b1bfd8dba56a598869316669c4cc67f02c5977df92f12e8eb88592e  ./sheep/idle/03.png
+d0df6103e30b3338949f372a1fe1cd766ee2370fe25752c5de30910eeafa6816  ./sheep/idle/04.png
+9a93cf00e97576de6a3a5f4c64a3dc3ca9c1c6e9398ba753680b338e0e7a94cd  ./sheep/walk_down/01.png
+1520c2a886097d2c44ddc087237ccfc5227031227e8939e2b0df78135dbad302  ./sheep/walk_down/02.png
+93914e3d08d5342230fca24fe746f1716b8086cf60b6b366ee1c868a708dda0b  ./sheep/walk_down/03.png
+e1101700c4a100a384346caeb7533003379b6d78298cc1a44091272b7f55d25d  ./sheep/walk_down/04.png
+b78d035d947daff498abc2fac41bde85dd296cdd6745f93d918f99d4a217d594  ./sheep/walk_left/01.png
+10be246b37cbd9e08462b87b5cad3741984574d68e528221700561c950cdeff9  ./sheep/walk_left/02.png
+36375447a0e8a193c907e9daf46e01709ae4da8a86b35e0b059cdd3481d47c66  ./sheep/walk_left/03.png
+383b88d06cb4aa3342bfa94115d453b2694f40485756fce4c6ec7cb88f7268b7  ./sheep/walk_left/04.png
+d707ca8f7dc5a7e46201626a3d32d46da533672dccf394aa1c339e1a63edcc4d  ./sheep/walk_right/01.png
+5f0dc743f9ff44937c35bb8a5c5b9d05f1bfb32061163bbe5b519991829f66e4  ./sheep/walk_right/02.png
+430cf76091bfc3e44d955e5aecbd50298ad5b5e1b18507a8ac1b4803a7ed6993  ./sheep/walk_right/03.png
+4fa1643be3b965aef06c6a23bb124e11c9e3093e0712f31f299a5da0236cf29a  ./sheep/walk_right/04.png
+ba68a34d7587d048e165d24713f3532f03137874142122d5e65e191a98146c02  ./sheep/walk_up/01.png
+2aa0fd0051dde44d2b6079f69e45f0ecefb6e9cc8abd588299e19a8dc20a04ae  ./sheep/walk_up/02.png
+e3496b31ecf733869758b8e70e8d6eac3e272ed51dc15ad0b8fe422aea8c5add  ./sheep/walk_up/03.png
+bcd334a4e05b51dc70f615c9cbaec8ac1891829e627ec1a2549c887c06498496  ./sheep/walk_up/04.png
+1b613a7606e705bd3b3bb330f647bd625cdee2e6a8b5668e2a1561d20f834c99  ./turtle/idle/01.png
+e50befd04f9e020764d4918c69861554dcd79e5f14fbbd774e61cca7e397891e  ./turtle/idle/02.png
+c5e4739389f9f282760fd0ee3bcdd5e0186a5f872f3130d957c289a09b2a9511  ./turtle/idle/03.png
+129e0d878bc7b60dc903270d22486bcb22a4e78d807859cf5be66ab2110ce825  ./turtle/idle/04.png
+9a8baee0f3055671824985b3f05a13419b9b33d07a446836c85442650a643c2c  ./turtle/walk_down/01.png
+de572aebce9d62c28cb542e0fbfc498e3a53fc155f2ba679aa0f719c8d2206eb  ./turtle/walk_down/02.png
+e27ff328e6b5742249c451ebe65163737b826faf23f1c177aaafc754f09cb44c  ./turtle/walk_down/03.png
+16a5a3f2977ef72f1ea1466c0d89b98077a96e9160618251e962fd0922a00ec9  ./turtle/walk_down/04.png
+52b220c7967ec14de37f4fea1717e2d5e9455e4ba36079aa8c807e4c49effa3c  ./turtle/walk_left/01.png
+bfbcfaa13393c28f10a17defbedd8be803de0e3d67f9ba15150c048300f7bbc6  ./turtle/walk_left/02.png
+0ee1e76243637b81f2fd3cfe35c76cd0ca535bd793bccb77cbcaba07a0ba7a45  ./turtle/walk_left/03.png
+3d6c73ff4c0663b3f55aa5db92d0b866b4c1ef095431de1e3e636dfe42d437f9  ./turtle/walk_left/04.png
+eca42132204742b2dfaf16d74aeaf7145314bbd071c6c69565c76c02939c538a  ./turtle/walk_right/01.png
+b0919fe1374929489163de86535fa17cfa079cd3f1afaee1b85b1e075e17c058  ./turtle/walk_right/02.png
+e0d53a91206697099f816392b5db30080fe8d2a30492dd02f4ab67b01f24e896  ./turtle/walk_right/03.png
+5711b56c5f2d9a05892de1d5629cd425b914ef2a5cbc4e76b825e94fe5e0056f  ./turtle/walk_right/04.png
+678f9f4288ac476b15455b1d4d1fb4c69caf95df4106cb14dcf8a979e0135b8c  ./turtle/walk_up/01.png
+62dba6bffdd6ac18bfa9b74b07a8c7c587eab798c1ea442480afc0f0c99e04e1  ./turtle/walk_up/02.png
+26cc37e879e39742b6b44075ba784f62983d798e352be479efcb48c74fff8c28  ./turtle/walk_up/03.png
+e0d14c7a7ac33380f3979a6c95f1f477807878b8b5db1a50b6588d0ab7a00bd5  ./turtle/walk_up/04.png

@@ -1,0 +1,35 @@
+# Slime King boss art
+
+Sources: two sheets supplied by the project owner in a Claude Code session on
+2026-10-19, kept in apps/practice/tools/source:
+- slime_minion_frames.webp (1125x844, transparent; 8 slime minions x 4 frames:
+  move, idle, cast, burst)
+  SHA-256 91375cb9446bd8518cc48a76f5ee308ee1d37b09ae41617f00716e5e11809cc9
+- slime_minion_concepts.webp (1448x1086, "Slime King - Explosive Minion
+  Concepts"; reference only, not cut)
+  SHA-256 6f7254dc4e407347ae42d83c9b2383d4f1193744369da0ad6b241258e1109263
+
+They look like image-generator output; origin and rights were not independently
+verified, and they carry no author, name, logo or text from Boom Online.
+Confirm ownership before a commercial release.
+
+tools/slice_slimes.gd cut three rows into assets/boss/<set>/{move,idle,cast,
+defeat}/01.png: slime_king ("Crowned Elite", 320x320, the boss), mini_bomb
+("Mini Slime Bomb", 160x160, thrown at hit warnings) and sticky ("Sticky
+Slime", 160x160, thrown at Block Lane). Slivers of neighbouring frames were
+removed and each set scaled by one factor. No pixels were painted. The other
+five minions are not used yet.
+
+Output SHA-256 (relative to assets/boss):
+93e067a5547a532016fc3824d7e8767b2b426c899ede50d8e7e90e700fe1d4b1  ./mini_bomb/cast/01.png
+0d5f483b8ae7ae519f184a28d3c30040c9ae89c9c2e03a8ea53a84bc02201ea7  ./mini_bomb/defeat/01.png
+94bdc49e0b0c08dbf51d5ed8b39937ebca138dfb6ba7cf3b01405ad1ab75acd6  ./mini_bomb/idle/01.png
+2c2775e32fc9f3f558f0abb63cc61ecb6a402f30c19c12c471105ce86d3bde31  ./mini_bomb/move/01.png
+8566bc10cd3c51edb6ec70a81524e94b798610f61686339d31dbd759bbf16275  ./slime_king/cast/01.png
+93ce6decc6205086e3e417aef83ae194986f17f6bdf90aead38fb57420faf83e  ./slime_king/defeat/01.png
+9a51c95e676ffbcb318022fabd6cc3bfa6d0491511e4f0a5a6568a3a7f49bcc1  ./slime_king/idle/01.png
+6d14c54dce77b2314b112a7ee6c2b7118d3f61de4c7f44806f4467fdd4f2d679  ./slime_king/move/01.png
+d9fb0f3054dfd5d765cce0472ca861a25444c1145e9d4bb72b1247ac52eb4de5  ./sticky/cast/01.png
+713a254b34482251eac890ea8cbc376c7b6587efec3f25ab9bb447d3b6c447aa  ./sticky/defeat/01.png
+55d90b779e82fbca31f0c68893360f385d35a55eca499985d7c43b6c41fa3524  ./sticky/idle/01.png
+a03b24b09a9baae9db0c09c9b02c73be94d92287a10a8078319c7bd8b2997ce1  ./sticky/move/01.png

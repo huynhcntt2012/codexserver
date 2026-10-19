@@ -3,8 +3,8 @@
   "name": "RỪNG NẤM ĐOM ĐÓM",
   "subtitle": "Trung bình • Khu rừng kỳ ảo",
   "theme": "forest",
-  "crate": "barrel",
-  "wall": "shrub",
+  "crate": "mushroom",
+  "wall": "round_tree",
   "bomb": "water_blue",
   "fx": "water_splash",
   "bot_step": 0.34,
@@ -46,5 +46,14 @@
     ]
   ],
   "pack_id": "005",
-  "story": "Những cây nấm ngừng phát sáng khi Đom Đóm Trưởng Lão đánh mất chiếc chuông rừng. Trong những vạt nấm, một cơn mưa bào tử đang chờ người lạ."
+  "story": "Những cây nấm ngừng phát sáng khi Đom Đóm Trưởng Lão đánh mất chiếc chuông rừng. Trong những vạt nấm, một cơn mưa bào tử đang chờ người lạ.",
+  "walls": [
+    "round_tree",
+    "pine_tree",
+    "mossy_stone"
+  ],
+  "crates": [
+    "mushroom",
+    "tree_stump"
+  ]
 }

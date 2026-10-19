@@ -8,6 +8,15 @@ const MOVE_SECONDS := 0.15
 const RESEND := 0.09
 const CHAT_POLL := 3.0
 const ItemUi := preload("res://scripts/ui/pc/battle_item_ui.gd")
+const PetSprite := preload("res://scripts/pet_sprite.gd")
+const MapBlocks := preload("res://scripts/map_blocks.gd")
+const BossView := preload("res://scripts/ui/pc/boss_view.gd")
+const BossHpBar := preload("res://scripts/ui/pc/boss_hp_bar.gd")
+const SKILL_NAMES := {
+	"boss_basic_hit": "Đánh thường", "boss_aoe_mark": "Đánh dấu vùng", "boss_block_lane": "Chặn ô",
+	"boss_wave_push": "Sóng đẩy", "boss_weak_point": "Lộ điểm yếu",
+}
+const RAID_TITLES := {"WIN": "ĐÃ HẠ BOSS!", "LOSE": "CẢ ĐỘI BỊ HẠ", "TIMEOUT": "HẾT GIỜ!", "ABORT": "TRẬN BỊ HỦY"}
 
 var game: Node
 var parts: Dictionary
@@ -68,6 +77,18 @@ var last_phase := ""
 var item_ui: RefCounted
 var selected_slot := 0
 var seen_effects: Dictionary = {}  # "<by>:<at>:<kind>" -> true
+# Boss raids (docs/BOSS.md): drawing, HUD, temporary walls and the server result.
+var boss_view: Node2D
+var boss_hud: PanelContainer
+var boss_title: Label
+var boss_phase: Label
+var boss_bar: Control
+var boss_note: Label
+var temp_walls: Dictionary = {}  # Vector2i -> Sprite2D (Block Lane)
+var raid_match := ""  # match id whose result is shown / being fetched
+var raid_info: Dictionary = {}
+var claim_button: Button
+var claiming := false
 
 func _init() -> void:
 	super("sky")
@@ -87,6 +108,7 @@ func _ready() -> void:
 	build_modal()
 	OnlineArena.snapshot_received.connect(_on_snapshot)
 	OnlineArena.closed.connect(_on_closed)
+	OnlineArena.reconnecting.connect(_on_reconnecting)
 	visibility_changed.connect(_on_visibility)
 
 ## Built-in and admin-published maps by id (MapCatalog).
@@ -236,20 +258,29 @@ func render_room(snap: Dictionary) -> void:
 	var number := "%03d" % int(snap.get("number", 0))
 	var practice := bool(snap.get("practice", false))
 	var seat_count := int(snap.get("seats", 8))
-	title_label.text = ("Luyện tập %s · %s" if practice else "Phòng %s · %s") % [number, str(level.get("name", map_id)).capitalize()]
+	var boss_mode := is_boss(snap)
+	var raid: Dictionary = snap.get("raid", {})
+	if boss_mode:
+		seat_count = int(raid.get("maxPlayers", 8))
+		title_label.text = "Đại Chiến Boss %s · %s" % [number, str(snap.get("boss", {}).get("name", "Boss"))]
+	else:
+		title_label.text = ("Luyện tập %s · %s" if practice else "Phòng %s · %s") % [number, str(level.get("name", map_id)).capitalize()]
 	map_art.texture = MapCatalog.preview(map_id)
 	if not levels.has(map_id):
 		MapCatalog.refresh(true)  # a map published after this app last asked
 	map_name.text = str(level.get("name", map_id)).capitalize()
 	var tier := str(level.get("subtitle", "")).get_slice("•", 0).strip_edges()
 	map_info.text = "%s · Phòng %s · Ván %d · Mỗi người 1 bom, tầm nổ 2 ô. Người cuối cùng còn sống thắng." % [tier, number, int(snap.get("round", 1))]
+	if boss_mode:
+		var boss: Dictionary = snap.get("boss", {})
+		map_info.text = "Cả đội cùng đánh Boss (%d HP với số người hiện tại). Đặt bom trúng Boss, né ô cảnh báo; Boss có %d giai đoạn. %s" % [int(boss.get("maxHp", 0)), boss.get("thresholds", []).size() + 1, "Phòng riêng: không nhận thưởng kinh tế." if bool(raid.get("private", false)) else ""]
 	var players: Array = snap.get("players", [])
 	players.sort_custom(func(a, b): return int(a.slot) < int(b.slot))
 	var ready := 0
 	for p in players:
 		ready += 1 if bool(p.get("ready", false)) else 0
 	var humans := players.filter(func(p): return not bool(p.get("bot", false))).size()
-	seats_title.text = "Người chơi + bot · tối đa %d" % seat_count if practice else "Người chơi trong phòng · tối đa 8"
+	seats_title.text = "Người chơi + bot · tối đa %d" % seat_count if practice else "Người chơi trong phòng · tối đa %d" % seat_count
 	for i in seats.size():
 		var seat: Dictionary = seats[i]
 		# Practice rooms have 4 seats; the rest of the grid stays hidden.
@@ -281,6 +312,10 @@ func render_room(snap: Dictionary) -> void:
 		status_label.text = "%d người + %d bot · Bot luôn sẵn sàng, bạn bè vào sẽ thay ghế bot. Bấm SẴN SÀNG để bắt đầu." % [humans, players.size() - humans]
 	elif phase == "countdown":
 		status_label.text = "Bắt đầu sau %d…" % ceili(maxf(0.0, float(snap.deadline) - float(snap.now)) / 1000.0)
+	elif boss_mode and not bool(raid.get("open", true)):
+		status_label.text = "Sự kiện đang tạm dừng hoặc ngoài khung giờ: chưa thể bắt đầu trận mới."
+	elif boss_mode:
+		status_label.text = "%d/%d người · %d/%d đã sẵn sàng · Tối thiểu %d người, có thể chơi một mình." % [players.size(), seat_count, ready, players.size(), int(raid.get("minPlayers", 1))]
 	elif players.size() < 2:
 		status_label.text = "%d/8 người · Cần ít nhất 2 người. Mời bạn bè vào phòng %s!" % [players.size(), number]
 	else:
@@ -333,8 +368,12 @@ func build_battle(root: VBoxContainer) -> void:
 	block_layer = Node2D.new()
 	piece_layer = Node2D.new()
 	piece_layer.y_sort_enabled = true
-	for layer in [floor_layer, block_layer, piece_layer]:
+	boss_view = BossView.new()
+	boss_view.name = "BossView"
+	boss_view.hide()
+	for layer in [floor_layer, block_layer, boss_view, piece_layer]:
 		board.add_child(layer)
+	build_boss_hud()
 	banner = title_text("", 96, Color.WHITE, board_area)
 	banner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -351,6 +390,11 @@ func build_battle(root: VBoxContainer) -> void:
 	result_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	result_detail.custom_minimum_size = Vector2(460, 0)
+	claim_button = candy("NHẬN THƯỞNG", claim_raid, "sun", 22)
+	claim_button.name = "ClaimRaid"
+	claim_button.focus_mode = Control.FOCUS_NONE
+	claim_button.hide()
+	result_stack.add_child(claim_button)
 	build_stats_bar(left)
 	build_sidebar(battle_view)
 
@@ -462,6 +506,11 @@ func clear_board() -> void:
 	bombs.clear()
 	flames.clear()
 	fighters.clear()
+	temp_walls.clear()
+	if boss_view:
+		boss_view.boss = {}
+		boss_view.last_hp = -1
+		boss_view.queue_redraw()
 
 ## Floor, walls and crates come from the snapshot grid (0 floor, 1 wall, 2 crate),
 ## textured with the map's own theme.
@@ -473,8 +522,9 @@ func build_board(snap: Dictionary) -> void:
 	for n in range(2):
 		for m in range(4):
 			floors.append(load("res://assets/tiles/%s/%d_%d.png" % [level.get("theme", "grass"), n, m]))
-	var wall_tex: Texture2D = load("res://assets/obstacles/%s/00.png" % level.get("wall", "stone_wall"))
-	var crate_tex: Texture2D = load("res://assets/obstacles/%s/00.png" % level.get("crate", "wood_crate"))
+	var blocks := level.duplicate()
+	blocks["wall"] = level.get("wall", "stone_wall")
+	blocks["crate"] = level.get("crate", "wood_crate")
 	for y in grid.size():
 		for x in grid[y].size():
 			var cell := Vector2i(x, y)
@@ -484,8 +534,7 @@ func build_board(snap: Dictionary) -> void:
 			floor_layer.add_child(ground)
 			var tile := int(grid[y][x])
 			if tile == 1 or tile == 2:
-				var block := Sprite2D.new()
-				block.texture = wall_tex if tile == 1 else crate_tex
+				var block: Sprite2D = MapBlocks.sprite(blocks, "wall" if tile == 1 else "crate", cell, TILE)
 				block.position = cell_center(cell)
 				block_layer.add_child(block)
 				if tile == 1:
@@ -508,6 +557,12 @@ func render_battle(snap: Dictionary) -> void:
 			if int(snap.grid[y][x]) != 2 and crates.has(cell):
 				crates[cell].queue_free()
 				crates.erase(cell)
+	if is_boss(snap):
+		sync_temp_walls(snap, level)
+		render_boss(snap)
+	else:
+		boss_view.hide()
+		boss_hud.hide()
 	# Bombs.
 	var seen := {}
 	for b in snap.get("bombs", []):
@@ -566,6 +621,13 @@ func render_battle(snap: Dictionary) -> void:
 			f.t = 0.0
 			f.rest = 0.0
 			f.sprite.action("walk_right" if step.x > 0 else "walk_left" if step.x < 0 else "walk_down" if step.y > 0 else "walk_up")
+		var pet := str(p.get("pet", "")) if p.get("pet") != null else ""
+		if pet != f.get("pet", ""):
+			# The arena sends the pet once the loadout arrives; everyone sees it.
+			f.pet = pet
+			f.pet_node = PetSprite.attach(f.root, f.sprite, pet)
+		if f.get("pet_node") != null and is_instance_valid(f.pet_node):
+			f.pet_node.mounted = bool(p.get("mounted", false)) and bool(p.alive)
 		f.alive = bool(p.alive)
 		f.root.modulate = (Color("9fe4ff") if bool(p.get("slow", false)) else Color.WHITE) if f.alive else Color(1, 1, 1, 0.35)
 		gear_marks(f.root, p)
@@ -579,12 +641,13 @@ func render_battle(snap: Dictionary) -> void:
 	render_side(snap)
 	render_items()
 
-## Item marks every player can see: shield bubble, mount under the feet, speed.
+## Item marks every player can see: shield bubble, mount under the feet (only for
+## a pet without art; a pet skin carries its rider itself), speed.
 func gear_marks(holder: Node2D, p: Dictionary) -> void:
 	var pet := str(p.get("pet", "")) if p.get("pet") != null else ""
 	var marks := [
 		["ItemShield", "res://assets/items/shield.png", bool(p.get("shield", false)) and bool(p.alive), Vector2(0, -26), -1],
-		["ItemMount", str(UIState.get_item(pet).get("icon", "")), bool(p.get("mounted", false)) and bool(p.alive), Vector2(0, 22), -1],
+		["ItemMount", str(UIState.get_item(pet).get("icon", "")), bool(p.get("mounted", false)) and bool(p.alive) and holder.get_node_or_null("Pet") == null, Vector2(0, 22), -1],
 		["ItemSpeed", "res://assets/items/shoe.png", bool(p.get("fast", false)) and bool(p.alive), Vector2(26, 18), 1],
 	]
 	for spec in marks:
@@ -722,7 +785,8 @@ func spawn_fighter(p: Dictionary, cell: Vector2i) -> Dictionary:
 func render_side(snap: Dictionary) -> void:
 	var phase := str(snap.get("phase", ""))
 	var left := maxf(0.0, float(snap.get("deadline", 0)) - float(snap.get("now", 0))) / 1000.0
-	side_room.text = ("● Luyện tập cùng bạn bè %03d" if bool(snap.get("practice", false)) else "● Phòng online %03d") % int(snap.get("number", 0))
+	var boss_mode := is_boss(snap)
+	side_room.text = ("● Đại Chiến Boss %03d" if boss_mode else ("● Luyện tập cùng bạn bè %03d" if bool(snap.get("practice", false)) else "● Phòng online %03d")) % int(snap.get("number", 0))
 	side_timer.text = "%d:%02d" % [int(left) / 60, int(left) % 60] if phase == "playing" else "0:00"
 	side_timer.add_theme_color_override("font_color", Color("ffe17b") if phase == "playing" and left <= 30.0 else Color.WHITE)
 	stat_round.text = str(int(snap.get("round", 1)))
@@ -746,6 +810,8 @@ func render_side(snap: Dictionary) -> void:
 		entry.name.tooltip_text = entry.name.text
 		entry.name.add_theme_color_override("font_color", game.HERO_COLORS[maxi(0, game.HEROES.find(hero))].darkened(0.25))
 		entry.state.text = ("Đang chơi" if p.alive else "Bị loại")
+		if boss_mode:
+			entry.state.text += " · %d sát thương" % int(snap.get("raid", {}).get("damage", {}).get(str(p.id), 0))
 		entry.state.add_theme_color_override("font_color", MINT.darkened(0.15) if p.alive else CORAL)
 		(entry.line.get_theme_stylebox("panel") as StyleBoxFlat).border_color = SUN if mine else Color("9fd7ff")
 	var me: Dictionary = OnlineArena.me()
@@ -753,9 +819,23 @@ func render_side(snap: Dictionary) -> void:
 		stat_status.text = "Ván đã kết thúc."
 	elif not me.is_empty() and not me.get("alive", true):
 		stat_status.text = "Bạn đã bị loại · đang xem trận."
+	elif boss_mode:
+		stat_status.text = "Né ô cảnh báo, đặt bom trúng Boss!"
 	else:
 		stat_status.text = "Phá thùng và hạ %d đối thủ!" % maxi(0, alive - 1)
-	if phase == "finished":
+	claim_button.visible = false
+	if phase == "finished" and boss_mode:
+		var raid: Dictionary = snap.get("raid", {})
+		var result := str(raid.get("result", "")) if raid.get("result") != null else ""
+		fetch_raid(str(raid.get("matchId", "")))
+		result_title.text = RAID_TITLES.get(result, "KẾT THÚC")
+		result_detail.text = raid_text(snap) + "\nVề phòng chờ sau %d giây." % ceili(left)
+		var grant := pending_grant()
+		claim_button.visible = not grant.is_empty()
+		claim_button.disabled = claiming
+		result_box.show()
+		fit_board()
+	elif phase == "finished":
 		var winner := str(snap.get("winner", "")) if snap.get("winner") != null else ""
 		var name := ""
 		for p in players:
@@ -775,6 +855,145 @@ func render_side(snap: Dictionary) -> void:
 		fit_board()
 	else:
 		result_box.hide()
+
+# ------------------------------------------------------------------ boss raid
+
+static func is_boss(snap: Dictionary) -> bool:
+	return str(snap.get("mode", "")) == "boss"
+
+## Boss name, phase, HP bar with phase ticks and the weak-point note, over the board.
+func build_boss_hud() -> void:
+	boss_hud = card(Color("2a1640", 0.92), Color("ff9ec0"), 18, 3, 10)
+	boss_hud.name = "BossHud"
+	boss_hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	boss_hud.hide()
+	# A row of its own above the board, so it never covers a tile.
+	var left := board_area.get_parent()
+	left.add_child(boss_hud)
+	left.move_child(boss_hud, board_area.get_index())
+	var line := row(12, boss_hud)
+	boss_title = title_text("", 22, Color.WHITE, line)
+	boss_phase = pill("PHASE 1", CORAL, Color.WHITE, 15, line)
+	boss_bar = BossHpBar.new()
+	boss_bar.name = "BossHp"
+	boss_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(boss_bar)
+	boss_note = text("", 15, Color("ffd84d"), line)
+
+func render_boss(snap: Dictionary) -> void:
+	var boss: Dictionary = snap.get("boss", {})
+	boss_view.visible = true
+	boss_view.show_boss(boss, float(snap.get("now", 0)))
+	boss_hud.show()
+	boss_title.text = str(boss.get("name", "Boss"))
+	boss_phase.text = "PHASE %d" % int(boss.get("phase", 1))
+	boss_bar.set_values(float(boss.get("hp", 0)), float(boss.get("maxHp", 1)), boss.get("thresholds", []), bool(boss.get("weak", false)))
+	var casts: Array = boss.get("casts", [])
+	if bool(boss.get("weak", false)):
+		boss_note.text = "ĐIỂM YẾU! Sát thương ×1,5"
+	elif not casts.is_empty():
+		boss_note.text = "⚠ %s" % SKILL_NAMES.get(str(casts[0].skill), "Cảnh báo")
+	else:
+		boss_note.text = ""
+
+## Block Lane walls (grid 1 where the map had floor) appear and go with the grid.
+func sync_temp_walls(snap: Dictionary, level: Dictionary) -> void:
+	for y in snap.grid.size():
+		for x in snap.grid[y].size():
+			var cell := Vector2i(x, y)
+			var is_wall := int(snap.grid[y][x]) == 1
+			if is_wall and not walls.has(cell) and not temp_walls.has(cell):
+				var block: Sprite2D = MapBlocks.sprite(level if not level.is_empty() else {"wall": "stone_block"}, "wall", cell, TILE)
+				block.position = cell_center(cell)
+				block.modulate = Color(1, 0.85, 0.75)
+				block_layer.add_child(block)
+				temp_walls[cell] = block
+			elif not is_wall and temp_walls.has(cell):
+				temp_walls[cell].queue_free()
+				temp_walls.erase(cell)
+
+func raid_text(snap: Dictionary) -> String:
+	var raid: Dictionary = snap.get("raid", {})
+	var result := str(raid.get("result", "")) if raid.get("result") != null else ""
+	var base: String = {
+		"WIN": "Cả đội đã đánh bại %s." % str(snap.get("boss", {}).get("name", "Boss")),
+		"LOSE": "Không còn ai chiến đấu.",
+		"TIMEOUT": "Boss còn HP khi hết giờ.",
+		"ABORT": "Trận kết thúc bất thường, không tính thưởng.",
+	}.get(result, "")
+	if raid_info.is_empty():
+		return base + "\nĐang lấy kết quả từ máy chủ…"
+	var me: Dictionary = raid_info.get("me", {})
+	var lines: Array[String] = [base, "Sát thương của bạn: %d · Hỗ trợ: %d" % [int(me.get("damage", 0)), int(me.get("support", 0))]]
+	var grant := pending_grant()
+	if str(me.get("reward", "none")) == "none":
+		lines.append("Không có thưởng: %s" % str(me.get("reason_text", me.get("reason", ""))))
+	elif not grant.is_empty():
+		lines.append("Thưởng: %s" % reward_line(grant.get("rewards", [])))
+	else:
+		for g in raid_info.get("grants", []):
+			if str(g.status) == "CLAIMED":
+				lines.append("Đã nhận: %s" % reward_line(g.get("rewards", [])))
+	return "\n".join(lines)
+
+func reward_line(rewards: Array) -> String:
+	var parts: Array[String] = []
+	for r in rewards:
+		match str(r.type):
+			"gold": parts.append("%d xu" % int(r.amount))
+			"gem": parts.append("%d KC" % int(r.amount))
+			"token": parts.append("%d %s" % [int(r.amount), str(r.get("label", "Huy Hiệu"))])
+			"item": parts.append("%s ×%d" % [str(UIState.get_item(str(r.item_id)).get("name", r.item_id)), int(r.amount)])
+	return " + ".join(parts)
+
+func pending_grant() -> Dictionary:
+	for g in raid_info.get("grants", []):
+		if str(g.status) == "ELIGIBLE":
+			return g
+	return {}
+
+## The result is recorded by the API a moment after the arena ends the raid.
+func fetch_raid(match_id: String) -> void:
+	if match_id == "" or match_id == raid_match:
+		return
+	raid_match = match_id
+	raid_info = {}
+	for attempt in 8:
+		if raid_match != match_id or not AuthSession.has_session():
+			return
+		var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/boss/raids/%s/result" % match_id.uri_encode())
+		if raid_match != match_id:
+			return
+		if reply.status == 200 and reply.data is Dictionary:
+			raid_info = reply.data
+			if not OnlineArena.snapshot.is_empty():
+				render_side(OnlineArena.snapshot)
+			return
+		await get_tree().create_timer(1.5).timeout
+
+func claim_raid() -> void:
+	var grant := pending_grant()
+	if grant.is_empty() or claiming:
+		return
+	claiming = true
+	claim_button.disabled = true
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_POST, "/v1/boss/rewards/%s/claim" % str(grant.id).uri_encode(), {"request_id": UIState.request_id()})
+	claiming = false
+	if reply.status == 200 and reply.data is Dictionary:
+		if reply.data.get("wallet") is Dictionary:
+			UIState.apply_wallet(reply.data.wallet)
+		for g in raid_info.get("grants", []):
+			if str(g.id) == str(grant.id):
+				g["status"] = "CLAIMED"
+		UIState.toast_requested.emit("Đã nhận: " + reward_line(grant.get("rewards", [])))
+	else:
+		notice("NHẬN THƯỞNG", "Chưa nhận được thưởng: %s" % str(reply.error))
+	if not OnlineArena.snapshot.is_empty():
+		render_side(OnlineArena.snapshot)
+
+func _on_reconnecting(active: bool) -> void:
+	if active and is_visible_in_tree():
+		show_banner("Đang kết nối lại…")
 
 # ------------------------------------------------------------------ flow
 
@@ -992,5 +1211,5 @@ func _process(delta: float) -> void:
 			f.root.position = f.from.lerp(cell_center(f.to), f.t)
 			# Idle only after a short rest, so steady walking does not flicker.
 			f.rest = f.rest + delta if f.t >= 1.0 else 0.0
-			if f.rest > 0.12 and f.alive and str(f.sprite.animation).begins_with("walk"):
+			if f.rest > 0.12 and f.alive and str(f.sprite.pose).begins_with("walk"):
 				f.sprite.action("idle")

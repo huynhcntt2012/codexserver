@@ -3,8 +3,8 @@
   "name": "CUNG ĐIỆN TRĂNG",
   "subtitle": "Khó • Cung trăng nhiệm màu",
   "theme": "moon",
-  "crate": "metal_barrel",
-  "wall": "special_wall",
+  "crate": "treasure_chest",
+  "wall": "stone_block",
   "bomb": "star",
   "fx": "ice",
   "bot_step": 0.29,
@@ -46,5 +46,14 @@
     ]
   ],
   "pack_id": "015",
-  "story": "Tại điện trăng, Kẻ Xám để lộ bí mật: hắn chỉ sợ sắc màu làm ai cũng khác biệt. Vượt qua ba vệ binh cuối cùng và khôi phục Lõi Cầu Vồng, bầu trời sẽ sáng trở lại."
+  "story": "Tại điện trăng, Kẻ Xám để lộ bí mật: hắn chỉ sợ sắc màu làm ai cũng khác biệt. Vượt qua ba vệ binh cuối cùng và khôi phục Lõi Cầu Vồng, bầu trời sẽ sáng trở lại.",
+  "walls": [
+    "stone_block",
+    "crystal_block",
+    "stone_lantern"
+  ],
+  "crates": [
+    "treasure_chest",
+    "cracked_ice"
+  ]
 }

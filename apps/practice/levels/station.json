@@ -3,8 +3,8 @@
   "name": "GA TÀU CẦU VỒNG",
   "subtitle": "Trung bình • Nhà ga sắc màu",
   "theme": "station",
-  "crate": "wood_crate",
-  "wall": "special_wall",
+  "crate": "traffic_cone",
+  "wall": "metal_crate",
   "bomb": "classic_blue",
   "fx": "fire_vertical",
   "bot_step": 0.34,
@@ -46,5 +46,15 @@
     ]
   ],
   "pack_id": "007",
-  "story": "Đường ray sáng rực nhưng đoàn tàu vẫn chạy vòng quanh ga không người lái. Muốn bước tiếp, nhóm bạn phải đưa các mảnh bản đồ về đúng toa tàu."
+  "story": "Đường ray sáng rực nhưng đoàn tàu vẫn chạy vòng quanh ga không người lái. Muốn bước tiếp, nhóm bạn phải đưa các mảnh bản đồ về đúng toa tàu.",
+  "walls": [
+    "metal_crate",
+    "hazard_crate",
+    "road_barrier"
+  ],
+  "crates": [
+    "traffic_cone",
+    "wood_box",
+    "broken_box"
+  ]
 }

@@ -3,8 +3,8 @@
   "name": "CHỢ ĐÊM ĐÈN LỒNG",
   "subtitle": "Trung bình • Phố chợ đêm",
   "theme": "market",
-  "crate": "barrel",
-  "wall": "stone_wall",
+  "crate": "wood_box",
+  "wall": "brick_wall",
   "bomb": "pink",
   "fx": "heart",
   "bot_step": 0.34,
@@ -46,5 +46,14 @@
     ]
   ],
   "pack_id": "010",
-  "story": "Một đêm hội bắt đầu nhưng không ai nhìn thấy bóng của mình. Người bán đèn lồng nhờ đội bạn thắp lại đủ bốn góc quảng trường để đẩy lùi màn sương tím."
+  "story": "Một đêm hội bắt đầu nhưng không ai nhìn thấy bóng của mình. Người bán đèn lồng nhờ đội bạn thắp lại đủ bốn góc quảng trường để đẩy lùi màn sương tím.",
+  "walls": [
+    "brick_wall",
+    "stone_lantern"
+  ],
+  "crates": [
+    "wood_box",
+    "pumpkin",
+    "treasure_chest"
+  ]
 }

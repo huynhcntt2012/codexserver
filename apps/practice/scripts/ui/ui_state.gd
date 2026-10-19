@@ -57,6 +57,17 @@ func owned(item_id: String) -> bool:
 func equipped(item_id: String) -> bool:
 	return item_id in profile.get("loadout", {}).values()
 
+## The pet brought into a round: the equipped one, else the first owned (it is
+## also the Q mount). Online, the arena checks ownership again.
+func round_pet() -> String:
+	var worn := str(profile.get("loadout", {}).get("pet", ""))
+	if worn != "" and owned(worn):
+		return worn
+	for item in items:
+		if str(item.get("category", "")) == "pet" and owned(str(item.get("id", ""))):
+			return str(item.id)
+	return ""
+
 func _process(_delta: float) -> void:
 	# Follow sign-in/out: server wallet while signed in, demo fixture otherwise.
 	var signed_in: bool = AuthSession.has_session()

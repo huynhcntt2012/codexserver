@@ -308,6 +308,7 @@ from app.admin_api import player_router  # noqa: E402
 from app.admin_api import router as admin_router  # noqa: E402
 from app.admin_auth import router as admin_auth_router  # noqa: E402
 from app.battle_items import router as battle_items_router  # noqa: E402
+from app.boss import router as boss_router  # noqa: E402
 from app.economy import router as economy_router  # noqa: E402
 from app.invites import router as invites_router  # noqa: E402
 from app.liveops import router as liveops_router  # noqa: E402
@@ -331,3 +332,4 @@ app.include_router(invites_router)
 app.include_router(battle_items_router)
 app.include_router(portal_router)
 app.include_router(website_router)
+app.include_router(boss_router)

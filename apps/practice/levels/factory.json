@@ -3,8 +3,8 @@
   "name": "XƯỞNG ROBOT KẸO",
   "subtitle": "Khó • Nhà máy robot",
   "theme": "factory",
-  "crate": "metal_barrel",
-  "wall": "special_wall",
+  "crate": "rusty_barrel",
+  "wall": "metal_crate",
   "bomb": "strong_black",
   "fx": "fire_horizontal",
   "bot_step": 0.29,
@@ -46,5 +46,15 @@
     ]
   ],
   "pack_id": "014",
-  "story": "Tất cả những chiếc máy làm kẹo chuyển sang sản xuất hộp màu xám. Robot Bíp bí mật chỉ ra cỗ máy đã bị điều khiển từ Cung Điện Trăng."
+  "story": "Tất cả những chiếc máy làm kẹo chuyển sang sản xuất hộp màu xám. Robot Bíp bí mật chỉ ra cỗ máy đã bị điều khiển từ Cung Điện Trăng.",
+  "walls": [
+    "metal_crate",
+    "hazard_crate"
+  ],
+  "crates": [
+    "rusty_barrel",
+    "water_barrel",
+    "tnt_barrel",
+    "traffic_cone"
+  ]
 }

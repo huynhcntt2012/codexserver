@@ -3,8 +3,8 @@
   "name": "CÔNG VIÊN KẸO",
   "subtitle": "Dễ • Thùng gỗ và bụi cây",
   "theme": "grass",
-  "crate": "wood_crate",
-  "wall": "stone_wall",
+  "crate": "wood_box",
+  "wall": "pine_tree",
   "bomb": "water_blue",
   "fx": "water_splash",
   "bot_step": 0.39,
@@ -42,5 +42,14 @@
       1,
       9
     ]
+  ],
+  "walls": [
+    "pine_tree",
+    "stone_block"
+  ],
+  "crates": [
+    "wood_box",
+    "flower_bush",
+    "tree_stump"
   ]
 }

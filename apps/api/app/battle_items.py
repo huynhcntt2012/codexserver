@@ -42,7 +42,11 @@ class ItemUse(Base):
 
 
 def loadout(db: Session, account_id: str) -> dict:
-    """Counts per quick slot item (capped) and whether the player owns a pet."""
+    """Counts per quick slot item (capped) and the pets the player owns.
+
+    `pet` is the default (first owned); the arena may use another of `pets` when
+    the client asks for the one it has equipped.
+    """
     from app.admin_api import ItemCatalog
 
     stock = {
@@ -63,6 +67,7 @@ def loadout(db: Session, account_id: str) -> dict:
         "slots": list(SLOTS),
         "items": {k: min(MAX_CARRIED, max(0, stock.get(k, 0))) for k in SLOTS},
         "pet": pets[0] if pets else None,
+        "pets": pets,
     }
 
 

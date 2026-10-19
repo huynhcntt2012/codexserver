@@ -1,6 +1,6 @@
 extends "res://scripts/ui/pc/pc_kit.gd"
 ## PC equipment ("TRANG BỊ"): category menu on the left; the hero on a podium in
-## the middle, wearing its wings and halo, with the seven loadout slots around it and the hero switcher; on the
+## the middle, wearing its wings, halo and pet, with the seven loadout slots around it and the hero switcher; on the
 ## right the hero's stats (segmented bars) and the owned-item list with rarity,
 ## stars and a TRANG BỊ button. Only real data: catalog items, the demo/server
 ## inventory and the hero stats from characters.json (items give no stat bonus).
@@ -8,7 +8,7 @@ signal navigate(destination: String)
 const SLOTS := [["hat", "Mũ"], ["wings", "Cánh"], ["outfit", "Trang phục"], ["bomb_skin", "Bom skin"], ["effect", "Hiệu ứng nổ"], ["pet", "Pet"], ["accessory", "Phụ kiện"]]
 const LEFT_SLOTS := ["hat", "wings", "outfit", "pet"]
 const RIGHT_SLOTS := ["bomb_skin", "effect", "accessory"]
-const TABS := [["", "Tất cả"], ["wings", "Cánh"], ["outfit", "Tr.Phục"], ["bomb_skin", "Bom"], ["effect", "Hiệu ứng"], ["accessory", "Phụ kiện"]]
+const TABS := [["", "Tất cả"], ["wings", "Cánh"], ["pet", "Pet"], ["outfit", "Tr.Phục"], ["bomb_skin", "Bom"], ["effect", "Hiệu ứng"], ["accessory", "Phụ kiện"]]
 const STATS := [["speed", "Tốc độ", "res://assets/items/shoe.png", Color("ffbe3c")], ["bombs", "Số bom", "res://assets/items/extra_bomb.png", Color("3aa6e6")], ["range", "Tầm nổ", "res://assets/items/flame.png", Color("ff6959")]]
 const STAT_MAX := 5
 const RARITY := {"common": ["Thường", Color("8fa3bf"), 1], "rare": ["Hiếm", Color("3aa6e6"), 2], "epic": ["Epic", Color("a98bf0"), 3], "legendary": ["Huyền thoại", Color("f4738d"), 3]}

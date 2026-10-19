@@ -3,8 +3,8 @@
   "name": "HANG PHA LÊ",
   "subtitle": "Trung bình • Hang động lấp lánh",
   "theme": "crystal",
-  "crate": "metal_barrel",
-  "wall": "special_wall",
+  "crate": "cracked_ice",
+  "wall": "crystal_block",
   "bomb": "ice",
   "fx": "ice",
   "bot_step": 0.34,
@@ -46,5 +46,13 @@
     ]
   ],
   "pack_id": "009",
-  "story": "Một viên pha lê biết hát tiết lộ bí mật: Kẻ Xám đang thu thập bảy tia sáng để nhuộm cả vương quốc thành một màu. Hang động đáp lời mỗi tiếng bom bằng nhịp vang nhỏ."
+  "story": "Một viên pha lê biết hát tiết lộ bí mật: Kẻ Xám đang thu thập bảy tia sáng để nhuộm cả vương quốc thành một màu. Hang động đáp lời mỗi tiếng bom bằng nhịp vang nhỏ.",
+  "walls": [
+    "crystal_block",
+    "stone_block"
+  ],
+  "crates": [
+    "cracked_ice",
+    "treasure_chest"
+  ]
 }

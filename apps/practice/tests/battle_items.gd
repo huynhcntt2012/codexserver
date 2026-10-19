@@ -39,6 +39,18 @@ func _run() -> void:
 	game._select_level(0)
 	open_round()
 	check(items.view().slots.size() == 6, "Six quick slots")
+	# The equipped pet (demo profile: pet_bunny) is ridden from the start.
+	var skin: Node = game.player.root.get_node_or_null("Pet")
+	check(items.pet == "pet_bunny" and items.mounted and skin != null, "Round starts riding the equipped pet")
+	for i in 20:
+		await process_frame
+	check(skin.visible and game.player.sprite.position.y < -8.0, "The rider sits on the pet")
+	check(str(game.player.sprite.animation) == "ride_idle", "A rider uses the sitting frames")
+	check(game.player.root.get_node_or_null("ItemMount") == null, "No icon under a pet with art")
+	items.toggle_mount()  # get off: the item checks below count hits without the mount
+	await process_frame
+	check(not items.mounted and not skin.visible, "Q gets off; the pet is not shown on foot")
+	check(not str(game.player.sprite.animation).begins_with("ride_"), "On foot the hero stands again")
 	check(items.counts.throw_bomb == 2 and items.counts.dart == 1, "Counts come from the stock")
 
 	# 1-6 selects; Ctrl uses the selected item in the facing direction.
@@ -105,6 +117,8 @@ func _run() -> void:
 	game.player.invulnerable = 0.0
 	game._hit_fighter(game.player)
 	check(game.player.lives == lives and not items.mounted and items.pet_used, "Mount absorbs one hit")
+	await process_frame
+	check(not skin.visible, "The pet is gone after it took the hit")
 	check(not items.toggle_mount(), "Mount used up this round")
 
 	# HUD shows the panel and the six slots with the yellow selection.

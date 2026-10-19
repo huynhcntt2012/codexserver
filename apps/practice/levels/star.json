@@ -3,8 +3,8 @@
   "name": "VƯỜN SAO RƠI",
   "subtitle": "Trung bình • Vườn thiên văn",
   "theme": "star",
-  "crate": "wood_crate",
-  "wall": "special_wall",
+  "crate": "treasure_chest",
+  "wall": "crystal_block",
   "bomb": "star",
   "fx": "fire_vertical",
   "bot_step": 0.34,
@@ -46,5 +46,13 @@
     ]
   ],
   "pack_id": "013",
-  "story": "Bầu trời đã mất một chòm sao, và những ngôi sao nhỏ lần lượt rơi xuống khu vườn. Người Giữ Sao xin các bạn gom ánh sáng trước khi trăng mới xuất hiện."
+  "story": "Bầu trời đã mất một chòm sao, và những ngôi sao nhỏ lần lượt rơi xuống khu vườn. Người Giữ Sao xin các bạn gom ánh sáng trước khi trăng mới xuất hiện.",
+  "walls": [
+    "crystal_block",
+    "pine_tree"
+  ],
+  "crates": [
+    "treasure_chest",
+    "flower_bush"
+  ]
 }

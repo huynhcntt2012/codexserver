@@ -15,7 +15,13 @@ func check(condition: bool, message: String) -> void:
 func run() -> void:
 	var state = root.get_node("UIState")
 	state.reset_demo()
-	check(state.items.size() == 34, "Catalog count")
+	check(state.items.size() == 43, "Catalog count")
+	# Ten pet skins, each with idle and four walking directions.
+	var pets: Array = state.items.filter(func(i): return str(i.category) == "pet")
+	check(pets.size() == 10, "Ten pets")
+	var cosmetics: Script = load("res://scripts/cosmetics.gd")
+	for pet in pets:
+		check(cosmetics.pet_frames(str(pet.get("art", ""))) != null, "Pet art: " + str(pet.id))
 	var ui = load("res://scenes/ui/ui_showcase.tscn").instantiate()
 	root.add_child(ui)
 	current_scene = ui

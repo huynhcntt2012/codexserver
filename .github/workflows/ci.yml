@@ -61,6 +61,7 @@ jobs:
           python3 scripts/build-practice.py --web-only
           "$GODOT" --headless --path apps/practice --script res://tests/headless_smoke.gd
           "$GODOT" --headless --path apps/practice --script res://tests/gameplay.gd
+          "$GODOT" --headless --path apps/practice --script res://tests/boss.gd
       - name: Create ephemeral CI configuration
         run: |
           echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)" >> .env

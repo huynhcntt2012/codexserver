@@ -9,7 +9,7 @@ import { SignJWT } from 'jose';
 export const processId = randomUUID().slice(0, 8);
 
 export type IngestEvent = {
-  type: 'room' | 'closed' | 'match' | 'use';
+  type: 'room' | 'closed' | 'match' | 'use' | 'boss_raid';
   room_id: string;
   phase?: string;
   players?: { account_id: string; name: string }[];
@@ -22,6 +22,23 @@ export type IngestEvent = {
   account_id?: string;
   item_id?: string;
   use_id?: string;
+  /** boss_raid: one settled raid (docs/BOSS.md); match_id is unique per round. */
+  event_id?: string;
+  match_id?: string;
+  result?: string;
+  boss_id?: string;
+  boss_hp_max?: number;
+  boss_hp_left?: number;
+  private?: boolean;
+  raiders?: {
+    account_id: string;
+    name: string;
+    damage: number;
+    support: number;
+    actions: number;
+    active_ms: number;
+    alive: boolean;
+  }[];
   results?: {
     account_id: string | null;
     is_bot?: boolean;
@@ -73,14 +90,16 @@ export function report(event: IngestEvent): void {
 }
 
 /**
- * A player's quick slot stock and pet from the API (service token). Missing API,
+ * A player's quick slot stock and owned pets from the API (service token). Missing API,
  * timeouts or errors give an empty loadout: the round still plays, without items.
  */
-export async function fetchLoadout(
-  accountId: string,
-): Promise<{ items: Record<string, number>; pet: string | null }> {
+export async function fetchLoadout(accountId: string): Promise<{
+  items: Record<string, number>;
+  pet: string | null;
+  pets: string[];
+}> {
   const base = process.env.API_URL;
-  const empty = { items: {}, pet: null };
+  const empty = { items: {}, pet: null, pets: [] };
   if (!base) return empty;
   try {
     const response = await fetch(
@@ -94,12 +113,71 @@ export async function fetchLoadout(
     const body = (await response.json()) as {
       items?: Record<string, unknown>;
       pet?: unknown;
+      pets?: unknown;
     };
     const items: Record<string, number> = {};
     for (const [k, v] of Object.entries(body.items ?? {}))
       if (typeof v === 'number') items[k] = v;
-    return { items, pet: typeof body.pet === 'string' ? body.pet : null };
+    const pets = Array.isArray(body.pets)
+      ? body.pets.filter((p): p is string => typeof p === 'string')
+      : [];
+    return {
+      items,
+      pet: typeof body.pet === 'string' ? body.pet : null,
+      pets,
+    };
   } catch {
     return empty;
+  }
+}
+
+/**
+ * The pet a player brings in: the one their client asked for (the equipped
+ * skin) when they own it, otherwise the API default. Ownership stays server-side.
+ */
+export function choosePet(
+  wanted: unknown,
+  owned: { pet: string | null; pets: string[] },
+): string | null {
+  return typeof wanted === 'string' && owned.pets.includes(wanted)
+    ? wanted
+    : owned.pet;
+}
+
+/** Raid rules of a published boss event, and whether a new raid may start now. */
+export type BossEventInfo = {
+  open: boolean;
+  rules: Record<string, unknown>;
+};
+
+/**
+ * Asks the API for a boss event (service token). Without API_URL (tests, local
+ * runs) every event id is an open event with the default rules.
+ */
+export async function fetchBossEvent(
+  eventId: string,
+): Promise<BossEventInfo | null> {
+  const base = process.env.API_URL;
+  if (!base) return { open: true, rules: {} };
+  try {
+    const response = await fetch(
+      `${base}/internal/v1/boss/events/${encodeURIComponent(eventId)}`,
+      {
+        headers: { Authorization: `Bearer ${await token()}` },
+        signal: AbortSignal.timeout(4000),
+      },
+    );
+    if (!response.ok) return null;
+    const body = (await response.json()) as {
+      open?: unknown;
+      rules?: unknown;
+    };
+    if (typeof body.rules !== 'object' || body.rules === null) return null;
+    return {
+      open: body.open === true,
+      rules: body.rules as Record<string, unknown>,
+    };
+  } catch {
+    return null;
   }
 }

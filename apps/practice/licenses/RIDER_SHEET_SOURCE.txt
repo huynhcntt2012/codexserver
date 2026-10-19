@@ -1,0 +1,96 @@
+# Rider sprites (heroes sitting on a pet)
+
+Source: one sheet image "RIDER CHARACTER SHEET" (1122x1402, opaque WebP),
+supplied by the project owner in a Claude Code session on 2026-10-19, kept at
+`tools/source/rider_sheet.webp` (413828 bytes).
+SHA-256: c39a88bfa44594151daed6cc836e229c80fc612c2bff2494a9bc370a26a74599
+
+Five columns match the project's heroes (blue boy = bombo, pink girl = mimi,
+red boy = zin, golden girl = lala, green boy = kai); five rows of 3 frames:
+mounted idle, ride down, ride up, ride left, ride right. It looks like
+image-generator output made for this project's heroes; its origin and rights
+were not independently verified, and it carries no author, name, logo or text
+from Boom Online. Confirm ownership before a commercial release.
+
+`tools/slice_rider_sheet.gd` removed each row's coloured panel (region growing
+from the panel edge), split the 3 frames at the emptiest columns, dropped
+slivers of neighbouring frames and scaled every hero's frames by one factor
+into `assets/riders/<hero>/<anim>/01-03.png` (64x64, seat on the bottom edge).
+No pixels were painted. The attach-point and usage panels were not used.
+
+Output SHA-256 (relative to assets/riders):
+8f7dcd433f6c2852f0adb3661e0b9eb8c788b71a8efbc2510b5e8a43a88dfa1c  ./bombo/ride_down/01.png
+d2e95305bfee28d4de6ee9b92355c9bcf049d5b24f46dc8d74dc3fff0e3f24e5  ./bombo/ride_down/02.png
+298e25d1982a11f501240d10f88adce210f87c72dce68dc234eab743c86631ef  ./bombo/ride_down/03.png
+15e6d86bc54269b78301c519ff857280354c753b5dc2df5d9b68581f16670146  ./bombo/ride_idle/01.png
+666d8b270a3762752dd15c45f7dd8bda91735038341be8cc70112714416ca54c  ./bombo/ride_idle/02.png
+6722338585b981d9cfe27dc73664fef01fac0b0261be74b7b0b5c11711812cb8  ./bombo/ride_idle/03.png
+585eed6c89fffd5a91188ff92ee3bc6ef77fea3c26c0a1a2eb277f001a1cd46b  ./bombo/ride_left/01.png
+26f64beaaa792dc4395a4fb9661d09a3ec507ced468fdb747b221fa4b076a642  ./bombo/ride_left/02.png
+d836ad9bdef483e99118e7c9eade4e68ffba99c6149368311564b2651bcb3dea  ./bombo/ride_left/03.png
+0ee92365f2f42f87f8a06480e2c20ad153a740cead54864b996ff6622e113b57  ./bombo/ride_right/01.png
+0e3ca6f2445a8dfed520f6bf2280ade4a015c67bc4773f783d01ea07f720246a  ./bombo/ride_right/02.png
+d00a600160ab9311ee9358bbad2dcc70ee8798c8506942b02e09acafdff4d503  ./bombo/ride_right/03.png
+8f1372b02feafddc3d038ef56ce6f844dd849216a7723c2fdf01b4205d7abd2e  ./bombo/ride_up/01.png
+8d804c7392dc8081d109b72872067fdebbb40c590c6223989040cef1203891fe  ./bombo/ride_up/02.png
+5fdd64fb966ee093f4433d6f6b96edf07c34a2a079d37bb1c4466f7fb892bc51  ./bombo/ride_up/03.png
+68d96ead2fd53fbfdd5063a0db936812891d005df6085393fae5df91834bf2ca  ./kai/ride_down/01.png
+c97891ac8fc857d147dafc792e02ebbab34fb7f4252f2a890828a0576717fd0b  ./kai/ride_down/02.png
+50e4df30b1ae0428e79eac1f84ebaaf9a89a16985bef065995f1314a9af50cb9  ./kai/ride_down/03.png
+239585d768021715717e721720b528324088f3b7a538ded1de2aaa74f8223731  ./kai/ride_idle/01.png
+19cda9834e830642e48b6aa094c22869bdc5ea63fa072a24cb73889771a3fe0c  ./kai/ride_idle/02.png
+7d431304a2e846ba0d7fbbdf87f35cbd9d2b606a6db4b7b92cb6139a854e12d3  ./kai/ride_idle/03.png
+d8d4b6026fb3668d5a4c095a3e627384a3524d934082cadea28e93435397c2e0  ./kai/ride_left/01.png
+38c02ab1171ab9a996074795aedbfebdff34a99a74a432d31bdccae48a88a67d  ./kai/ride_left/02.png
+b61c938cd04e34d03b680b9ee19014627f76b247101174711a11b85146ec0d0f  ./kai/ride_left/03.png
+acc23bb4f46c28a094587fa99fc0b36d0f67fb630a33ce1e0d3c9ce549b696cf  ./kai/ride_right/01.png
+4176d8304b4caba5e4f41e45582af2b924546f5b786286fde1c79e9e6b999fe2  ./kai/ride_right/02.png
+9012d9d919573015e90eb1fa47a66c74c175b12f97dfea738b34c7df5f74b290  ./kai/ride_right/03.png
+3dbdf9ee9b14de810b9aec593246e1ef898f057c7c730896a1be41aede6ea524  ./kai/ride_up/01.png
+a1f76559a4c024fc64105051dd8d91840ace7ec79f9d141b688baaf6e47f055b  ./kai/ride_up/02.png
+a0044bae5c09ca4d7cfc607090a630d3a40942c625504f3d050c5f7e374c1d21  ./kai/ride_up/03.png
+d9c8f5fd008b59b986f2b73661163d84da056d073b405948078b40a8f59e63e3  ./lala/ride_down/01.png
+3b20ced6c5b1a928cc2d9b320c9650ce62d2a47ee2a3b5c14eb09ce6a06bc9aa  ./lala/ride_down/02.png
+da7ba0ede9c31232c5d4041953431cefa64a80aa3cfcc321674811f4c95882b6  ./lala/ride_down/03.png
+2f19f3e2f02bb8dbc342317a1999e01afc2530364feef74044f8de6553e8cdae  ./lala/ride_idle/01.png
+d207808b662c3ef0a65891e75a4cd9836ba0b59f5fd139fd10fa7fb8f09a521e  ./lala/ride_idle/02.png
+fcd1960f5645747bc405fa2eb2dd3d46cf2071caeb1775c4bc4a6eae5cffa42e  ./lala/ride_idle/03.png
+fe6c99322cb251f14c0135c793bc1fc463d939797fc0f60aa17790781172bea4  ./lala/ride_left/01.png
+2e2f047792770a8f28464665d38bc2eea4a609822392153f59141a153f63eec0  ./lala/ride_left/02.png
+5909e040ddf4f22490fec0bbd0c15ab029c1a6d39b3e700ae83b0fa612165c7f  ./lala/ride_left/03.png
+28c3d25c417bf0fdb8b8b9da0696751accda1b82f239ae3722e712faf19e3ea5  ./lala/ride_right/01.png
+f72ec4ff95ec2ab4e5478393087208842ec7b51a3d13e954d79efd6357c08a1b  ./lala/ride_right/02.png
+1e111ce7f18d5463ff071744b7c7c01e86fdaf95b8db58a57b301bec8f2bdc26  ./lala/ride_right/03.png
+e2d670bb69c426cb71d3d353a066f369740587200853c912044e6c5bab67ec37  ./lala/ride_up/01.png
+1e2a3f4a61a1df6a3569f7469894b3d35d8fd2e3ff548a260b318f66c8210b3c  ./lala/ride_up/02.png
+ecccbd053a476c5a8d9421c92bca183e19e811d0221816ea2a99456036f0d428  ./lala/ride_up/03.png
+c721aaaf2af56bd7a0d6600322617ff2cf12ac103aed6673d8f991878c819131  ./mimi/ride_down/01.png
+b9220321d838f2f481c15e44a04e2d16bdef3468c4425ca2b6daf7f1b20da5a8  ./mimi/ride_down/02.png
+095333f532fb31b2ae7d32c44ed02cc166bc336fd1c614ec217bb774c6b71780  ./mimi/ride_down/03.png
+a31b83fdef58e0615131d04ccc8e86a3c9538a45a300b189a3e99f5500d01bf3  ./mimi/ride_idle/01.png
+3733224c08e3c7750fb532702d7753572310fe77136a7275eda47aa04ac1ec5d  ./mimi/ride_idle/02.png
+77bf43554f62a263f175ce94202d946f32dac4d6a0d25470259581fbf84cc7c7  ./mimi/ride_idle/03.png
+72da359c87bb7a71e17ffc9330ab7d8569a477bdc546d69d0dcafdb65d9134c1  ./mimi/ride_left/01.png
+b36a00ceae390faebf2e3bda9eb358aefce4511ee60b3ccad1cc41037b475011  ./mimi/ride_left/02.png
+a93482987cc6a0b7190af46668e7e440cb2a443be07dff245bf4b8ce0159dc02  ./mimi/ride_left/03.png
+adac97c999e386245cccd7c6807d73cd0d441a8e0868a2703536f56f6dc3baf6  ./mimi/ride_right/01.png
+53e9c018182a235cccf4e3e02ae6a4104ff2ac4a23271a8087f7e31dd4a2f291  ./mimi/ride_right/02.png
+ef94a9f2ddbe0d5668e06cc37c5af79d2ec5b1d8fafa9bcb03c9287edac8fe24  ./mimi/ride_right/03.png
+7ea61675bc8890a7eb83027b5d0aef826d97994f9b4548119fbf122c3fb9762a  ./mimi/ride_up/01.png
+e70d6a80d29d7f47944e94d7a0521ef54889596c479ff31db4ceeae3c2226c2b  ./mimi/ride_up/02.png
+745b21085867a1da3de0494e9e410dfe13a02a5396f653562b3035e87581651a  ./mimi/ride_up/03.png
+7fce4c755d5dc82f0fe5ba27f7a9b7934b7e0f9ad8f83b7551a5f87eda4cb173  ./zin/ride_down/01.png
+545e8d401049a14c4b6a342bc12bf6ba91f223a206d68146d12858aaba08ca5b  ./zin/ride_down/02.png
+e17bfed2b3623d625c01a359e68cdf9372fbd8be7939c463360f56ab071e1f21  ./zin/ride_down/03.png
+caf83b41eeeb9b8a9f2c3e25c50fe620b19e959f1cb5deb9b352afa7de063806  ./zin/ride_idle/01.png
+a9541a30afec59e8879604d8cef82ec5bb1c08c146d145b0f073bb553d6f4916  ./zin/ride_idle/02.png
+dd211e6ceef77933f50372881cce55d6cf09c707ce612144aad469354ba516eb  ./zin/ride_idle/03.png
+9d2ff9baf72a6f8e0845687898e9e7582f044017348781234a894466e172ddf6  ./zin/ride_left/01.png
+2df36e9949fdcc4eb1f9e87d6ce37187864daafa04f7b13123e27b3d676c3739  ./zin/ride_left/02.png
+e2e9d52b51203746dd4cb608e65f96aba24961e6b5b96d0cdc6d5e6687554eb6  ./zin/ride_left/03.png
+7dfc2f121759f49a23ca5ce4560e379a568df1f42230938b3f6fc616e1acafd9  ./zin/ride_right/01.png
+faa1fd630a4ab936ceaf39c61bd771c6abf41ce7f5ca3b1d42a9908e48dd9dce  ./zin/ride_right/02.png
+0150b626edf707465ce85abb50ee68bca88a43f37281fce428b01e2c16df704b  ./zin/ride_right/03.png
+6fae3726704ff09bd9ab70f54bf3f315243c69aace883de30d8214dc499005a6  ./zin/ride_up/01.png
+6caee154826ef8ffbcef98cba6227bdfa51270a0d9f0f377d4c73c2fa19cfc34  ./zin/ride_up/02.png
+a1287ffa0d6645198f87363bb058bbae2502ec6310a916d3c68d4331f33e96f9  ./zin/ride_up/03.png

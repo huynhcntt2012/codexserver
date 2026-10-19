@@ -8,6 +8,11 @@ import QuestEditor, {
   summary,
   useCatalog,
 } from '@/components/QuestEditor';
+import BossEditor, {
+  BossConfig,
+  BossStats,
+  fullBoss,
+} from '@/components/BossEditor';
 import { Card, Empty, Field, Loading, Modal, Phase } from '@/components/ui';
 import { api } from '@/lib/api';
 import {
@@ -33,7 +38,7 @@ type EventQuest = {
   title: string;
   description: string;
   chapter: string | null;
-  reset: 'once' | 'daily';
+  reset: 'once' | 'daily' | 'weekly';
   objectives: Objective[];
   rewards: Reward[];
 };
@@ -54,6 +59,7 @@ type Config = {
   chapters: Chapter[];
   quests: EventQuest[];
   shop: ShopEntry[];
+  boss: BossConfig | null;
 };
 
 type GameEvent = {
@@ -115,8 +121,10 @@ const STEPS = [
   '3. Chương',
   '4. Nhiệm vụ',
   '5. Event Shop',
-  '6. Kiểm tra & lưu',
+  '6. Boss',
+  '7. Kiểm tra & lưu',
 ];
+const CHECK_STEP = STEPS.length - 1;
 
 const EMPTY: Config = {
   token_name: 'Vé Sao',
@@ -126,6 +134,7 @@ const EMPTY: Config = {
   chapters: [],
   quests: [],
   shop: [],
+  boss: null,
 };
 
 /** Fills optional fields the API may omit (old events, templates). */
@@ -160,6 +169,7 @@ function fullConfig(config: Partial<Config> | undefined): Config {
         item_id: r.item_id ?? null,
       })),
     })),
+    boss: fullBoss(c.boss),
     shop: (c.shop ?? []).map((s: Partial<ShopEntry>) => ({
       sku: s.sku ?? '',
       item_id: s.item_id ?? '',
@@ -234,9 +244,9 @@ export default function Events() {
     setCheck(null);
   }
 
-  async function fromTemplate() {
+  async function fromTemplate(kind: 'story' | 'boss' = 'story') {
     try {
-      const template = await api<GameEvent>('/events/template');
+      const template = await api<GameEvent>(`/events/template?kind=${kind}`);
       open(toDraft(template));
     } catch (reason) {
       toast((reason as Error).message, true);
@@ -265,7 +275,7 @@ export default function Events() {
 
   async function save(publish: boolean) {
     if (!draft || !(await validate())) {
-      setStep(5);
+      setStep(CHECK_STEP);
       return;
     }
     try {
@@ -336,8 +346,14 @@ export default function Events() {
       actions={
         can('liveops') && (
           <div className="toolbar">
-            <button className="btn secondary" onClick={fromTemplate}>
+            <button className="btn secondary" onClick={() => fromTemplate()}>
               Tạo từ mẫu “Giải Cứu Bầu Trời Bong Bóng”
+            </button>
+            <button
+              className="btn secondary"
+              onClick={() => fromTemplate('boss')}
+            >
+              Tạo từ mẫu “Đại Chiến Boss”
             </button>
             <button className="btn warn" onClick={() => open(blank())}>
               + Sự kiện mới
@@ -392,6 +408,13 @@ export default function Events() {
                       <td className="spark">
                         {c.chapters.length} chương · {c.quests.length} nhiệm vụ
                         · {c.shop.length} món shop
+                        {c.boss && (
+                          <>
+                            <br />
+                            ⚔️ {c.boss.display_name} · {c.boss.map_id} · 1-
+                            {c.boss.max_players} người
+                          </>
+                        )}
                       </td>
                       <td>v{event.version}</td>
                       <td>
@@ -741,6 +764,7 @@ export default function Events() {
                       >
                         <option value="once">Một lần cả sự kiện</option>
                         <option value="daily">Mỗi ngày</option>
+                        <option value="weekly">Mỗi tuần (thứ Hai)</option>
                       </select>
                     </Field>
                   </div>
@@ -890,6 +914,16 @@ export default function Events() {
           )}
 
           {step === 5 && (
+            <BossEditor
+              boss={config.boss}
+              token={config.token_name}
+              mapIds={mapIds}
+              items={items}
+              onChange={(boss) => setConfig({ boss })}
+            />
+          )}
+
+          {step === CHECK_STEP && (
             <div className="stack">
               <p>
                 <b>{draft.name || '(chưa đặt tên)'}</b> · {chapters.length}{' '}
@@ -901,7 +935,11 @@ export default function Events() {
                   <li key={q.key}>
                     [
                     {q.chapter ??
-                      (q.reset === 'daily' ? 'mỗi ngày' : 'sự kiện')}
+                      {
+                        daily: 'mỗi ngày',
+                        weekly: 'mỗi tuần',
+                        once: 'sự kiện',
+                      }[q.reset]}
                     ] {q.title}:{' '}
                     {summary(q.objectives, q.rewards, config.token_name)}
                   </li>
@@ -1009,6 +1047,13 @@ export default function Events() {
               .map((v) => `v${v.version} (${v.created_by})`)
               .join(', ')}
           </p>
+          {stats.event.config.boss && (
+            <BossStats
+              eventId={stats.event.id}
+              canSettle={can('liveops')}
+              toast={toast}
+            />
+          )}
         </Modal>
       )}
     </Layout>

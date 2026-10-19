@@ -23,6 +23,10 @@ export const RULES: Record<string, string> = {
   MAPS_DISTINCT: 'Chơi bản đồ khác nhau',
   LOGIN_DAY: 'Điểm danh ngày',
   WITH_FRIEND: 'Chơi cùng bạn bè',
+  BOSS_PLAYED: 'Hoàn thành trận Boss',
+  BOSS_WON: 'Đánh bại Boss',
+  BOSS_DAMAGE: 'Sát thương lên Boss',
+  BOSS_SUPPORT: 'Hỗ trợ trong trận Boss',
 };
 
 export const REWARD: Record<Reward['type'], string> = {

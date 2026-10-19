@@ -44,6 +44,10 @@ RULES = (
     "MAPS_DISTINCT",
     "LOGIN_DAY",
     "WITH_FRIEND",
+    "BOSS_PLAYED",
+    "BOSS_WON",
+    "BOSS_DAMAGE",
+    "BOSS_SUPPORT",
 )
 RULE_LABELS = {
     "MATCH_COMPLETED": "Hoàn thành trận",
@@ -52,7 +56,13 @@ RULE_LABELS = {
     "MAPS_DISTINCT": "Chơi bản đồ khác nhau",
     "LOGIN_DAY": "Điểm danh ngày",
     "WITH_FRIEND": "Chơi cùng bạn bè",
+    "BOSS_PLAYED": "Hoàn thành trận Boss",
+    "BOSS_WON": "Đánh bại Boss",
+    "BOSS_DAMAGE": "Gây sát thương lên Boss",
+    "BOSS_SUPPORT": "Hành động hỗ trợ trong trận Boss",
 }
+# Boss raid objectives (docs/BOSS.md) count only valid boss raids, whatever `modes` says.
+BOSS_RULES = ("BOSS_PLAYED", "BOSS_WON", "BOSS_DAMAGE", "BOSS_SUPPORT")
 # Anti-farm for client-reported practice rounds (only counted where allowed).
 PRACTICE_MIN_MS = 20_000
 PRACTICE_PER_DAY = 40
@@ -93,9 +103,18 @@ def week_key(at: datetime) -> str:
 
 class Objective(BaseModel):
     type: Literal[
-        "MATCH_COMPLETED", "MATCH_WON", "BOMB_PLACED", "MAPS_DISTINCT", "LOGIN_DAY", "WITH_FRIEND"
+        "MATCH_COMPLETED",
+        "MATCH_WON",
+        "BOMB_PLACED",
+        "MAPS_DISTINCT",
+        "LOGIN_DAY",
+        "WITH_FRIEND",
+        "BOSS_PLAYED",
+        "BOSS_WON",
+        "BOSS_DAMAGE",
+        "BOSS_SUPPORT",
     ]
-    target: int = Field(ge=1, le=1000)
+    target: int = Field(ge=1, le=1_000_000)
     # Empty = any map. Ids are map ids (park, moon, admin maps), never display names.
     map_ids: list[str] = Field(default_factory=list, max_length=20)
     # online = arena rounds (verified); practice = bot rounds the PC app reports.
@@ -125,8 +144,8 @@ class QuestBody(QuestFields):
 class EventQuest(QuestFields):
     key: str = Field(pattern=r"^[A-Za-z0-9_]{2,32}$")
     chapter: str | None = None
-    # once = one claim for the whole event; daily = resets every day.
-    reset: Literal["once", "daily"] = "once"
+    # once = one claim for the whole event; daily / weekly reset (Vietnam time).
+    reset: Literal["once", "daily", "weekly"] = "once"
 
 
 class Chapter(BaseModel):
@@ -147,6 +166,71 @@ class ShopEntry(BaseModel):
     per_player: int = Field(default=1, ge=1, le=99)
 
 
+BOSS_SKILLS = (
+    "boss_basic_hit",
+    "boss_aoe_mark",
+    "boss_block_lane",
+    "boss_wave_push",
+    "boss_weak_point",
+)
+BOSS_ITEMS = ("throw_bomb", "dart", "blue_shield", "speed_shoes", "freeze_bomb", "push_glove")
+
+
+class BossSession(BaseModel):
+    """A daily play window in Vietnam time, e.g. 19:00-22:00 on chosen weekdays."""
+
+    days_of_week: list[int] = Field(default=[1, 2, 3, 4, 5, 6, 7], min_length=1, max_length=7)
+    local_start: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    local_end: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$|^24:00$")
+
+
+class BossEligibility(BaseModel):
+    """Who earns raid rewards (anti-AFK); spec defaults."""
+
+    min_active_seconds: int = Field(default=45, ge=0, le=900)
+    min_active_fraction: float = Field(default=0.5, ge=0, le=1)
+    min_damage_fraction: float = Field(default=0.01, ge=0, le=1)
+    support_actions: int = Field(default=3, ge=0, le=100)
+    # Fewer accepted inputs than this during the raid = AFK.
+    min_actions: int = Field(default=10, ge=0, le=1000)
+
+
+class BossRules(BaseModel):
+    """Boss raid of an event (docs/BOSS.md). The arena reads it; clients never send it."""
+
+    boss_id: str = Field(default="boss_001", pattern=r"^[a-z0-9_]{2,32}$")
+    asset_pack_id: str = Field(default="boss_001_placeholder", pattern=r"^[a-z0-9_]{2,48}$")
+    display_name: str = Field(default="Boss Sự Kiện", min_length=2, max_length=40)
+    map_id: str = Field(default="harbor", max_length=24)
+    difficulty: Literal["EASY", "NORMAL", "HARD"] = "NORMAL"
+    base_hp: int = Field(default=1000, ge=50, le=1_000_000)
+    hp_per_extra_player: float = Field(default=0.55, ge=0, le=5)
+    phase_thresholds: list[float] = Field(default=[0.7, 0.35], max_length=4)
+    skills: list[Literal[BOSS_SKILLS]] = Field(default=list(BOSS_SKILLS), min_length=1)
+    bomb_damage: int = Field(default=50, ge=1, le=10_000)
+    weak_multiplier: float = Field(default=1.5, ge=1, le=5)
+    min_players: int = Field(default=1, ge=1, le=8)
+    max_players: int = Field(default=8, ge=1, le=8)
+    duration_seconds: int = Field(default=300, ge=30, le=1800)
+    items: list[Literal[BOSS_ITEMS]] = Field(default=list(BOSS_ITEMS))
+    mount: bool = True
+    reward_private_room: bool = False
+    # Empty = playable for the whole event window.
+    sessions: list[BossSession] = Field(default_factory=list, max_length=7)
+    eligibility: BossEligibility = Field(default_factory=BossEligibility)
+    full_reward_limit_per_day: int = Field(default=3, ge=0, le=100)
+    win_rewards: list[Reward] = Field(
+        default_factory=lambda: [
+            Reward(type="gold", amount=150),
+            Reward(type="token", amount=30),
+        ],
+        max_length=5,
+    )
+    lose_rewards: list[Reward] = Field(
+        default_factory=lambda: [Reward(type="gold", amount=20)], max_length=5
+    )
+
+
 class EventConfig(BaseModel):
     token_name: str = Field(default="Vé Sao", max_length=24)
     banner: str = Field(default="", max_length=120)
@@ -155,6 +239,8 @@ class EventConfig(BaseModel):
     chapters: list[Chapter] = Field(default_factory=list, max_length=12)
     quests: list[EventQuest] = Field(default_factory=list, max_length=40)
     shop: list[ShopEntry] = Field(default_factory=list, max_length=20)
+    # Boss raid (event kind "boss"); token_name is then the Boss Badge.
+    boss: BossRules | None = None
 
 
 class QuestDefinition(Base):
@@ -343,6 +429,98 @@ def seed_defaults(db: Session) -> int:
             added += 1
     db.commit()
     return added
+
+
+def template_boss_event() -> dict:
+    """Boss raid event of the Boss Event spec (sample numbers, still to be approved)."""
+    start = datetime.combine(vn_day(now()), datetime.min.time(), tzinfo=VN)
+
+    def quest(key, title, reset, rule, target, rewards):
+        return {
+            "key": key,
+            "title": title,
+            "reset": reset,
+            "objectives": [{"type": rule, "target": target}],
+            "rewards": rewards,
+        }
+
+    def tokens(n):
+        return [{"type": "token", "amount": n}]
+
+    return {
+        "name": "Đại Chiến Boss - Săn Boss Nhận Quà",
+        "kind": "boss",
+        "description": "Cả đội 1-8 người hạ Boss Sự Kiện ở Bến Cảng Bong Bóng.",
+        "start_at": start.astimezone(UTC).isoformat(),
+        "end_at": (start + timedelta(days=7)).astimezone(UTC).isoformat(),
+        "claim_end_at": (start + timedelta(days=10)).astimezone(UTC).isoformat(),
+        "reward_items": [],
+        "config": {
+            "token_name": "Huy Hiệu Boss",
+            "banner": "Một sinh vật bí ẩn làm xáo trộn sức mạnh bóng nước!",
+            "intro": (
+                "Lập đội săn Boss, né các ô cảnh báo và đặt bom trúng Boss để khôi phục "
+                "sự cân bằng của các vùng đất BỤP BỤP!. Tên và hình Boss sẽ cập nhật sau."
+            ),
+            "npc": "Boss Sự Kiện",
+            "chapters": [],
+            "boss": {
+                "sessions": [
+                    {
+                        "days_of_week": [1, 2, 3, 4, 5, 6, 7],
+                        "local_start": "19:00",
+                        "local_end": "22:00",
+                    }
+                ]
+            },
+            "quests": [
+                quest(
+                    "BOSS_DAILY_PLAY_1",
+                    "Hoàn thành 1 trận Boss hợp lệ",
+                    "daily",
+                    "BOSS_PLAYED",
+                    1,
+                    [{"type": "gold", "amount": 100}],
+                ),
+                quest(
+                    "BOSS_DAILY_WIN_1", "Đánh bại Boss 1 lần", "daily", "BOSS_WON", 1, tokens(10)
+                ),
+                quest(
+                    "BOSS_WEEKLY_WIN_5", "Thắng Boss 5 lần", "weekly", "BOSS_WON", 5, tokens(100)
+                ),
+                quest("BOSS_WIN_1", "Mốc 1 trận thắng", "once", "BOSS_WON", 1, tokens(20)),
+                quest("BOSS_WIN_3", "Mốc 3 trận thắng", "once", "BOSS_WON", 3, tokens(30)),
+                quest("BOSS_WIN_5", "Mốc 5 trận thắng", "once", "BOSS_WON", 5, tokens(50)),
+                quest(
+                    "BOSS_EVENT_CLEAR_10",
+                    "Thắng Boss 10 lần trong mùa",
+                    "once",
+                    "BOSS_WON",
+                    10,
+                    [{"type": "item", "item_id": "effect_star", "amount": 1}],
+                ),
+                quest(
+                    "BOSS_EVENT_CLEAR_20",
+                    "Thắng Boss 20 lần trong mùa",
+                    "once",
+                    "BOSS_WON",
+                    20,
+                    [{"type": "item", "item_id": "wings_golden_light", "amount": 1}],
+                ),
+            ],
+            "shop": [
+                {"sku": "boss_dragon", "item_id": "pet_dragon", "cost": 300, "per_player": 1},
+                {"sku": "boss_fire", "item_id": "effect_fire", "cost": 150, "per_player": 1},
+                {
+                    "sku": "boss_shield",
+                    "item_id": "blue_shield",
+                    "cost": 20,
+                    "per_player": 10,
+                    "stock": 10000,
+                },
+            ],
+        },
+    }
 
 
 def template_event() -> dict:
@@ -585,7 +763,10 @@ def validate_event(
         errors += check_objectives(quest.objectives, maps, where)
         errors += check_rewards(db, quest.rewards, where, allow_token=True)
         tokens = sum(r.amount for r in quest.rewards if r.type == "token")
-        max_tokens += tokens * (days if quest.reset == "daily" else 1)
+        repeats = {"daily": days, "weekly": (days + 6) // 7}.get(quest.reset, 1)
+        max_tokens += tokens * repeats
+        if config.boss is None and any(o.type in BOSS_RULES for o in quest.objectives):
+            errors.append(f"{where}: mục tiêu Boss cần sự kiện có cấu hình Boss")
         if sum(r.amount for r in quest.rewards if r.type == "gem") > 500:
             warnings.append(f"{where}: thưởng kim cương lớn, cần người duyệt kinh tế xem lại")
     for chapter in config.chapters:
@@ -602,6 +783,11 @@ def validate_event(
             errors.append(f"Shop {entry.sku}: vật phẩm '{entry.item_id}' đang ẩn")
         elif item.category != "consumable" and entry.per_player > 1:
             errors.append(f"Shop {entry.sku}: vật phẩm sở hữu vĩnh viễn chỉ đổi 1 lần/người")
+    if config.boss is not None:
+        boss_errors, boss_warnings, boss_tokens = validate_boss(db, config.boss, maps, days)
+        errors += boss_errors
+        warnings += boss_warnings
+        max_tokens += boss_tokens
     if config.shop:
         if not max_tokens:
             errors.append("Shop cần Vé, nhưng không nhiệm vụ nào thưởng Vé")
@@ -613,6 +799,50 @@ def validate_event(
     if not config.quests:
         warnings.append("Sự kiện chưa có nhiệm vụ nào")
     return {"ok": not errors, "errors": errors, "warnings": warnings, "max_tokens": max_tokens}
+
+
+def map_seats(db: Session, map_id: str) -> int:
+    """Spawn points of a map: the arena gives every map (built-in or admin) 8."""
+    return 8 if map_id in known_maps(db) else 0
+
+
+def validate_boss(db: Session, boss: BossRules, maps: set[str], days: int):
+    """Publish checks of the spec (section 11): map, seats, phases, skills, rewards."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    if boss.map_id not in maps:
+        errors.append(f"Boss: bản đồ '{boss.map_id}' không tồn tại")
+    elif map_seats(db, boss.map_id) < boss.max_players:
+        errors.append(f"Boss: bản đồ '{boss.map_id}' không đủ {boss.max_players} điểm xuất phát")
+    if not boss.min_players <= boss.max_players <= 8:
+        errors.append("Boss: cần 1 ≤ số người tối thiểu ≤ tối đa ≤ 8")
+    thresholds = boss.phase_thresholds
+    if any(not 0 < t < 1 for t in thresholds) or thresholds != sorted(thresholds, reverse=True):
+        errors.append("Boss: ngưỡng phase phải giảm dần trong khoảng (0, 1), ví dụ 0.70, 0.35")
+    if len(set(thresholds)) != len(thresholds):
+        errors.append("Boss: ngưỡng phase bị trùng")
+    if len(set(boss.skills)) != len(boss.skills):
+        errors.append("Boss: kỹ năng bị trùng")
+    if not {"boss_basic_hit", "boss_aoe_mark"} & set(boss.skills):
+        errors.append("Boss: cần ít nhất một đòn gây sát thương (Basic Hit hoặc AOE)")
+    for session in boss.sessions:
+        if any(d < 1 or d > 7 for d in session.days_of_week):
+            errors.append("Boss: ngày trong tuần là 1 (thứ Hai) đến 7 (Chủ nhật)")
+        if session.local_end <= session.local_start:
+            errors.append(f"Boss: phiên {session.local_start}-{session.local_end} không hợp lệ")
+    errors += check_rewards(db, boss.win_rewards, "Boss thắng", allow_token=True)
+    errors += check_rewards(db, boss.lose_rewards, "Boss thua", allow_token=True)
+    if boss.reward_private_room:
+        warnings.append("Boss: phòng riêng nhận thưởng, cần luật chống cày (anti-abuse)")
+    if sum(r.amount for r in boss.win_rewards if r.type == "gem") > 100:
+        warnings.append("Boss: thưởng kim cương mỗi trận lớn, cần người duyệt kinh tế xem lại")
+    hp8 = round(boss.base_hp * (1 + boss.hp_per_extra_player * 7))
+    bombs = -(-hp8 // boss.bomb_damage)
+    if bombs > boss.duration_seconds:
+        warnings.append(f"Boss 8 người cần {bombs} quả bom trúng trong {boss.duration_seconds}s")
+    per_day = boss.full_reward_limit_per_day
+    tokens = sum(r.amount for r in boss.win_rewards if r.type == "token")
+    return errors, warnings, tokens * per_day * days
 
 
 # ---------------------------------------------------------------- quest engine
@@ -691,14 +921,18 @@ def quests_for(db: Session, at: datetime, events=None) -> list[Quest]:
         config = event_config(event)
         chapters = {c.key: c for c in config.chapters}
         for quest in config.quests:
-            daily = quest.reset == "daily"
+            period, resets = "event", aware(event.end_at)
+            if quest.reset == "daily":
+                period, resets = vn_day(at).isoformat(), min(next_midnight(at), resets)
+            elif quest.reset == "weekly":
+                period, resets = week_key(at), min(next_monday(at), resets)
             found.append(
                 Quest(
                     event_quest_key(event.id, quest.key),
                     "story" if quest.chapter else "event",
                     quest.model_dump(),
-                    vn_day(at).isoformat() if daily else "event",
-                    min(next_midnight(at), aware(event.end_at)) if daily else aware(event.end_at),
+                    period,
+                    resets,
                     event,
                     chapters.get(quest.chapter) if quest.chapter else None,
                 )
@@ -762,7 +996,10 @@ def advance(
     )
     changed = False
     for i, objective in enumerate(quest.objectives):
-        if facts["mode"] not in objective.modes and objective.type != "LOGIN_DAY":
+        boss = objective.type in BOSS_RULES
+        if boss != (facts["mode"] == "boss"):
+            continue
+        if not boss and facts["mode"] not in objective.modes and objective.type != "LOGIN_DAY":
             continue
         if objective.map_ids and facts.get("map_id") not in objective.map_ids:
             continue
@@ -777,8 +1014,12 @@ def advance(
             step = {
                 "MATCH_COMPLETED": 1,
                 "MATCH_WON": 1 if facts["won"] else 0,
-                "BOMB_PLACED": facts["bombs"],
-                "WITH_FRIEND": 1 if facts["with_friend"] else 0,
+                "BOMB_PLACED": facts.get("bombs", 0),
+                "WITH_FRIEND": 1 if facts.get("with_friend") else 0,
+                "BOSS_PLAYED": 1,
+                "BOSS_WON": 1 if facts["won"] else 0,
+                "BOSS_DAMAGE": facts.get("damage", 0),
+                "BOSS_SUPPORT": facts.get("support", 0),
             }.get(kind, 0)
             if kind == "MAPS_DISTINCT" and facts.get("map_id"):
                 if facts["map_id"] not in entry["seen"]:
@@ -1350,8 +1591,8 @@ def admin_validate_event(body: EventCheck, _: Reader, db: Db):
 
 
 @router.get("/admin/v1/events/template")
-def admin_event_template(_: Reader):
-    return template_event()
+def admin_event_template(_: Reader, kind: Literal["story", "boss"] = "story"):
+    return template_boss_event() if kind == "boss" else template_event()
 
 
 @router.get("/admin/v1/events/{event_id}/analytics")

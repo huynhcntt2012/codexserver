@@ -92,6 +92,44 @@ bên cạnh, không vẽ thêm. Ảnh có vẻ do công cụ tạo ảnh làm ch
 nguồn gốc và quyền chưa được xác minh độc lập, không có tên/logo Boom Online.
 Hash và ghi chú tại `apps/practice/licenses/WING_PACK_SOURCE.txt`; không gán lại MIT.
 
+## Bộ sprite thú cưng do người dùng cung cấp
+
+Skin thú cưng (`apps/practice/assets/cosmetics/pets`: thỏ, rồng, cừu, tuần lộc,
+lạc đà bông, mèo, corgi, khủng long, rùa, cáo) được cắt từ 10 sprite sheet trong
+`asset.7z` chủ dự án gửi ngày 2026-10-19, bằng `apps/practice/tools/slice_pet_sheets.gd`:
+chỉ đổi kênh alpha, xóa đốm/mảnh khung bên cạnh và thu nhỏ, không vẽ thêm. Ảnh có vẻ
+do công cụ tạo ảnh làm; nguồn gốc và quyền chưa được xác minh độc lập, không có
+tên/logo Boom Online. Hash và ghi chú tại `apps/practice/licenses/PET_SHEETS_SOURCE.txt`;
+không gán lại MIT.
+
+## Bộ khối bản đồ do người dùng cung cấp
+
+28 khối tường/thùng (`apps/practice/assets/obstacles/<tên>/00.png`, ví dụ `brick_wall`,
+`round_tree`, `tnt_barrel`, `treasure_chest`) được cắt từ ảnh 28 khối chủ dự án gửi ngày
+2026-10-19 (`apps/practice/tools/source/map_blocks.webp`) bằng
+`apps/practice/tools/slice_map_blocks.gd`: chỉ xóa nền trắng/bóng, cắt và thu nhỏ, không vẽ
+thêm. Ảnh có vẻ do công cụ tạo ảnh làm; nguồn gốc và quyền chưa được xác minh độc lập, không
+có tên/logo Boom Online. Hash tại `apps/practice/licenses/MAP_BLOCKS_SOURCE.txt`; không gán
+lại MIT.
+
+## Bộ sprite nhân vật cưỡi thú do người dùng cung cấp
+
+Hình nhân vật ngồi trên pet (`apps/practice/assets/riders/<nhân vật>/ride_*`) được cắt từ
+ảnh "Rider Character Sheet" chủ dự án gửi ngày 2026-10-19
+(`apps/practice/tools/source/rider_sheet.webp`) bằng `apps/practice/tools/slice_rider_sheet.gd`:
+chỉ xóa nền ô màu, tách khung và thu nhỏ, không vẽ thêm. Ảnh có vẻ do công cụ tạo ảnh làm cho
+5 nhân vật của dự án; nguồn gốc và quyền chưa được xác minh độc lập, không có tên/logo Boom
+Online. Hash tại `apps/practice/licenses/RIDER_SHEET_SOURCE.txt`; không gán lại MIT.
+
+## Hình Boss Vua Slime do người dùng cung cấp
+
+Hình Boss Đại Chiến Boss (`apps/practice/assets/boss`: Vua Slime, Mini Slime Bomb, Sticky
+Slime) cắt từ ảnh khung hình slime chủ dự án gửi ngày 2026-10-19
+(`apps/practice/tools/source/slime_minion_frames.webp`) bằng
+`apps/practice/tools/slice_slimes.gd`: chỉ tách khung và thu nhỏ, không vẽ thêm. Ảnh có vẻ do
+công cụ tạo ảnh làm; nguồn gốc và quyền chưa được xác minh độc lập, không có tên/logo Boom
+Online. Hash tại `apps/practice/licenses/SLIME_KING_SOURCE.txt`; không gán lại MIT.
+
 ## Bộ giao diện PC "Bubble Isles" do người dùng cung cấp
 
 Màn Tìm trận, Phòng, HUD, Kết quả, Cửa hàng và Trang bị của app PC

@@ -111,13 +111,13 @@ export interface Flame {
   y: number;
   expiresAt: number;
 }
-const directions = {
+export const directions = {
   up: [0, -1],
   down: [0, 1],
   left: [-1, 0],
   right: [1, 0],
 } as const;
-const key = (x: number, y: number) => `${x},${y}`;
+export const key = (x: number, y: number) => `${x},${y}`;
 
 function newGear(): Gear {
   return {
@@ -202,6 +202,9 @@ export class Arena {
   /** Called after a round becomes finished; must not block the tick. */
   onRoundEnd: ((result: RoundResult) => void) | null = null;
   private flameOwners = new Map<string, string>();
+  /** Players needed before an all-ready lobby counts down (boss raids allow 1). */
+  protected minPlayers = 2;
+  protected roundMs = ROUND_MS;
   private nextBomb = 1;
   private inputs = new Map<string, Action>();
 
@@ -209,7 +212,7 @@ export class Arena {
     return this.map?.spawns ?? SPAWNS;
   }
 
-  private build(): Tile[][] {
+  protected build(): Tile[][] {
     return this.map ? createLayoutMap(this.map) : createMap();
   }
 
@@ -264,7 +267,8 @@ export class Arena {
     if (value === 'ready' && this.phase === 'waiting') {
       p.ready = true;
       if (
-        this.players.size >= 2 &&
+        this.players.size >= this.minPlayers &&
+        this.canStart() &&
         [...this.players.values()].every((player) => player.ready)
       ) {
         this.phase = 'countdown';
@@ -296,14 +300,17 @@ export class Arena {
     this.now += delta;
     if (this.phase === 'countdown' && this.now >= this.deadline) {
       this.phase = 'playing';
-      this.deadline = this.now + ROUND_MS;
+      this.deadline = this.now + this.roundMs;
       this.startedAt = this.now;
+      // Players with a pet start the round riding it.
+      for (const gear of this.gear.values()) gear.mounted = !!gear.pet;
       this.stats = new Map(
         [...this.players.keys()].map((id) => [
           id,
           { bombs: 0, kills: 0, diedAt: null },
         ]),
       );
+      this.onStart();
     }
     if (this.phase === 'finished' && this.now >= this.deadline) this.reset();
     if (this.phase !== 'playing') {
@@ -358,11 +365,33 @@ export class Arena {
         }
       }
     }
+    this.step();
     this.killInFlames();
-    this.resolveWinner();
-    if (this.phase === 'playing' && this.now >= this.deadline)
-      this.finish(null);
+    if (this.phase === 'playing') this.resolveWinner();
+    if (this.phase === 'playing' && this.now >= this.deadline) this.timeUp();
   }
+
+  // Hooks for other modes (boss.ts); the PvP rules leave them empty.
+  /** Whether an all-ready lobby may start a round now. */
+  protected canStart(): boolean {
+    return true;
+  }
+  /** Called once when a round starts playing. */
+  protected onStart(): void {}
+  /** Called every playing tick after movement, before knockouts are resolved. */
+  protected step(): void {}
+  /** The round clock ran out: a draw in PvP. */
+  protected timeUp(): void {
+    this.finish(null);
+  }
+  /** A blast reached (x, y); true stops the ray there, like a wall. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected onFlame(_x: number, _y: number, _bomb: Bomb): boolean {
+    return false;
+  }
+  /** The server accepted an item use (support actions in boss raids). */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected onItemAccepted(_id: string, _item: ItemId): void {}
 
   isWalkable(x: number, y: number): boolean {
     return (
@@ -389,11 +418,12 @@ export class Arena {
     });
   }
 
-  private explode(id: number): void {
+  protected explode(id: number): void {
     const bomb = this.bombs.get(id);
     if (!bomb) return;
     this.bombs.delete(id); // Remove before chaining to prevent cycles.
     this.ignite(bomb.x, bomb.y, bomb.owner);
+    this.onFlame(bomb.x, bomb.y, bomb);
     for (const [dx, dy] of Object.values(directions)) {
       for (let distance = 1; distance <= 2; distance++) {
         const x = bomb.x + dx * distance,
@@ -401,6 +431,7 @@ export class Arena {
         const tile = this.grid[y]?.[x];
         if (tile === undefined || tile === Tile.Wall) break;
         this.ignite(x, y, bomb.owner);
+        if (this.onFlame(x, y, bomb)) break;
         if (tile === Tile.Crate) {
           this.grid[y]![x] = Tile.Floor;
           break;
@@ -420,7 +451,7 @@ export class Arena {
     this.flames.set(key(x, y), { x, y, expiresAt: this.now + FLAME_MS });
     this.flameOwners.set(key(x, y), owner);
   }
-  private killInFlames(): void {
+  protected killInFlames(): void {
     for (const p of this.players.values()) {
       if (!p.alive || !this.flames.has(key(p.x, p.y))) continue;
       if (this.guarded(p)) continue;
@@ -433,11 +464,11 @@ export class Arena {
       if (credit) credit.kills++;
     }
   }
-  private resolveWinner(): void {
+  protected resolveWinner(): void {
     const alive = [...this.players.values()].filter((p) => p.alive);
     if (alive.length <= 1) this.finish(alive[0]?.id ?? null);
   }
-  private finish(winner: string | null): void {
+  protected finish(winner: string | null): void {
     this.phase = 'finished';
     this.winner = winner;
     this.deadline = this.now + 8000;
@@ -476,7 +507,7 @@ export class Arena {
       })),
     };
   }
-  private reset(): void {
+  protected reset(): void {
     this.grid = this.build();
     this.bombs.clear();
     this.flames.clear();
@@ -526,7 +557,7 @@ export class Arena {
   }
 
   /** A shield or the mount absorbs one hit, then a short grace period. */
-  private guarded(p: Player): boolean {
+  protected guarded(p: Player): boolean {
     const gear = this.gear.get(p.id);
     if (!gear) return false;
     if (gear.graceUntil > this.now) return true;
@@ -683,6 +714,7 @@ export class Arena {
       to,
       at: this.now,
     });
+    this.onItemAccepted(p.id, item);
     this.onItemUsed?.(p.id, item);
   }
 

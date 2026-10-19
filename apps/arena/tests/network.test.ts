@@ -589,7 +589,14 @@ test(
         res.end(
           JSON.stringify({
             items: who === 'ana' ? { throw_bomb: 2 } : {},
-            pet: who === 'ana' ? 'pet_bunny' : null,
+            pet:
+              who === 'bo' ? 'pet_bunny' : who === 'ana' ? 'pet_bunny' : null,
+            pets:
+              who === 'bo'
+                ? ['pet_bunny', 'pet_fox']
+                : who === 'ana'
+                  ? ['pet_bunny']
+                  : [],
           }),
         );
         return;
@@ -640,16 +647,25 @@ test(
         (p) => p.id === c.id,
       )!;
     try {
+      // A pet the player does not own is ignored; an owned one is worn.
       const { client: ana, seat } = await join('ana', 'create/arena2', {
         map: 'park',
+        pet: 'pet_dragon',
       });
-      const { client: bo } = await join('bo', `joinById/${seat.roomId}`);
+      const { client: bo } = await join('bo', `joinById/${seat.roomId}`, {
+        pet: 'pet_fox',
+      });
       await waitUntil(
         () => me(ana)?.items?.throw_bomb === 2 && me(ana).pet === 'pet_bunny',
       );
+      await waitUntil(() => me(bo)?.pet === 'pet_fox');
       ana.send('ready');
       bo.send('ready');
       await waitUntil(() => ana.state.snapshot?.phase === 'playing', 6000);
+      // Both own a pet, so both start the round riding it.
+      await waitUntil(
+        () => me(ana).mounted === true && me(bo).mounted === true,
+      );
       ana.send('right');
       await waitUntil(() => me(ana).x === 2);
       ana.send('use_dart'); // none in stock: refused, nothing reported
@@ -664,12 +680,195 @@ test(
       );
       assert.ok(ana.state.snapshot!.bombs.length >= 1);
       ana.send('mount');
-      await waitUntil(() => me(ana).mounted === true);
+      await waitUntil(() => me(ana).mounted === false);
       bo.send('use_throw_bomb'); // bo has no items
       await delay(300);
       assert.equal(reported.filter((e) => e.type === 'use').length, 1);
     } finally {
       for (const c of clients) c.ws.close();
+      await delay(100);
+      await server.gracefullyShutdown(false);
+      api.close();
+      delete process.env.API_URL;
+    }
+  },
+);
+
+test(
+  'boss raid over the wire: event rules from the API, solo WIN reported once, reconnect',
+  { timeout: 30_000 },
+  async () => {
+    process.env.JWT_SECRET = secret;
+    const raids: Record<string, unknown>[] = [];
+    let open = true;
+    const api = createHttpServer((req, res) => {
+      res.setHeader('Content-Type', 'application/json');
+      if (req.url?.startsWith('/internal/v1/boss/events/')) {
+        const id = decodeURIComponent(req.url.split('/').pop()!);
+        if (id !== 'evt_boss') {
+          res.statusCode = 404;
+          res.end('{}');
+          return;
+        }
+        // One bomb (50) defeats this test boss.
+        res.end(
+          JSON.stringify({
+            open,
+            rules: {
+              base_hp: 50,
+              map_id: 'harbor',
+              skills: [],
+              max_players: 4,
+            },
+          }),
+        );
+        return;
+      }
+      if (req.url?.startsWith('/internal/v1/arena/loadout/')) {
+        res.end(JSON.stringify({ items: {}, pet: null, pets: [] }));
+        return;
+      }
+      let raw = '';
+      req.on('data', (chunk) => (raw += chunk));
+      req.on('end', () => {
+        try {
+          const event = JSON.parse(raw);
+          if (event.type === 'boss_raid') raids.push(event);
+        } catch {
+          /* ignore */
+        }
+        res.statusCode = 204;
+        res.end();
+      });
+    });
+    await new Promise<void>((done) => api.listen(0, '127.0.0.1', done));
+    const apiAddress = api.address();
+    assert.ok(apiAddress && typeof apiAddress !== 'string');
+    process.env.API_URL = `http://127.0.0.1:${apiAddress.port}`;
+    const { server, httpServer, listen } = createArenaServer();
+    await listen(0, '127.0.0.1');
+    const address = httpServer.address();
+    assert.ok(address && typeof address !== 'string');
+    const base = `http://127.0.0.1:${address.port}`;
+    const sockets: WebSocket[] = [];
+    const seat = async (id: string, route: string, extra = {}) => {
+      const response = await fetch(`${base}/matchmake/${route}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: await token(id), ...extra }),
+      });
+      return { status: response.status, body: (await response.json()) as Seat };
+    };
+    try {
+      // Unknown or paused events open no room.
+      assert.equal(
+        (await seat('ana', 'joinOrCreate/boss', { event: 'nope' })).status >=
+          400,
+        true,
+      );
+      open = false;
+      assert.ok(
+        (await seat('ana', 'joinOrCreate/boss', { event: 'evt_boss' }))
+          .status >= 400,
+      );
+      open = true;
+      const { body } = await seat('ana', 'joinOrCreate/boss', {
+        event: 'evt_boss',
+      });
+      // Read the reconnection token from JOIN_ROOM ([10, len, token...]).
+      let reconnect = '';
+      const connect = (query: string) => {
+        const ws = new WebSocket(
+          `${base.replace('http', 'ws')}/${body.processId}/${body.roomId}?${query}`,
+        );
+        sockets.push(ws);
+        type BossSnap = {
+          mode: string;
+          map: string;
+          phase: string;
+          players: unknown[];
+          raid: { maxPlayers: number; result: string | null };
+          boss: { maxHp: number };
+        };
+        const state: { snapshot?: BossSnap; joined: boolean } = {
+          joined: false,
+        };
+        ws.on('message', (raw) => {
+          const bytes = Buffer.from(raw as Buffer);
+          if (bytes[0] === 10) {
+            reconnect = bytes.subarray(2, 2 + bytes[1]!).toString();
+            ws.send(Buffer.from([10]));
+            state.joined = true;
+          }
+          if (bytes[0] === 17 && bytes[1] === 1)
+            state.snapshot = JSON.parse(bytes.subarray(2).toString());
+        });
+        const send = (action: string) =>
+          ws.send(
+            Buffer.concat([
+              Buffer.from([13, 0, 0xa0 + action.length]),
+              Buffer.from(action),
+            ]),
+          );
+        return { ws, state, send };
+      };
+      let ana = connect(`sessionId=${body.sessionId}`);
+      await waitUntil(() => ana.state.joined && !!ana.state.snapshot);
+      assert.equal(ana.state.snapshot!.mode, 'boss');
+      assert.equal(ana.state.snapshot!.map, 'harbor');
+      assert.equal(ana.state.snapshot!.raid.maxPlayers, 4);
+      ana.send('ready'); // solo is allowed
+      await waitUntil(() => ana.state.snapshot?.phase === 'playing', 6000);
+      assert.equal(ana.state.snapshot!.boss.maxHp, 50);
+      // Drop the connection mid-raid and come back with the token.
+      ana.ws.terminate();
+      await delay(300);
+      ana = connect(
+        `sessionId=${body.sessionId}&reconnectionToken=${encodeURIComponent(reconnect)}`,
+      );
+      await waitUntil(
+        () => ana.state.joined && ana.state.snapshot?.phase === 'playing',
+      );
+      const me = () =>
+        (
+          ana.state.snapshot!.players as { id: string; x: number; y: number }[]
+        ).find((p) => p.id === body.sessionId)!;
+      assert.ok(me(), 'still seated after reconnecting');
+      // Spawn (1,1): down to row 5, right to (6,5) next to the boss, bomb, run.
+      const go = async (dir: string, steps: number) => {
+        for (let i = 0; i < steps; i++) {
+          const before = `${me().x},${me().y}`;
+          ana.send(dir);
+          await waitUntil(() => `${me().x},${me().y}` !== before, 2000);
+        }
+      };
+      await go('down', 4);
+      await go('right', 5);
+      assert.deepEqual([me().x, me().y], [6, 5]);
+      ana.send('bomb');
+      await delay(100);
+      await go('left', 3);
+      await waitUntil(() => ana.state.snapshot?.phase === 'finished', 5000);
+      assert.equal(ana.state.snapshot!.raid.result, 'WIN');
+      await waitUntil(() => raids.length === 1, 3000);
+      const raid = raids[0] as {
+        event_id: string;
+        result: string;
+        match_id: string;
+        boss_hp_max: number;
+        raiders: { account_id: string; damage: number; actions: number }[];
+      };
+      assert.equal(raid.event_id, 'evt_boss');
+      assert.equal(raid.result, 'WIN');
+      assert.equal(raid.boss_hp_max, 50);
+      assert.ok(raid.match_id.endsWith('.1'));
+      assert.equal(raid.raiders[0]!.account_id, 'ana');
+      assert.equal(raid.raiders[0]!.damage, 50);
+      assert.ok(raid.raiders[0]!.actions >= 10);
+      await delay(300);
+      assert.equal(raids.length, 1, 'reported once');
+    } finally {
+      for (const ws of sockets) ws.close();
       await delay(100);
       await server.gracefullyShutdown(false);
       api.close();

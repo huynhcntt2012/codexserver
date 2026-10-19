@@ -3,8 +3,8 @@
   "name": "BẾN CẢNG BONG BÓNG",
   "subtitle": "Trung bình • Bến cảng biển",
   "theme": "harbor",
-  "crate": "barrel",
-  "wall": "stone_wall",
+  "crate": "wood_box",
+  "wall": "brick_wall",
   "bomb": "water_blue",
   "fx": "water_splash",
   "bot_step": 0.34,
@@ -46,5 +46,14 @@
     ]
   ],
   "pack_id": "006",
-  "story": "Những con thuyền bong bóng bị mắc kẹt vì dòng thủy triều kỳ lạ. Thuyền trưởng Bọt gửi một thông điệp: mảnh pha lê trôi về phía tuyến tàu cầu vồng."
+  "story": "Những con thuyền bong bóng bị mắc kẹt vì dòng thủy triều kỳ lạ. Thuyền trưởng Bọt gửi một thông điệp: mảnh pha lê trôi về phía tuyến tàu cầu vồng.",
+  "walls": [
+    "brick_wall",
+    "stone_block"
+  ],
+  "crates": [
+    "wood_box",
+    "water_barrel",
+    "rusty_barrel"
+  ]
 }

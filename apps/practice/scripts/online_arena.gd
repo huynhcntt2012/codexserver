@@ -8,6 +8,8 @@ extends Node
 signal snapshot_received(snapshot: Dictionary)
 ## Emitted once when the room connection ends (left, kicked, or network lost).
 signal closed(reason: String)
+## Boss raids: the connection dropped mid-raid and the adapter is getting the seat back.
+signal reconnecting(active: bool)
 
 const MAPS := ["park", "frost", "coast"]
 const ACTIONS := [
@@ -15,6 +17,8 @@ const ACTIONS := [
 	"use_throw_bomb", "use_dart", "use_blue_shield", "use_speed_shoes", "use_freeze_bomb", "use_push_glove",
 ]
 const CONNECT_MS := 12000
+## The arena keeps a dropped raider's seat for 30 s (BossRoom.RECONNECT_SECONDS).
+const RECONNECT_MS := 25000
 
 var room_id := ""
 var session_id := ""
@@ -27,6 +31,11 @@ var socket := WebSocketPeer.new()
 var token_override := ""
 var _opening := false
 var _deadline := 0
+var _ws_base := ""
+var _process_id := ""
+## From JOIN_ROOM: lets this client take its seat back after a drop.
+var _reconnect_token := ""
+var _rejoining := false
 
 ## Arena base URL. SUNI_ARENA_URL wins; otherwise the API URL's sibling: the
 ## public host ("https://api.x" -> "https://arena.x"), the web proxy
@@ -86,6 +95,15 @@ func join_room(target: String, hero: String) -> bool:
 
 ## Reserves a seat and opens the WebSocket; true once the server sent JOIN_ROOM
 ## and the first snapshot. On failure `last_error` says why.
+## Boss raid rooms (docs/BOSS.md). quick = team up with a public room of the
+## event (or open one); otherwise a new room, private = invite only (no economy
+## rewards unless the event allows them). The server reads the rules itself.
+func boss_room(event_id: String, hero: String, quick := true, private := false) -> bool:
+	var options := {"event": event_id, "hero": hero}
+	if private:
+		options["private"] = true
+	return await _join(("joinOrCreate/boss" if quick and not private else "create/boss"), options)
+
 func _join(route: String, options: Dictionary) -> bool:
 	if busy or connected:
 		last_error = "Đang ở trong một phòng khác."
@@ -99,6 +117,10 @@ func _join(route: String, options: Dictionary) -> bool:
 	snapshot = {}
 	var body := options.duplicate()
 	body["token"] = token
+	# The equipped pet skin; the arena shows it only if this account owns it.
+	var pet := UIState.round_pet()
+	if pet != "":
+		body["pet"] = pet
 	var base := arena_url()
 	var reply := await _request(base + "/matchmake/" + route, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify(body))
 	var seat: Variant = reply.data
@@ -108,8 +130,10 @@ func _join(route: String, options: Dictionary) -> bool:
 		return false
 	room_id = str(seat.roomId)
 	session_id = str(seat.sessionId)
-	var ws_url := base.replace("https://", "wss://").replace("http://", "ws://")
-	ws_url += "/%s/%s?sessionId=%s" % [str(seat.processId).uri_encode(), room_id.uri_encode(), session_id.uri_encode()]
+	_process_id = str(seat.processId)
+	_ws_base = base.replace("https://", "wss://").replace("http://", "ws://")
+	_reconnect_token = ""
+	var ws_url := _ws_url()
 	socket = WebSocketPeer.new()
 	socket.inbound_buffer_size = 1024 * 1024
 	if socket.connect_to_url(ws_url) != OK:
@@ -122,6 +146,40 @@ func _join(route: String, options: Dictionary) -> bool:
 		await get_tree().process_frame
 	busy = false
 	return connected and not snapshot.is_empty()
+
+func _ws_url() -> String:
+	return _ws_base + "/%s/%s?sessionId=%s" % [_process_id.uri_encode(), room_id.uri_encode(), session_id.uri_encode()]
+
+## A drop during a boss raid is retried with the reconnection token.
+func _resumable() -> bool:
+	return _reconnect_token != "" and str(snapshot.get("mode", "")) == "boss" and str(snapshot.get("phase", "")) == "playing"
+
+func _rejoin() -> void:
+	_rejoining = true
+	reconnecting.emit(true)
+	var room := room_id
+	var until := Time.get_ticks_msec() + RECONNECT_MS
+	while Time.get_ticks_msec() < until and _rejoining:
+		room_id = room
+		socket = WebSocketPeer.new()
+		socket.inbound_buffer_size = 1024 * 1024
+		if socket.connect_to_url(_ws_url() + "&reconnectionToken=" + _reconnect_token.uri_encode()) == OK:
+			last_error = ""
+			_opening = true
+			_deadline = Time.get_ticks_msec() + 5000
+			while _opening:
+				await get_tree().process_frame
+			if connected:
+				_rejoining = false
+				reconnecting.emit(false)
+				return
+		await get_tree().create_timer(1.5).timeout
+	var gave_up := _rejoining
+	_rejoining = false
+	reconnecting.emit(false)
+	_reset()
+	if gave_up:
+		closed.emit("Mất kết nối với phòng.")
 
 func _token() -> String:
 	return token_override if token_override != "" else AuthSession.access_token()
@@ -149,7 +207,8 @@ func send_action(action: String) -> void:
 	socket.send(packet)
 
 func leave() -> void:
-	var was_in_room := connected or _opening
+	var was_in_room := connected or _opening or _rejoining
+	_rejoining = false
 	if socket.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		socket.send(PackedByteArray([12]))
 	socket.close()
@@ -185,6 +244,10 @@ func _process(_delta: float) -> void:
 		var was_connected := connected
 		if _opening and last_error.is_empty():
 			last_error = "Máy chủ từ chối vào phòng."
+		if was_connected and _resumable():
+			connected = false
+			_rejoin()
+			return
 		_reset()
 		if was_connected:
 			closed.emit("Mất kết nối với phòng.")
@@ -193,7 +256,9 @@ func _handle(packet: PackedByteArray) -> void:
 	if packet.is_empty():
 		return
 	match packet[0]:
-		10:  # JOIN_ROOM: ack; the server uses the 'none' serializer.
+		10:  # JOIN_ROOM [10, len, reconnection token, ...]: ack ('none' serializer).
+			if packet.size() > 1 and packet.size() >= 2 + packet[1]:
+				_reconnect_token = packet.slice(2, 2 + packet[1]).get_string_from_utf8()
 			socket.send(PackedByteArray([10]))
 			connected = true
 		17:  # ROOM_DATA_BYTES, type 1, UTF-8 JSON snapshot (version 2 only).

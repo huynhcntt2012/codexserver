@@ -86,6 +86,7 @@ export const EVENT_KIND: Record<string, string> = {
   custom: 'Tùy chỉnh',
   story: 'Cốt truyện nhiều chương',
   challenge: 'Thử thách có thời hạn',
+  boss: 'Đại Chiến Boss',
 };
 
 export const ROLE: Record<string, string> = {

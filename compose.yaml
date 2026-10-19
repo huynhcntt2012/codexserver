@@ -41,6 +41,8 @@ services:
       - ./infra/postgres/010_battle_items.sql:/docker-entrypoint-initdb.d/010_battle_items.sql:ro
       - ./infra/postgres/011_website.sql:/docker-entrypoint-initdb.d/011_website.sql:ro
       - ./infra/postgres/012_wings.sql:/docker-entrypoint-initdb.d/012_wings.sql:ro
+      - ./infra/postgres/013_pets.sql:/docker-entrypoint-initdb.d/013_pets.sql:ro
+      - ./infra/postgres/014_boss.sql:/docker-entrypoint-initdb.d/014_boss.sql:ro
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U suni -d suni']
       interval: 5s

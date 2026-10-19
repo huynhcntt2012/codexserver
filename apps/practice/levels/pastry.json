@@ -3,8 +3,8 @@
   "name": "TIỆM BÁNH MÂY",
   "subtitle": "Dễ • Xứ sở bánh ngọt",
   "theme": "pastry",
-  "crate": "wood_crate",
-  "wall": "stone_wall",
+  "crate": "treasure_chest",
+  "wall": "brick_wall",
   "bomb": "pink",
   "fx": "heart",
   "bot_step": 0.39,
@@ -46,5 +46,14 @@
     ]
   ],
   "pack_id": "004",
-  "story": "Chiếc lò bánh của cô Mây bỗng nguội lạnh, để lại cả thị trấn không còn mùi bánh mới. Tìm lại Tia Lửa Hồng bị giấu sau những khay bánh biết đi."
+  "story": "Chiếc lò bánh của cô Mây bỗng nguội lạnh, để lại cả thị trấn không còn mùi bánh mới. Tìm lại Tia Lửa Hồng bị giấu sau những khay bánh biết đi.",
+  "walls": [
+    "brick_wall",
+    "round_tree"
+  ],
+  "crates": [
+    "treasure_chest",
+    "mushroom",
+    "wood_box"
+  ]
 }
