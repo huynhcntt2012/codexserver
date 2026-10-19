@@ -11,5 +11,5 @@ func bind_slot(slot: String, label_text: String) -> void:
 		$Padding/Body/Art.texture = null
 		$Padding/Body/Name.tooltip_text = "Ô trống"
 	else:
-		$Padding/Body/Art.texture = load(str(item.get("icon", "")))
+		$Padding/Body/Art.texture = CatalogSync.texture(str(item.get("icon", "")))
 		$Padding/Body/Name.tooltip_text = str(item.get("name", ""))

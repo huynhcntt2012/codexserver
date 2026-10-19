@@ -22,7 +22,7 @@ func bind_item(item: Dictionary) -> void:
 	rarity.add_theme_color_override("font_color", UISkin.rarity_color(rarity_id))
 	title.text = str(item.get("name", ""))
 	title.tooltip_text = str(item.get("description", ""))
-	art.texture = load(str(item.get("icon", "")))
+	art.texture = CatalogSync.texture(str(item.get("icon", "")))
 	refresh()
 
 func refresh() -> void:

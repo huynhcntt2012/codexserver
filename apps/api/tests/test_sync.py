@@ -366,3 +366,28 @@ def test_player_renames_display_name(client):
         )
     login = {"username": "rename_me", "password": "player-password-1"}
     assert client.post("/v1/login", json=login).json()["name"] == "Bụp Siêu Cấp"
+
+
+def test_arena_room_survives_a_concurrent_insert(client):
+    from sqlalchemy.orm import Session
+
+    from app import matches
+
+    event = matches.ArenaEvent(type="room", room_id="race1", process_id="p1")
+    engine = next(main.app.dependency_overrides[main.db_session]()).get_bind()
+    with Session(engine) as first:
+        matches.arena_room(first, event)
+        first.commit()
+    with Session(engine) as second:
+        real_get = second.get
+        calls = []
+
+        def stale_get(model, key):
+            calls.append(key)
+            # The first lookup misses, as if another event had not committed yet.
+            return None if len(calls) == 1 else real_get(model, key)
+
+        second.get = stale_get
+        room = matches.arena_room(second, event)
+        second.commit()
+        assert room.id == "arena:p1:race1" and len(calls) == 2

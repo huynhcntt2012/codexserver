@@ -87,7 +87,7 @@ func apply(items: Array) -> void:
 				item[key] = entry[key]
 		item["shop_enabled"] = true
 		var bundled := "res://assets/" + str(entry.get("icon", ""))
-		if not item.has("icon") or not ResourceLoader.exists(str(item.get("icon", ""))):
+		if not item.has("icon") or not has_icon(str(item.get("icon", ""))):
 			item["icon"] = bundled if ResourceLoader.exists(bundled) else ""
 		if str(entry.get("icon_sha256", "")) != "":
 			var cached := icon_path(entry)
@@ -143,9 +143,15 @@ func download(job: Dictionary) -> void:
 	icon_ready.emit(str(job.id))
 	UIState.inventory_changed.emit()
 
+## Cached user:// icons are raw PNGs, not imported resources.
+static func has_icon(path: String) -> bool:
+	return FileAccess.file_exists(path) if path.begins_with("user://") else ResourceLoader.exists(path)
+
 ## Texture for a res:// or cached user:// icon; user files are decoded once.
 func texture(path: String) -> Texture2D:
-	if path.begins_with("res://"):
+	if path == "":
+		return null
+	if not path.begins_with("user://"):
 		return load(path) if ResourceLoader.exists(path) else null
 	if textures.has(path):
 		return textures[path]

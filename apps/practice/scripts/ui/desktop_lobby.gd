@@ -414,8 +414,7 @@ func icon_button(icon: String, action: Callable, side := 58.0, fill := Color("3a
 
 func picture(path: String, side: Vector2) -> TextureRect:
 	var node := TextureRect.new()
-	if ResourceLoader.exists(path):
-		node.texture = load(path)
+	node.texture = CatalogSync.texture(path)
 	node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	node.custom_minimum_size = side

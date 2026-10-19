@@ -41,7 +41,7 @@ func _create_tabs() -> void:
 		var btn = Button.new()
 		btn.name = "Tab_%s" % tab_id
 		btn.text = label
-		btn.icon = load(UIState.get_item(_tab_icon_item(tab_id)).get("icon", "res://assets/items/mystery.png"))
+		btn.icon = CatalogSync.texture(str(UIState.get_item(_tab_icon_item(tab_id)).get("icon", "res://assets/items/mystery.png")))
 		btn.expand_icon = true
 		btn.custom_minimum_size = Vector2(91, 47)
 		row.add_child(btn)

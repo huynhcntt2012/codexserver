@@ -220,7 +220,7 @@ func _mark(holder: Node2D, mark_name: String, path: String, shown: bool, offset:
 			mark.queue_free()
 		return
 	if mark == null:
-		var texture: Texture2D = load(path) if ResourceLoader.exists(path) else null
+		var texture := CatalogSync.texture(path)
 		if texture == null:
 			return
 		mark = Sprite2D.new()

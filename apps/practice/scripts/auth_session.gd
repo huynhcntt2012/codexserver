@@ -15,6 +15,10 @@ func _ready() -> void:
 	api_url = config.get_value("network", "api_url", api_url)
 	if not OS.get_environment("SUNI_API_URL").is_empty():
 		api_url = OS.get_environment("SUNI_API_URL")
+	# The web build's CSP only allows same-origin requests: use the site's /api proxy.
+	if OS.has_feature("web"):
+		var location := JavaScriptBridge.get_interface("location")
+		api_url = str(location.origin) + "/api"
 	_http.timeout = 15.0
 	_http.body_size_limit = 65536
 	_http.max_redirects = 0

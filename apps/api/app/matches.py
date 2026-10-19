@@ -243,18 +243,24 @@ def arena_room(db: Session, event: ArenaEvent) -> GameRoom:
     key = f"arena:{event.process_id}:{event.room_id}"[:80]
     room = db.get(GameRoom, key)
     if room is None:
-        room = GameRoom(
-            id=key,
-            source="arena",
-            room_id=event.room_id,
-            status="waiting",
-            map_name=event.map_name,
-            map_id=event.map_id,
-            max_players=event.max_players,
-            created_at=now(),
-            updated_at=now(),
-        )
-        db.add(room)
+        try:
+            with db.begin_nested():
+                db.add(
+                    GameRoom(
+                        id=key,
+                        source="arena",
+                        room_id=event.room_id,
+                        status="waiting",
+                        map_name=event.map_name,
+                        map_id=event.map_id,
+                        max_players=event.max_players,
+                        created_at=now(),
+                        updated_at=now(),
+                    )
+                )
+        except IntegrityError:
+            pass  # a concurrent event for the same room inserted it first
+        room = db.get(GameRoom, key)
     return room
 
 
