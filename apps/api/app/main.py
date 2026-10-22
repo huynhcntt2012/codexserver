@@ -263,9 +263,65 @@ def change_password(body: PasswordChange, db: Db):
     return Response(status_code=204)
 
 
+def masked_email(address: str | None) -> str | None:
+    """b***@gmail.com: enough for the owner to recognise, never the full address."""
+    if not address or "@" not in address:
+        return None
+    local, domain = address.split("@", 1)
+    return f"{local[:1]}***@{domain}"
+
+
 @app.get("/v1/me")
 def me(account: Identity):
-    return {"id": account.id, "name": account.display_name, "guest": account.username is None}
+    return {
+        "id": account.id,
+        "name": account.display_name,
+        "guest": account.username is None,
+        "username": account.username,
+        "email": masked_email(account.email),
+    }
+
+
+class OwnPassword(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=10, max_length=128)
+
+
+class OwnEmail(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+    email: str = Field(max_length=254, pattern=EMAIL)
+
+
+def check_own_password(account: Account, password: str) -> None:
+    """Signed-in changes still need the current password (a stolen token is not enough)."""
+    if account.username is None or not account.password:
+        raise HTTPException(403, "Guest accounts have no password")
+    if not password_hash.verify(password, account.password):
+        raise HTTPException(401, "Invalid credentials")
+
+
+@app.post("/v1/me/password", status_code=204, dependencies=[Depends(check_rate)])
+def change_own_password(body: OwnPassword, account: Identity, db: Db):
+    """Settings window: change the password of the signed-in account."""
+    check_own_password(account, body.password)
+    if body.new_password == body.password:
+        raise HTTPException(422, "New password must differ from the current one")
+    account.password = password_hash.hash(body.new_password)
+    db.commit()
+    return Response(status_code=204)
+
+
+@app.put("/v1/me/email", dependencies=[Depends(check_rate)])
+def change_own_email(body: OwnEmail, account: Identity, db: Db):
+    """Sets the address password-reset codes go to (not verified by a code yet)."""
+    check_own_password(account, body.password)
+    account.email = body.email.strip().lower()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(409, "Email unavailable") from exc
+    return {"email": masked_email(account.email)}
 
 
 DISPLAY_NAME = re.compile(r"^[\w .\-]{2,24}$")
@@ -311,7 +367,9 @@ from app.battle_items import router as battle_items_router  # noqa: E402
 from app.boss import router as boss_router  # noqa: E402
 from app.economy import router as economy_router  # noqa: E402
 from app.invites import router as invites_router  # noqa: E402
+from app.leaderboard import router as leaderboard_router  # noqa: E402
 from app.liveops import router as liveops_router  # noqa: E402
+from app.mail import router as mail_router  # noqa: E402
 from app.maps import router as maps_router  # noqa: E402
 from app.matches import router as matches_router  # noqa: E402
 from app.portal import router as portal_router  # noqa: E402
@@ -333,3 +391,5 @@ app.include_router(battle_items_router)
 app.include_router(portal_router)
 app.include_router(website_router)
 app.include_router(boss_router)
+app.include_router(leaderboard_router)
+app.include_router(mail_router)

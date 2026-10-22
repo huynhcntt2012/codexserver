@@ -135,6 +135,49 @@ def test_robot_template_validates_and_reaches_the_arena(client):
     assert info["rules"]["skills"][0] == "robot_bomb_launch"
 
 
+def test_cactus_and_ram_templates_validate_and_reach_the_arena(client):
+    admin = owner(client)
+    reward_items(client, admin)
+    for kind, name, skills in (
+        ("cactus", "Vua Xương Rồng", liveops.CACTUS_SKILLS),
+        ("ram", "Cừu Sấm Sét", liveops.RAM_SKILLS),
+    ):
+        template = client.get(f"/admin/v1/events/template?kind={kind}", headers=admin).json()
+        rules = template["config"]["boss"]
+        assert template["kind"] == "boss" and rules["display_name"] == name
+        assert rules["skills"] == list(skills)
+        assert (rules["footprint"], rules["rescue_ms"], rules["hp_formula"]) == (2, 4000, "team")
+        assert (rules["base_hp"], rules["bomb_damage"], rules["phase_thresholds"]) == (
+            8000,
+            100,
+            [0.7, 0.3],
+        )
+        check = client.post("/admin/v1/events/validate", json=template, headers=admin).json()
+        assert check["ok"] and not check["warnings"], check
+
+        def broken(template=template, rules=rules, **boss_rules):
+            config = {**template["config"], "boss": {**rules, **boss_rules}}
+            return client.post(
+                "/admin/v1/events/validate", json={**template, "config": config}, headers=admin
+            ).json()
+
+        assert not broken(footprint=3)["ok"]  # these bosses take 2 x 2
+        mixed = broken(skills=[*skills, "boss_basic_hit"])
+        assert mixed["ok"] and any("nhiều boss" in w for w in mixed["warnings"])
+        assert any("1,5" in w for w in broken(rescue_ms=800)["warnings"])
+        event_id = boss_event(client, admin, **{k: v for k, v in rules.items() if k != "sessions"})
+        info = client.get(f"/internal/v1/boss/events/{event_id}", headers=ARENA_SERVICE).json()
+        assert info["rules"]["rescue_ms"] == 4000 and info["rules"]["hp_formula"] == "team"
+        _, headers = player(client, f"twin_{kind}")
+        shown = [
+            e
+            for e in client.get("/v1/boss/events", headers=headers).json()["events"]
+            if e["id"] == event_id
+        ][0]
+        assert (shown["rules"]["hp_solo"], shown["rules"]["hp_full"]) == (5600, 11200)
+        assert shown["rules"]["rescue_ms"] == 4000
+
+
 def test_players_see_the_newest_running_boss_event_first(client):
     admin = owner(client)
     older = boss_event(client, admin)

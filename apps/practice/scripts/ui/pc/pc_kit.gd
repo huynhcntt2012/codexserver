@@ -3,8 +3,10 @@ extends Control
 ## shop, equipment). Style follows the supplied "Bubble Isles" UI kit: sky or
 ## sunset backdrop, cream panels, candy buttons with a thick darker bottom edge.
 ## Everything is drawn in code; characters and items reuse the game's own art.
+const HeroPortrait := preload("res://scripts/hero_portrait.gd")
 const Glyph := preload("res://scripts/ui/desktop_lobby.gd").Glyph
 const ScreenFill := preload("res://scripts/ui/screen_fill.gd")
+const PopupHeader := preload("res://scripts/ui/popup_header.gd")
 const DESIGN := Vector2(1280, 720)
 const INK := Color("2b3a67")
 const MUTED := Color("6b7a9c")
@@ -93,6 +95,8 @@ var modal := Control.new()
 var modal_title: Label
 var modal_message: Label
 var modal_actions: HBoxContainer
+var settings_overlay: Control
+var settings_page: Control
 var fill_screen := true
 ## Set before adding to the tree: the page lives inside a lobby popup, so it
 ## draws no backdrop or top bar and scales to its own rect, not the window.
@@ -130,11 +134,12 @@ func build_modal() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	modal.add_child(center)
 	var sheet := card(CREAM, Color.WHITE, 26, 5, 22)
-	sheet.custom_minimum_size = Vector2(480, 0)
+	sheet.custom_minimum_size = Vector2(560, 0)
 	center.add_child(sheet)
 	var stack := column(16, sheet)
-	modal_title = text("", 26, INK, stack)
-	modal_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var header := PopupHeader.new(true)
+	stack.add_child(header)
+	modal_title = header.title_label
 	modal_message = text("", 18, MUTED, stack)
 	modal_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	modal_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -159,18 +164,55 @@ func notice(title: String, message: String, on_yes := Callable(), yes_label := "
 func close_modal() -> void:
 	modal.hide()
 
-## Settings shared by PC screens: fullscreen, plus the game's audio switch when given.
-func open_settings(audio_on := false, on_audio := Callable()) -> void:
-	notice("CÀI ĐẶT", "")
-	for child in modal_actions.get_children():
-		child.queue_free()
-	var full := DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]
-	modal_actions.add_child(sized(candy("Toàn màn hình: " + ("BẬT" if full else "TẮT"), func():
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if full else DisplayServer.WINDOW_MODE_FULLSCREEN)
-		close_modal(), "sky", 17), Vector2(220, 50)))
-	if on_audio.is_valid():
-		modal_actions.add_child(sized(candy("Âm thanh: " + ("BẬT" if audio_on else "TẮT"), func(): on_audio.call(); close_modal(), "mint", 17), Vector2(180, 50)))
-	modal_actions.add_child(sized(candy("Đóng", close_modal, "ghost", 17), Vector2(100, 50)))
+## The settings window (pc_settings.gd) over this page, built on first use.
+## Loaded at run time: the window is itself a kit page.
+func open_settings(_audio_on := false, _on_audio := Callable()) -> void:
+	if settings_overlay == null:
+		settings_overlay = Control.new()
+		settings_overlay.name = "SettingsOverlay"
+		settings_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		settings_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+		canvas.add_child(settings_overlay)
+		var dim := ColorRect.new()
+		dim.color = Color(0.1, 0.18, 0.36, 0.6)
+		dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		settings_overlay.add_child(dim)
+		var sheet := card(CREAM, Color.WHITE, 26, 4, 12)
+		sheet.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		for side in ["left", "right", "top", "bottom"]:
+			sheet.set("offset_" + side, 28 if side in ["left", "top"] else -28)
+		settings_overlay.add_child(sheet)
+		var stack := column(6, sheet)
+		var head := row(10, stack)
+		var header := PopupHeader.new()
+		head.add_child(header)
+		header.set_title("CÀI ĐẶT")
+		header.set_icon(Glyph.new("gear", SUN, 56))
+		head.add_child(round_icon("close", close_settings, "coral", 44))
+		var area := Control.new()
+		area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		stack.add_child(area)
+		settings_page = load("res://scripts/ui/pc/pc_settings.gd").new()
+		settings_page.embedded = true
+		settings_page.navigate.connect(func(destination: String):
+			close_settings()
+			if destination == "logout":
+				if OnlineArena.connected:
+					OnlineArena.leave()
+				AuthSession.logout()
+				get_tree().change_scene_to_file("res://scenes/ui/launch/launch_screen.tscn"))
+		area.add_child(settings_page)
+		settings_page.hide()
+	if "game" in self and self.get("game") != null:
+		settings_page.hero_id = str(self.get("game").HEROES[self.get("game").selected_hero])
+	settings_overlay.show()
+	settings_page.show()
+	canvas.move_child(settings_overlay, canvas.get_child_count() - 1)
+
+func close_settings() -> void:
+	if settings_overlay:
+		settings_page.hide()
+		settings_overlay.hide()
 
 ## Top bar from the kit: back, profile chip, title, wallet, mail, settings.
 func top_bar(title: String, on_back: Callable, on_settings: Callable) -> Dictionary:
@@ -209,7 +251,7 @@ func top_bar(title: String, on_back: Callable, on_settings: Callable) -> Diction
 	return {"bar": bar, "face": face_art, "name": name_label, "level": lv, "xp": xp, "gold": gold, "gem": gem, "title": heading}
 
 func refresh_top_bar(parts: Dictionary, hero_id: String) -> void:
-	(parts.face as TextureRect).texture = load("res://assets/characters/portraits/%s.png" % hero_id)
+	(parts.face as TextureRect).texture = HeroPortrait.texture(hero_id)
 	(parts.name as Label).text = AuthSession.account_name if AuthSession.has_session() else "Khách"
 	(parts.level as Label).text = "Lv.%d" % int(UIState.profile.get("level", 1))
 	(parts.xp as ProgressBar).max_value = maxf(1.0, float(UIState.profile.get("xp_max", 1)))
@@ -379,7 +421,9 @@ static func icon_texture(path: String) -> Texture2D:
 	if path == "":
 		return null
 	# Server art cached by CatalogSync lives in user://; bundled art in res://.
-	var source: Texture2D = null
+	var source: Texture2D = HeroPortrait.for_path(path)
+	if source != null:
+		return source
 	if path.begins_with("user://"):
 		var sync = Engine.get_main_loop().root.get_node_or_null("CatalogSync")
 		source = sync.texture(path) if sync else null
@@ -425,6 +469,8 @@ func _process(_delta: float) -> void:
 		if child is Control and child.visible and child != modal:
 			need = need.max((child as Control).get_combined_minimum_size())
 	var ratio := minf(viewport.x / need.x, viewport.y / need.y)
+	if ratio <= 0.0:
+		return  # not laid out yet (an embedded page before its first layout)
 	canvas.scale = Vector2.ONE * ratio
 	canvas.position = Vector2.ZERO
 	canvas.size = viewport / ratio

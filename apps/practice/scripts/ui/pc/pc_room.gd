@@ -299,7 +299,7 @@ func refresh() -> void:
 		style.border_color = color
 		style.bg_color = Color("fff2df") if i == 0 else Color.WHITE
 		(entry.dot as ColorRect).color = color
-		(entry.face as TextureRect).texture = load("res://assets/characters/portraits/%s.png" % heroes[i])
+		(entry.face as TextureRect).texture = HeroPortrait.texture(heroes[i])
 		var hero_name: String = game.HERO_NAMES[hero_index].capitalize()
 		if i == 0:
 			(entry.tag as Label).text = "Lv.%d" % int(UIState.profile.get("level", 1))

@@ -16,9 +16,12 @@ import type { MapDef } from './maps.js';
  * server-driven boss on a normal map. Bombs, blasts, items and the mount are
  * the PvP rules (Arena); this adds the boss footprint, its HP and phases, the
  * telegraphed skills and the WIN / LOSE / TIMEOUT / ABORT result.
- * Two skill sets: the Slime King's five `boss_*` skills and the Clockwork Bomb
- * Robot's seven `robot_*` skills (spec "Robot Bom Dây Cót", SK01-SK07), whose
- * bombs blast in a + along the grid. The robot also walks (`walkMs`).
+ * Four skill sets: the Slime King's five `boss_*` skills, the Clockwork Bomb
+ * Robot's seven `robot_*` skills (spec "Robot Bom Dây Cót", SK01-SK07), and
+ * (spec "Cừu Sấm Sét & Vua Xương Rồng") the Cactus King's four `cactus_*` and
+ * the Thunder Ram's four `ram_*` skills. Robot, cactus and ram walk (`walkMs`).
+ * With `rescueMs` a boss hit traps the raider in a water bubble: a teammate
+ * stepping into them frees them (1.2 s invulnerable), else they are out.
  * Everything is decided here: clients only draw the snapshot.
  */
 
@@ -39,7 +42,26 @@ export const ROBOT_SKILLS = [
   'robot_overheat',
   'robot_reactor',
 ] as const;
-export const BOSS_SKILLS = [...SLIME_SKILLS, ...ROBOT_SKILLS] as const;
+/** Vua Xương Rồng: SK01 Lăn Gai, SK02 Gai Bay, SK03 Gai Nổ Chữ Thập, ULT Bão Gai Xoáy. */
+export const CACTUS_SKILLS = [
+  'cactus_thorn_roll',
+  'cactus_thorn_shot',
+  'cactus_thorn_cross',
+  'cactus_thorn_storm',
+] as const;
+/** Cừu Sấm Sét: SK01 Húc Sấm, SK02 Cầu Điện, SK03 Điện Nổ Chữ Thập, ULT Thiên Lôi Liên Kích. */
+export const RAM_SKILLS = [
+  'ram_thunder_charge',
+  'ram_thunder_ball',
+  'ram_lightning_cross',
+  'ram_thunder_storm',
+] as const;
+export const BOSS_SKILLS = [
+  ...SLIME_SKILLS,
+  ...ROBOT_SKILLS,
+  ...CACTUS_SKILLS,
+  ...RAM_SKILLS,
+] as const;
 export type BossSkill = (typeof BOSS_SKILLS)[number];
 
 /** Raid rules from the event config (API); defaults are the spec's sample numbers. */
@@ -65,6 +87,10 @@ export interface BossRules {
   footprint: number;
   /** Ms per step when the boss walks toward the team between casts; 0 = stays put. */
   walkMs: number;
+  /** A boss hit traps the raider this long for a rescue (0 = out at once). */
+  rescueMs: number;
+  /** HP scaling: per_extra = base × (1 + k × (n − 1)); team = base × (0.6 + 0.1 × n). */
+  hpFormula: 'per_extra' | 'team';
 }
 
 export const DEFAULT_RULES: BossRules = {
@@ -86,6 +112,8 @@ export const DEFAULT_RULES: BossRules = {
   mount: true,
   footprint: 3,
   walkMs: 0,
+  rescueMs: 0,
+  hpFormula: 'per_extra',
 };
 
 /** Robot preset of the spec (event_config_example.json; numbers to playtest). */
@@ -103,6 +131,35 @@ export const ROBOT_RULES: Partial<BossRules> = {
   durationSeconds: 360,
   footprint: 2,
   walkMs: 700,
+};
+
+/** Spec "Cừu Sấm Sét & Vua Xương Rồng" v1.0 table (8 000 HP at 4 players, 100 per bomb). */
+const TWIN_RULES: Partial<BossRules> = {
+  baseHp: 8000,
+  hpFormula: 'team',
+  phaseThresholds: [0.7, 0.3],
+  bombDamage: 100,
+  minPlayers: 1,
+  maxPlayers: 8,
+  durationSeconds: 420,
+  footprint: 2,
+  rescueMs: 4000,
+};
+export const CACTUS_RULES: Partial<BossRules> = {
+  ...TWIN_RULES,
+  bossId: 'boss_cactus_king',
+  assetPackId: 'cactus_king',
+  name: 'Vua Xương Rồng',
+  skills: [...CACTUS_SKILLS],
+  walkMs: 650,
+};
+export const RAM_RULES: Partial<BossRules> = {
+  ...TWIN_RULES,
+  bossId: 'boss_thunder_ram',
+  assetPackId: 'thunder_ram',
+  name: 'Cừu Sấm Sét',
+  skills: [...RAM_SKILLS],
+  walkMs: 550,
 };
 
 /**
@@ -126,7 +183,32 @@ export const SKILL_TIMING: Record<
   robot_magnet_pull: { telegraph: 1200 + 1000, cooldown: 20000, phase: 3 },
   robot_overheat: { telegraph: 1600 + 1300, cooldown: 30000, phase: 3 },
   robot_reactor: { telegraph: 2000 + 1500, cooldown: 45000, phase: 3 },
+  cactus_thorn_roll: { telegraph: 900, cooldown: 9000, phase: 1 },
+  cactus_thorn_shot: { telegraph: 700, cooldown: 7000, phase: 1 },
+  cactus_thorn_cross: { telegraph: 1200, cooldown: 12000, phase: 2 },
+  cactus_thorn_storm: { telegraph: 1500, cooldown: 24000, phase: 3 },
+  ram_thunder_charge: { telegraph: 900, cooldown: 9000, phase: 1 },
+  ram_thunder_ball: { telegraph: 800, cooldown: 7000, phase: 1 },
+  ram_lightning_cross: { telegraph: 1100, cooldown: 12000, phase: 2 },
+  ram_thunder_storm: { telegraph: 1000, cooldown: 25000, phase: 3 },
 };
+/** Cactus King / Thunder Ram numbers (spec pages 7-8 and 11-12). */
+export const ROLL_CELLS = 4;
+export const ROLL_MS_PER_CELL = 250; // 4 tiles/s
+export const STUN_MS = 1500;
+export const THORN_CELLS = 5;
+export const THORN_MS_PER_CELL = 167; // 6 tiles/s
+export const CROSS_CELLS = 3;
+export const STORM_RING_GAP = 550;
+export const CHARGE_CELLS = 5;
+export const CHARGE_MS_PER_CELL = 200; // 5 tiles/s
+export const BALL_CELLS = 6;
+export const BALL_MS_PER_CELL = 200; // 5 tiles/s
+/** Thunder Ram ultimate: 3 waves, each warned 1.0 s, strike 0.18 s + 0.25 s left. */
+export const STRIKE_WAVE_GAP = 1000 + 180 + 250;
+export const RESCUE_GRACE_MS = 1200;
+/** Walking bosses keep a target 7 s, then switch to another raider. */
+export const TARGET_MS = 7000;
 /** Bomb Chain: the three bombs go off one after another. */
 export const CHAIN_GAP = 400;
 /** Overheat: the eight bombs go off one after another. */
@@ -179,8 +261,17 @@ export interface Cast {
   target?: string;
   chaseAt?: number;
   chaseUntil?: number;
-  /** Recoil dash: footprint top-left after the dash. */
+  /** Recoil dash / roll / charge: footprint top-left after the move. */
   to?: [number, number];
+  /** Cactus roll: the boss hits a hard wall at the end and is stunned. */
+  stun?: boolean;
+  /** Thorn shot / thunder ball: projectiles of one throw share a volley id; lane per tile. */
+  volley?: number;
+  lanes?: number[];
+  /** Thunder ball: the small blast at the end of its flight. */
+  final?: boolean;
+  /** Ultimates: wave number (1-3). */
+  wave?: number;
 }
 
 export interface RaidStats {
@@ -209,8 +300,13 @@ export interface RaidSummary {
   }[];
 }
 
-/** hp(n) = round(base * (1 + k * (n - 1))), fixed when the raid starts. */
+/**
+ * HP fixed when the raid starts: per_extra = base × (1 + k × (n − 1)), team =
+ * base × (0.6 + 0.1 × n) (the twin-boss spec; base = HP at 4 players).
+ */
 export function bossHp(rules: BossRules, players: number): number {
+  if (rules.hpFormula === 'team')
+    return Math.round(rules.baseHp * (0.6 + 0.1 * Math.max(1, players)));
   return Math.round(
     rules.baseHp * (1 + rules.hpPerExtraPlayer * Math.max(0, players - 1)),
   );
@@ -236,6 +332,10 @@ export class BossArena extends Arena {
   /** Server time of the boss's last walking step / dash (clients animate it). */
   movedAt = 0;
   weakUntil = 0;
+  /** Cactus King hit a hard wall rolling: no walking or casting until then. */
+  stunUntil = 0;
+  /** Trapped raiders (rescueMs): player id -> time they are out if nobody comes. */
+  trapped = new Map<string, number>();
   casts: Cast[] = [];
   /** Temporary walls from Block Lane: cell key -> expiry. */
   blocks = new Map<string, number>();
@@ -253,6 +353,11 @@ export class BossArena extends Arena {
   private nextChaserStep = 0;
   private lastTarget = '';
   private targetStreak = 0;
+  private walkTarget = '';
+  private walkTargetUntil = 0;
+  private nextVolley = 1;
+  /** Volleys whose projectile already stopped, per lane ("<volley>:<lane>"). */
+  private stopped = new Set<string>();
   private rng: () => number;
 
   constructor(map: MapDef, rules: Partial<BossRules> = {}, seed = 1) {
@@ -318,6 +423,8 @@ export class BossArena extends Arena {
 
   override input(id: string, value: unknown): boolean {
     if (value === 'mount' && !this.rules.mount) return false;
+    // A trapped raider waits in the bubble: no moves, bombs or items.
+    if (this.trapped.has(id) && value !== 'ready') return false;
     if (
       typeof value === 'string' &&
       value.startsWith('use_') &&
@@ -340,6 +447,11 @@ export class BossArena extends Arena {
     this.hp = this.hpMax;
     this.bossPhase = 1;
     this.weakUntil = 0;
+    this.stunUntil = 0;
+    this.trapped.clear();
+    this.stopped.clear();
+    this.walkTarget = '';
+    this.walkTargetUntil = 0;
     this.casts = [];
     this.blocks.clear();
     this.readyAt.clear();
@@ -368,6 +480,8 @@ export class BossArena extends Arena {
   protected override reset(): void {
     super.reset();
     this.placeBoss();
+    this.trapped.clear();
+    this.stunUntil = 0;
     this.casts = [];
     this.blocks.clear();
     this.hp = 0;
@@ -418,12 +532,19 @@ export class BossArena extends Arena {
         const [x, y] = cell.split(',').map(Number) as [number, number];
         if (this.grid[y]![x] === Tile.Wall) this.grid[y]![x] = Tile.Floor;
       }
+    for (const [id, until] of this.trapped)
+      if (until <= this.now) {
+        this.trapped.delete(id);
+        const p = this.players.get(id);
+        if (p?.alive) this.knockOut(p);
+      }
     if (this.phase === 'playing') this.runChasers();
     for (const cast of [...this.casts])
       if (cast.resolveAt <= this.now) {
         this.casts = this.casts.filter((c) => c !== cast);
         this.resolve(cast);
       }
+    if (this.stunUntil > this.now) return;
     if (this.phase === 'playing' && this.now >= this.nextCastAt) this.cast();
     if (this.phase === 'playing') this.walk();
   }
@@ -432,7 +553,8 @@ export class BossArena extends Arena {
     // Everyone left (or the room closes): nobody wins, nothing is rewarded.
     if (!this.players.size) return this.end('ABORT');
     if (this.hpMax && this.hp <= 0) return this.end('WIN');
-    if (![...this.players.values()].some((p) => p.alive)) this.end('LOSE');
+    const standing = [...this.players.values()].filter((p) => p.alive);
+    if (!standing.length) this.end('LOSE');
   }
 
   protected override timeUp(): void {
@@ -531,6 +653,8 @@ export class BossArena extends Arena {
   /** The telegraphs of `skill`, or null when they would leave someone no way out. */
   plan(skill: BossSkill): Cast[] | null {
     if (skill.startsWith('robot_')) return this.planRobot(skill);
+    if (skill.startsWith('cactus_') || skill.startsWith('ram_'))
+      return this.planTwin(skill);
     const telegraph = SKILL_TIMING[skill].telegraph;
     const alive = [...this.players.values()].filter((p) => p.alive);
     let tiles: [number, number][] = [];
@@ -656,6 +780,8 @@ export class BossArena extends Arena {
   private resolve(cast: Cast): void {
     const cells = new Set(cast.tiles.map(([x, y]) => key(x, y)));
     if (cast.skill.startsWith('robot_')) return this.resolveRobot(cast, cells);
+    if (cast.skill.startsWith('cactus_') || cast.skill.startsWith('ram_'))
+      return this.resolveTwin(cast, cells);
     switch (cast.skill) {
       case 'boss_basic_hit':
       case 'boss_aoe_mark':
@@ -1216,15 +1342,7 @@ export class BossArena extends Arena {
     if (!this.rules.walkMs || this.casts.length || this.now < this.nextWalkAt)
       return;
     this.nextWalkAt = this.now + this.rules.walkMs;
-    const [cx, cy] = this.centre();
-    const target = [...this.players.values()]
-      .filter((p) => p.alive)
-      .sort(
-        (a, b) =>
-          Math.abs(a.x - cx) +
-          Math.abs(a.y - cy) -
-          (Math.abs(b.x - cx) + Math.abs(b.y - cy)),
-      )[0];
+    const target = this.twin() ? this.chaseTarget() : this.nearest()[0];
     if (!target || this.gapTo(this.bossX, this.bossY, target) <= 2) return;
     const start = key(this.bossX, this.bossY);
     const first = new Map<string, Dir | null>([[start, null]]);
@@ -1263,12 +1381,482 @@ export class BossArena extends Arena {
     this.movedAt = this.now;
   }
 
-  /** A boss hit: a shield or the mount absorbs it, otherwise the player is out. */
+  // ------------------------------------------------------------ Cactus King / Thunder Ram
+
+  /** The twin-boss spec's bosses (cactus_* or ram_* skills). */
+  twin(): boolean {
+    return this.rules.skills.some(
+      (sk) => sk.startsWith('cactus_') || sk.startsWith('ram_'),
+    );
+  }
+
+  /** Raiders still standing (not trapped), nearest to the boss first. */
+  private nearest(): Player[] {
+    const [cx, cy] = this.centre();
+    return [...this.players.values()]
+      .filter((p) => p.alive && !this.trapped.has(p.id))
+      .sort(
+        (a, b) =>
+          Math.abs(a.x - cx) +
+          Math.abs(a.y - cy) -
+          (Math.abs(b.x - cx) + Math.abs(b.y - cy)),
+      );
+  }
+
+  /** Keeps chasing one raider for TARGET_MS, then switches to another (spec p.13). */
+  private chaseTarget(): Player | undefined {
+    const options = this.nearest();
+    const current = options.find((p) => p.id === this.walkTarget);
+    if (current && this.now < this.walkTargetUntil) return current;
+    const next = options.find((p) => p.id !== this.walkTarget) ?? options[0];
+    this.walkTarget = next?.id ?? '';
+    this.walkTargetUntil = this.now + TARGET_MS;
+    return next;
+  }
+
+  /** How far the footprint can move toward `dir` (max), and what stops it. */
+  private run(dir: Dir, max: number): { distance: number; wall: boolean } {
+    for (let d = 1; d <= max; d++)
+      for (let lane = 0; lane < this.size; lane++) {
+        const [x, y] = this.edge(dir, lane, d);
+        if (!this.landing(x, y))
+          return {
+            distance: d - 1,
+            wall: (this.grid[y]?.[x] ?? Tile.Wall) === Tile.Wall,
+          };
+      }
+    return { distance: max, wall: false };
+  }
+
+  /**
+   * Cells a + of `reach` out of every footprint side hits: walls stop a ray; a
+   * crate takes the hit (it breaks) and stops it, like a player's bomb.
+   */
+  private cross(reach: number): Cell[] {
+    const out = new Map<string, Cell>();
+    for (const dir of Object.keys(directions) as Dir[])
+      for (let lane = 0; lane < this.size; lane++)
+        for (let d = 1; d <= reach; d++) {
+          const [x, y] = this.edge(dir, lane, d);
+          const tile = this.grid[y]?.[x];
+          if (tile === undefined || tile === Tile.Wall || this.isBoss(x, y))
+            break;
+          out.set(key(x, y), [x, y]);
+          if (tile === Tile.Crate) break;
+        }
+    return [...out.values()];
+  }
+
+  /** One cast per projectile step: tiles at distance d go off d × msPerCell after the throw. */
+  private volley(
+    skill: BossSkill,
+    dir: Dir,
+    lanes: number[],
+    maxCells: number,
+    msPerCell: number,
+    at: number,
+    passBombs: boolean,
+  ): Cast[] {
+    const volley = this.nextVolley++;
+    const steps = new Map<number, { tiles: Cell[]; lanes: number[] }>();
+    const ends: { lane: number; cell: Cell; d: number }[] = [];
+    for (const lane of lanes) {
+      let last: { cell: Cell; d: number } | null = null;
+      for (let d = 1; d <= maxCells; d++) {
+        const [x, y] = this.edge(dir, lane, d);
+        const tile = this.grid[y]?.[x];
+        const bomb = [...this.bombs.values()].some(
+          (b) => b.x === x && b.y === y,
+        );
+        if (tile !== Tile.Floor || this.isBoss(x, y) || (bomb && !passBombs))
+          break;
+        const step = steps.get(d) ?? { tiles: [], lanes: [] };
+        step.tiles.push([x, y]);
+        step.lanes.push(lane);
+        steps.set(d, step);
+        last = { cell: [x, y], d };
+        if (bomb) break; // the ball sets it off and stops there
+      }
+      if (last) ends.push({ lane, ...last });
+    }
+    const casts = [...steps].map(([d, step]) => ({
+      id: this.nextCast++,
+      skill,
+      tiles: step.tiles,
+      lanes: step.lanes,
+      castAt: this.now,
+      resolveAt: at + d * msPerCell,
+      dir,
+      volley,
+    }));
+    return casts;
+  }
+
+  /** Each wave fair on its own: everyone gets out of that wave's cells in time. */
+  private fairEach(casts: Cast[]): boolean {
+    return casts.every((c) =>
+      [...this.players.values()]
+        .filter((p) => p.alive && !this.trapped.has(p.id))
+        .every((p) => this.canEscape(p, c.tiles, c.resolveAt - this.now)),
+    );
+  }
+
+  /** Rings at Chebyshev distance 1..3 from the footprint, each leaving a 2-cell gap. */
+  private rings(): Cell[][] {
+    const out: Cell[][] = [];
+    const dirs = Object.keys(directions) as Dir[];
+    const gapDir = dirs[Math.floor(this.rng() * dirs.length)]!;
+    const gapLane = Math.floor(this.rng() * Math.max(1, this.size - 1));
+    for (let r = 1; r <= 3; r++) {
+      const ring: Cell[] = [];
+      for (let y = this.bossY - r; y < this.bossY + this.size + r; y++)
+        for (let x = this.bossX - r; x < this.bossX + this.size + r; x++) {
+          const gx = Math.max(
+            this.bossX - x,
+            x - (this.bossX + this.size - 1),
+            0,
+          );
+          const gy = Math.max(
+            this.bossY - y,
+            y - (this.bossY + this.size - 1),
+            0,
+          );
+          if (Math.max(gx, gy) !== r || !this.floor(x, y)) continue;
+          // The open corridor straight out of one side (same lanes on every ring).
+          const [dx, dy] = directions[gapDir];
+          const inGap = dx
+            ? (dx > 0 ? x > this.bossX : x < this.bossX + this.size) &&
+              y >= this.bossY + gapLane &&
+              y <= this.bossY + gapLane + 1 &&
+              gx > 0 &&
+              gy === 0
+            : (dy > 0 ? y > this.bossY : y < this.bossY + this.size) &&
+              x >= this.bossX + gapLane &&
+              x <= this.bossX + gapLane + 1 &&
+              gy > 0 &&
+              gx === 0;
+          if (!inGap) ring.push([x, y]);
+        }
+      out.push(ring);
+    }
+    return out;
+  }
+
+  /** Thunder Ram ultimate: 6-8 cells per wave, around raiders, never every way out. */
+  private strikes(): Cell[] {
+    const picked = new Map<string, Cell>();
+    const standing = this.nearest();
+    for (const p of standing.sort(() => this.rng() - 0.5)) {
+      if (picked.size >= 4) break;
+      const options: Cell[] = [[p.x, p.y]];
+      for (const [dx, dy] of Object.values(directions))
+        options.push([p.x + dx, p.y + dy]);
+      const cell = options[Math.floor(this.rng() * options.length)]!;
+      if (this.floor(...cell)) picked.set(key(...cell), cell);
+    }
+    const near: Cell[] = [];
+    for (let y = this.bossY - 4; y < this.bossY + this.size + 4; y++)
+      for (let x = this.bossX - 4; x < this.bossX + this.size + 4; x++)
+        if (this.floor(x, y) && !picked.has(key(x, y))) near.push([x, y]);
+    const want = 6 + Math.floor(this.rng() * 3);
+    while (picked.size < want && near.length) {
+      const cell = near.splice(Math.floor(this.rng() * near.length), 1)[0]!;
+      picked.set(key(...cell), cell);
+    }
+    return [...picked.values()];
+  }
+
+  /** Cast of a whole-footprint move (roll / charge) toward `dir`, or null. */
+  private movePlan(
+    skill: BossSkill,
+    dir: Dir,
+    max: number,
+    msPerCell: number,
+  ): Cast | null {
+    const { distance, wall } = this.run(dir, max);
+    if (distance < 1) return null;
+    const [dx, dy] = directions[dir];
+    const telegraph = SKILL_TIMING[skill].telegraph;
+    return {
+      id: this.nextCast++,
+      skill,
+      tiles: this.swept(dir, distance),
+      castAt: this.now,
+      resolveAt: this.now + telegraph + distance * msPerCell,
+      dir,
+      to: [this.bossX + dx * distance, this.bossY + dy * distance],
+      ...(skill === 'cactus_thorn_roll' && wall && distance < max
+        ? { stun: true }
+        : {}),
+    };
+  }
+
+  private planTwin(skill: BossSkill): Cast[] | null {
+    const target = this.nearest()[0];
+    if (!target) return null;
+    const front = this.dirTo(target.x, target.y);
+    const telegraph = SKILL_TIMING[skill].telegraph;
+    const at = this.now + telegraph;
+    let casts: Cast[] = [];
+    if (skill === 'cactus_thorn_roll' || skill === 'ram_thunder_charge') {
+      const roll = skill === 'cactus_thorn_roll';
+      const order = [
+        front,
+        ...(Object.keys(directions) as Dir[]).filter((d) => d !== front),
+      ];
+      for (const dir of order) {
+        const cast = this.movePlan(
+          skill,
+          dir,
+          roll ? ROLL_CELLS : CHARGE_CELLS,
+          roll ? ROLL_MS_PER_CELL : CHARGE_MS_PER_CELL,
+        );
+        // The lane is warned for the whole move; it hits when the boss arrives.
+        if (cast && this.fairEach([{ ...cast, resolveAt: at }])) {
+          this.facing = dir;
+          return [cast];
+        }
+        if (cast) this.nextCast--;
+      }
+      return null;
+    }
+    if (skill === 'cactus_thorn_shot') {
+      // Three thorns: the footprint's lanes and the one beside it toward the target.
+      const lane = this.laneTo(front, target.x, target.y);
+      const along =
+        front === 'left' || front === 'right'
+          ? target.y - this.bossY
+          : target.x - this.bossX;
+      const extra =
+        along < 0
+          ? -1
+          : along >= this.size
+            ? this.size
+            : lane === 0
+              ? -1
+              : this.size;
+      const lanes = [...Array(this.size).keys(), extra];
+      casts = this.volley(
+        skill,
+        front,
+        lanes,
+        THORN_CELLS,
+        THORN_MS_PER_CELL,
+        at,
+        false,
+      );
+    } else if (skill === 'ram_thunder_ball') {
+      const lane = this.laneTo(front, target.x, target.y);
+      casts = this.volley(
+        skill,
+        front,
+        [lane],
+        BALL_CELLS,
+        BALL_MS_PER_CELL,
+        at,
+        true,
+      );
+      // The ball pops in a small + where its flight ends.
+      const last = casts.at(-1);
+      if (last) {
+        const [ex, ey] = last.tiles[0]!;
+        last.tiles = this.blast(ex, ey, 1);
+        last.lanes = last.tiles.map(() => lane);
+        last.final = true;
+      }
+    } else if (
+      skill === 'cactus_thorn_cross' ||
+      skill === 'ram_lightning_cross'
+    ) {
+      const tiles = this.cross(CROSS_CELLS);
+      if (tiles.length)
+        casts = [
+          {
+            id: this.nextCast++,
+            skill,
+            tiles,
+            castAt: this.now,
+            resolveAt: at,
+          },
+        ];
+    } else if (skill === 'cactus_thorn_storm') {
+      this.rings().forEach((tiles, i) => {
+        if (tiles.length)
+          casts.push({
+            id: this.nextCast++,
+            skill,
+            tiles,
+            castAt: this.now,
+            resolveAt: at + i * STORM_RING_GAP,
+            wave: i + 1,
+          });
+      });
+    } else if (skill === 'ram_thunder_storm') {
+      for (let wave = 0; wave < 3; wave++) {
+        let tiles = this.strikes();
+        // Never every way out: drop marked cells until each raider can step aside.
+        const ms = telegraph + wave * STRIKE_WAVE_GAP;
+        while (
+          tiles.length > 2 &&
+          !this.nearest().every((p) => this.canEscape(p, tiles, ms))
+        )
+          tiles = tiles.slice(1);
+        casts.push({
+          id: this.nextCast++,
+          skill,
+          tiles,
+          castAt: this.now + wave * STRIKE_WAVE_GAP,
+          resolveAt: this.now + ms,
+          wave: wave + 1,
+        });
+      }
+    }
+    this.facing = front;
+    if (!casts.length || !this.fairEach(casts)) {
+      this.nextCast -= casts.length;
+      return null;
+    }
+    return casts;
+  }
+
+  private resolveTwin(cast: Cast, cells: Set<string>): void {
+    if (cast.to) return this.moveBoss(cast);
+    if (cast.volley !== undefined) return this.fly(cast);
+    for (const p of this.players.values())
+      if (p.alive && cells.has(key(p.x, p.y))) this.hurt(p);
+    // The cross / strike stays live a moment (flames; crates on it break).
+    for (const [x, y] of cast.tiles) {
+      if (this.grid[y]![x] === Tile.Crate) this.grid[y]![x] = Tile.Floor;
+      this.ignite(x, y, 'boss');
+    }
+  }
+
+  /** Thorns / the ball reach this step: hit the first raider (or bomb) on each lane. */
+  private fly(cast: Cast): void {
+    cast.tiles.forEach(([x, y], i) => {
+      const lane = cast.lanes?.[i] ?? 0;
+      const stop = `${cast.volley}:${lane}`;
+      if (this.stopped.has(stop) && !cast.final) return;
+      const bomb = [...this.bombs.values()].find((b) => b.x === x && b.y === y);
+      if (bomb && cast.skill === 'ram_thunder_ball') {
+        // Chain reaction: the thunder ball sets player bombs off.
+        this.explode(bomb.id);
+        this.stopped.add(stop);
+        return;
+      }
+      const victim = [...this.players.values()].find(
+        (p) => p.alive && !this.trapped.has(p.id) && p.x === x && p.y === y,
+      );
+      if (victim) {
+        this.hurt(victim);
+        if (!cast.final) this.stopped.add(stop);
+      }
+    });
+    if (cast.final) for (const [x, y] of cast.tiles) this.ignite(x, y, 'boss');
+  }
+
+  /** Roll / charge arrives: hits its lane, moves; the ram knocks raiders aside first. */
+  private moveBoss(cast: Cast): void {
+    const dir = cast.dir ?? this.facing;
+    const [dx, dy] = directions[dir];
+    const planned =
+      Math.abs(cast.to![0] - this.bossX) + Math.abs(cast.to![1] - this.bossY);
+    // Bombs placed during the warning shorten the move.
+    const { distance, wall } = this.run(dir, planned);
+    const hit = new Set(
+      this.swept(dir, Math.max(distance, 1)).map((c) => key(...c)),
+    );
+    for (const p of this.players.values()) {
+      if (!p.alive || !hit.has(key(p.x, p.y))) continue;
+      if (cast.skill === 'ram_thunder_charge') this.knockAside(p, dir, hit);
+      this.hurt(p);
+    }
+    if (distance) {
+      this.bossX += dx * distance;
+      this.bossY += dy * distance;
+      this.movedAt = this.now;
+    }
+    this.facing = dir;
+    this.evict();
+    if (
+      cast.stun ||
+      (cast.skill === 'cactus_thorn_roll' && wall && distance < planned)
+    )
+      this.stunUntil = this.now + STUN_MS;
+  }
+
+  /**
+   * Húc Sấm: a raider in the lane is pushed out of it, to the first free cell
+   * beside the lane (the near side first), if every cell on the way is free.
+   */
+  private knockAside(p: Player, dir: Dir, lane: Set<string>): void {
+    const sides: Dir[] =
+      dir === 'left' || dir === 'right' ? ['up', 'down'] : ['left', 'right'];
+    const options = sides.map((side) => {
+      const [sx, sy] = directions[side];
+      const path: Cell[] = [];
+      for (let i = 1; i <= this.size; i++) {
+        const cell: Cell = [p.x + sx * i, p.y + sy * i];
+        path.push(cell);
+        if (!lane.has(key(...cell))) break;
+      }
+      return path;
+    });
+    options.sort((a, b) => a.length - b.length || this.rng() - 0.5);
+    for (const path of options) {
+      const free = path.every(
+        ([x, y]) =>
+          this.isWalkable(x, y) &&
+          ![...this.players.values()].some(
+            (o) => o !== p && o.alive && o.x === x && o.y === y,
+          ),
+      );
+      const [x, y] = path.at(-1)!;
+      if (free && !lane.has(key(x, y))) {
+        [p.x, p.y] = [x, y];
+        return;
+      }
+    }
+  }
+
+  /**
+   * A boss hit: a shield or the mount absorbs it; otherwise the raider is out,
+   * or (rescueMs) trapped in a bubble until a teammate frees them. A trapped
+   * raider is not hit again.
+   */
   private hurt(p: Player): void {
-    if (this.guarded(p)) return;
+    if (!p.alive || this.trapped.has(p.id) || this.guarded(p)) return;
+    if (this.rules.rescueMs > 0) {
+      this.trapped.set(p.id, this.now + this.rules.rescueMs);
+      return;
+    }
+    this.knockOut(p);
+  }
+
+  private knockOut(p: Player): void {
     p.alive = false;
     const stats = this.stats.get(p.id);
     if (stats) stats.diedAt = this.now - this.startedAt;
+  }
+
+  /** Boss flames trap (or knock out); players' own flames skip trapped raiders. */
+  protected override flameHits(p: Player, owner: string | undefined): boolean {
+    if (this.trapped.has(p.id)) return false;
+    if (owner === 'boss') {
+      this.hurt(p);
+      return false;
+    }
+    return true;
+  }
+
+  /** A free raider stepping into a trapped one pops the bubble (counts as support). */
+  protected override onBump(p: Player, other: Player): void {
+    if (!this.trapped.has(other.id) || this.trapped.has(p.id)) return;
+    this.trapped.delete(other.id);
+    const gear = this.gear.get(other.id);
+    if (gear) gear.graceUntil = this.now + RESCUE_GRACE_MS;
+    const stats = this.raid.get(p.id);
+    if (stats) stats.support++;
   }
 
   override snapshot() {
@@ -1290,6 +1878,8 @@ export class BossArena extends Arena {
         phase: this.bossPhase,
         thresholds: this.rules.phaseThresholds,
         weak: this.weakUntil > this.now,
+        stunned: this.stunUntil > this.now,
+        rescueMs: this.rules.rescueMs,
         seq: this.seq,
         casts: this.casts.map((c) => ({
           id: c.id,
@@ -1301,7 +1891,16 @@ export class BossArena extends Arena {
           ...(c.bombs ? { bombs: c.bombs } : {}),
           ...(c.mini ? { mini: c.mini } : {}),
           ...(c.to ? { to: c.to } : {}),
+          ...(c.stun ? { stun: true } : {}),
+          ...(c.volley !== undefined
+            ? { volley: c.volley, lanes: c.lanes }
+            : {}),
+          ...(c.final ? { final: true } : {}),
+          ...(c.wave ? { wave: c.wave } : {}),
         })),
+        trapped: Object.fromEntries(
+          [...this.trapped].map(([id, until]) => [id, until]),
+        ),
       },
       raid: {
         eventId: this.rules.eventId,

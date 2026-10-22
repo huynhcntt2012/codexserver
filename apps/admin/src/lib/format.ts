@@ -133,6 +133,11 @@ export const ACTION: Record<string, string> = {
   'map.hide': 'Ẩn bản đồ',
   'quest.save': 'Lưu nhiệm vụ',
   'quest.seed': 'Thêm nhiệm vụ mặc định',
+  'leaderboard.settings': 'Sửa cách tính xếp hạng',
+  'leaderboard.hide': 'Ẩn khỏi bảng xếp hạng',
+  'leaderboard.show': 'Hiện lại trên bảng xếp hạng',
+  'mail.send': 'Gửi thư',
+  'mail.recall': 'Thu hồi thư',
 };
 
 /** Item art copied from the game into /admin/game at build time. */
@@ -152,4 +157,5 @@ export const KIND: Record<string, [string, string]> = {
   exchange: ['Đổi KC ↔ vàng', 'blue'],
   purchase: ['Mua vật phẩm', 'amber'],
   admin_adjust: ['Admin điều chỉnh', 'red'],
+  mail: ['Quà hộp thư', 'violet'],
 };

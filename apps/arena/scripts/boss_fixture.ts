@@ -1,12 +1,20 @@
 /**
  * Writes boss raid snapshots (waiting / playing with a telegraph / WIN, and the
- * Clockwork Bomb Robot: Bomb Chain, Mini Chaser, walking) for the PC app's UI
+ * Clockwork Bomb Robot: Bomb Chain, Mini Chaser, walking; the Cactus King and
+ * the Thunder Ram mid-skill, a trapped raider) for the PC app's UI
  * test (apps/practice/tests/boss.gd), from the real simulation:
  *   npx tsx scripts/boss_fixture.ts ../practice/tests/fixtures/boss_snapshots.json
  *   npx prettier --write ../practice/tests/fixtures/boss_snapshots.json
  */
 import { writeFileSync } from 'node:fs';
-import { BossArena, ROBOT_RULES } from '../src/boss.js';
+import {
+  BossArena,
+  CACTUS_RULES,
+  RAM_RULES,
+  ROBOT_RULES,
+  type BossSkill,
+} from '../src/boss.js';
+import { Tile } from '../src/game.js';
 import { MAPS } from '../src/maps.js';
 
 const g = new BossArena(
@@ -80,6 +88,50 @@ const me = walker.players.get('me')!;
 [me.x, me.y] = [8, 11];
 walker.tick(1600);
 const robotWalk = factory(walker);
+// Cactus King / Thunder Ram: one skill each, `ms` after the cast starts.
+const twin = (
+  preset: typeof CACTUS_RULES,
+  skill: BossSkill,
+  me: [number, number],
+  ms: number,
+) => {
+  const r = new BossArena(
+    MAPS.harbor!,
+    { ...preset, eventId: 'evt_twin', skills: [skill] },
+    9,
+  );
+  r.matchPrefix = 'p1.twin';
+  r.addPlayer('me', 'Ana', 'mimi');
+  r.addPlayer('bo', 'Bo', 'kai');
+  r.input('me', 'ready');
+  r.input('bo', 'ready');
+  r.tick(3000);
+  r.rules.walkMs = 0;
+  for (const row of r.grid)
+    row.forEach((t, x) => {
+      if (t === Tile.Crate) row[x] = Tile.Floor;
+    });
+  r.bossPhase = skill.endsWith('storm') ? 3 : skill.endsWith('cross') ? 2 : 1;
+  const a = r.players.get('me')!;
+  [a.x, a.y] = me;
+  const b = r.players.get('bo')!;
+  [b.x, b.y] = [15, 11];
+  for (let i = 0; i < 60 && !r.casts.length; i++) r.tick(50);
+  for (let t = 0; t < ms; t += 50) r.tick(50);
+  return factory(r);
+};
+const twins = {
+  cactusRoll: twin(CACTUS_RULES, 'cactus_thorn_roll', [7, 10], 300),
+  cactusShot: twin(CACTUS_RULES, 'cactus_thorn_shot', [8, 1], 800),
+  cactusCross: twin(CACTUS_RULES, 'cactus_thorn_cross', [1, 1], 600),
+  cactusStorm: twin(CACTUS_RULES, 'cactus_thorn_storm', [1, 1], 800),
+  ramCharge: twin(RAM_RULES, 'ram_thunder_charge', [1, 5], 300),
+  ramBall: twin(RAM_RULES, 'ram_thunder_ball', [15, 5], 900),
+  ramCross: twin(RAM_RULES, 'ram_lightning_cross', [1, 1], 600),
+  ramStorm: twin(RAM_RULES, 'ram_thunder_storm', [7, 3], 600),
+  // The cross lands on a raider who stays: trapped, waiting for a rescue.
+  cactusTrapped: twin(CACTUS_RULES, 'cactus_thorn_cross', [7, 4], 1300),
+};
 writeFileSync(
   process.argv[2]!,
   JSON.stringify({
@@ -89,7 +141,16 @@ writeFileSync(
     robotChain,
     robotChaser,
     robotWalk,
+    ...twins,
   }),
+);
+console.log(
+  Object.entries(twins)
+    .map(
+      ([k, v]) =>
+        `${k}:${v.boss.casts.length}/${Object.keys(v.boss.trapped).length}`,
+    )
+    .join(' '),
 );
 console.log(
   playing.boss.casts.length,

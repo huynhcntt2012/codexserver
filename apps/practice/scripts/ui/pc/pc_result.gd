@@ -88,7 +88,7 @@ func render() -> void:
 		title.text = "THUA RỒI!"
 		subtitle.text = "Hết giờ rồi" if game.remaining <= 0.0 else "Bạn đã bị loại, thử lại nhé"
 	title.add_theme_color_override("font_color", SUN if paused or game.last_won else Color("9fd7ff"))
-	hero_art.texture = load("res://assets/characters/portraits/%s.png" % game.player.hero)
+	hero_art.texture = HeroPortrait.texture(game.player.hero)
 	for child in rows.get_children():
 		child.queue_free()
 	var ranked: Array = game.fighters.duplicate()

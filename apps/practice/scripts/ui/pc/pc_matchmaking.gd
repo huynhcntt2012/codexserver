@@ -77,7 +77,7 @@ func refresh() -> void:
 	var count := seated()
 	for i in seats.size():
 		var filled := i < count
-		seats[i].texture = load("res://assets/characters/portraits/%s.png" % heroes[i]) if filled else null
+		seats[i].texture = HeroPortrait.texture(heroes[i]) if filled else null
 		var frame := seat_frames[i].get_theme_stylebox("panel") as StyleBoxFlat
 		frame.border_color = game.HERO_COLORS[game.HEROES.find(heroes[i])] if filled else Color("cfe6fb")
 		frame.bg_color = Color.WHITE if filled else GLASS

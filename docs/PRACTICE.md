@@ -135,7 +135,7 @@ bằng container co giãn, phủ kín mọi tỉ lệ màn hình:
 
 - Thanh trên: logo, Sảnh chính/Cửa hàng/Trang bị/Nhiệm vụ/Xếp hạng, ví vàng
   và kim cương (ví demo của Cửa hàng, nút + mở Cửa hàng), Bạn bè, Thư, Cài đặt
-  (toàn màn hình, âm thanh, đăng xuất). Tab đang mở được tô sáng cùng một
+  (cửa sổ 6 mục, xem [SETTINGS.md](SETTINGS.md)). Tab đang mở được tô sáng cùng một
   bảng màu cho cả năm tab (chuyển màu mượt, icon nảy nhẹ); popup chỉ làm mờ
   phần dưới thanh trên nên vẫn bấm chuyển tab được.
 - Cột trái: hồ sơ tài khoản/khách với Lv/XP demo, tab Nhân vật (năm nhân vật)

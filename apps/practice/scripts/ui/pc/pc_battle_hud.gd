@@ -176,7 +176,7 @@ func refresh() -> void:
 			continue
 		var actor: Dictionary = game.fighters[i]
 		var hero_index: int = game.HEROES.find(actor.hero)
-		(entry.face as TextureRect).texture = load("res://assets/characters/portraits/%s.png" % actor.hero)
+		(entry.face as TextureRect).texture = HeroPortrait.texture(actor.hero)
 		(entry.face as TextureRect).modulate.a = 1.0 if actor.alive else 0.45
 		(entry.name as Label).text = ("Bot " if actor.bot else "") + game.HERO_NAMES[hero_index].capitalize()
 		(entry.name as Label).add_theme_color_override("font_color", game.HERO_COLORS[hero_index].darkened(0.25))

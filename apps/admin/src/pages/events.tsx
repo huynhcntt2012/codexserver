@@ -244,7 +244,9 @@ export default function Events() {
     setCheck(null);
   }
 
-  async function fromTemplate(kind: 'story' | 'boss' | 'robot' = 'story') {
+  async function fromTemplate(
+    kind: 'story' | 'boss' | 'robot' | 'cactus' | 'ram' = 'story',
+  ) {
     try {
       const template = await api<GameEvent>(`/events/template?kind=${kind}`);
       open(toDraft(template));
@@ -360,6 +362,18 @@ export default function Events() {
               onClick={() => fromTemplate('robot')}
             >
               Tạo từ mẫu “Robot Bom Dây Cót”
+            </button>
+            <button
+              className="btn secondary"
+              onClick={() => fromTemplate('cactus')}
+            >
+              Tạo từ mẫu “Vua Xương Rồng”
+            </button>
+            <button
+              className="btn secondary"
+              onClick={() => fromTemplate('ram')}
+            >
+              Tạo từ mẫu “Cừu Sấm Sét”
             </button>
             <button className="btn warn" onClick={() => open(blank())}>
               + Sự kiện mới

@@ -1,4 +1,5 @@
 extends Control
+const HeroPortrait := preload("res://scripts/hero_portrait.gd")
 signal navigate(destination: String)
 const UISkin = preload("res://scripts/ui/ui_skin.gd")
 const Card = preload("res://scenes/ui/components/product_card.tscn")
@@ -28,8 +29,8 @@ func _ready() -> void:
 	UISkin.heading($ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow/PromoText/PromoTitle, 26, UISkin.NAVY)
 	UISkin.heading($ScreenFrame/VBox/Body/Main/ListHeader, 21)
 	$ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow/PromoText/PromoSubtitle.add_theme_color_override("font_color", UISkin.NAVY)
-	$ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow/PromoArt.texture = load("res://assets/characters/portraits/bombo.png")
-	$ScreenFrame/VBox/Body/RightPanel/MascotVBox/MascotArt.texture = load("res://assets/characters/portraits/mimi.png")
+	$ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow/PromoArt.texture = HeroPortrait.texture("bombo")
+	$ScreenFrame/VBox/Body/RightPanel/MascotVBox/MascotArt.texture = HeroPortrait.texture("mimi")
 	$ScreenFrame/VBox/Body/Main/Promo/PromoPad/PromoRow/PromoText/PromoCTA.pressed.connect(_buy_promo)
 	$ScreenFrame/VBox/TopBar.back_requested.connect(func(): navigate.emit("home"))
 	$ScreenFrame/VBox/BottomNav.navigate.connect(func(page): navigate.emit(page))

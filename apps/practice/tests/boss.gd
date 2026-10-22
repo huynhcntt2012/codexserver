@@ -184,6 +184,112 @@ func run() -> void:
 	check(view.footprint().position == Vector2(float(walk.boss.x), float(walk.boss.y)) * 64, "Slide ends on the server cell")
 	await capture("robot-walk.png")
 
+	# Vua Xương Rồng / Cừu Sấm Sét: directional art + VFX, server tiles, banner, rescue bubble.
+	for spec in [
+		["cactusRoll", "cactus_king", "LĂN GAI"], ["cactusShot", "cactus_king", "GAI BAY"],
+		["cactusCross", "cactus_king", "GAI NỔ"], ["cactusStorm", "cactus_king", "BÃO GAI XOÁY"],
+		["ramCharge", "thunder_ram", "HÚC SẤM"], ["ramBall", "thunder_ram", "CẦU ĐIỆN"],
+		["ramCross", "thunder_ram", "ĐIỆN NỔ"], ["ramStorm", "thunder_ram", "BÃO SÉT"],
+	]:
+		var snap: Dictionary = fixtures[spec[0]]
+		view.boss = {}  # a new raid for the view
+		view.casts_seen = {}
+		online._on_snapshot(snap)
+		await frames()
+		check(view.pack_name == spec[1] and view.walks.size() == 4 and (not view.vfx.is_empty() or not view.series.is_empty()), "%s: %s art and VFX" % [spec[0], spec[1]])
+		check(view.boss.casts.size() == snap.boss.casts.size(), "%s: every server cast drawn" % spec[0])
+		for i in snap.boss.casts.size():
+			check(view.boss.casts[i].tiles == snap.boss.casts[i].tiles, "%s: same warned cells as the server" % spec[0])
+		check(view.banner_text == spec[2] and view.banner_left > 0.0, "%s: banner %s (%s)" % [spec[0], spec[2], view.banner_text])
+		check(view.footprint().size == Vector2(128, 128), "%s: 2x2 footprint" % spec[0])
+		await capture("twin-%s.png" % spec[0])
+	# Cactus King, design-team sprite pack: 6-frame walks, the boss faces the
+	# roll and is hidden while the orb rolls along the lane; one warning and one
+	# burst per server cell; the last thorn of a volley bursts where it stopped.
+	var roll: Dictionary = fixtures.cactusRoll
+	var bx := int(roll.boss.x); var by := int(roll.boss.y)
+	var steps := {"left": Vector2i(-4, 0), "right": Vector2i(4, 0), "up": Vector2i(0, -4), "down": Vector2i(0, 4)}
+	for dir in steps:
+		var step: Vector2i = steps[dir]
+		var snap: Dictionary = roll.duplicate(true)
+		var rc: Dictionary = snap.boss.casts[0]
+		rc.dir = dir
+		rc.to = [bx + step.x, by + step.y]
+		var lane_tiles := []
+		var side := Vector2i(1, 0) if step.x == 0 else Vector2i(0, 1)
+		for k in range(1, 5):
+			for o in [Vector2i.ZERO, side]:
+				var t: Vector2i = Vector2i(bx, by) + step / 4 * k + o + (Vector2i(1, 1) if step.x + step.y > 0 else Vector2i.ZERO) * Vector2i(absi(signi(step.x)), absi(signi(step.y)))
+				lane_tiles.append([t.x, t.y])
+		rc.tiles = lane_tiles
+		view.boss = {}
+		view.casts_seen = {}
+		online._on_snapshot(snap)
+		await frames()
+		check(view.walks[dir].size() == 6 and view.series.orb.size() == 8, "roll_%s: 6 walk frames, 8 orb frames" % dir)
+		view.now = float(rc.castAt) + 300.0
+		view.queue_redraw()
+		await frames()
+		check(view.art == view.walks[dir][0], "roll_%s: faces the lane while warning" % dir)
+		view.now = (float(rc.castAt) + 900.0 + float(rc.resolveAt)) * 0.5
+		var mid: Vector2 = (Vector2(bx, by) + Vector2(step) * 0.5 + Vector2.ONE) * 64.0
+		check(view.orb_position(view.boss.casts[0]).distance_to(mid) < 2.0, "roll_%s: orb halfway along the lane (%s)" % [dir, view.orb_position(view.boss.casts[0])])
+		view.hold_clock = true
+		view.queue_redraw()
+		await capture("cactus-roll-%s.png" % dir)
+		view.hold_clock = false
+		# Resolved: the boss stands at the end cell at once, the orb bursts there.
+		var done: Dictionary = snap.duplicate(true)
+		done.boss.casts = []
+		done.boss.x = rc.to[0]; done.boss.y = rc.to[1]; done.boss.movedAt = rc.resolveAt
+		view.impacts = []
+		online._on_snapshot(done)
+		await frames()
+		check(view.drawn_origin() == Vector2(rc.to[0], rc.to[1]) * 64.0, "roll_%s: no walk back after the roll" % dir)
+		check(view.impacts.size() == 1 and view.impacts[0].frames == view.series.impact and view.impacts[0].at == (Vector2(rc.to[0], rc.to[1]) + Vector2.ONE) * 64.0, "roll_%s: burst at the end cell" % dir)
+	for spec in [["cactusShot", "projectile"], ["cactusCross", "cross_tile"], ["cactusStorm", "cross_tile"]]:
+		var snap: Dictionary = fixtures[spec[0]]
+		view.boss = {}
+		view.casts_seen = {}
+		view.impacts = []
+		online._on_snapshot(snap)
+		await frames()
+		var c0: Dictionary = view.boss.casts[0]
+		view.now = lerpf(float(c0.castAt), float(c0.resolveAt), 0.6) if spec[0] != "cactusShot" else float(view.boss.casts[1].resolveAt) - 80.0
+		view.hold_clock = true
+		view.queue_redraw()
+		await capture("cactus-%s.png" % spec[0].substr(6).to_lower())
+		view.hold_clock = false
+		# Every cast resolves in turn: bursts only on the server's cells.
+		var left: Dictionary = snap.duplicate(true)
+		var bursts := 0
+		while not left.boss.casts.is_empty():
+			left.boss.casts.pop_front()
+			online._on_snapshot(left.duplicate(true))
+			bursts = view.impacts.size()
+		var cells := 0
+		for hit in view.impacts:
+			for t in hit.get("tiles", []):
+				var on_server := false
+				for c in snap.boss.casts:
+					on_server = on_server or c.tiles.has(t)
+				check(on_server, "%s: burst on a server cell %s" % [spec[0], t])
+				cells += 1
+		if spec[0] == "cactusShot":
+			check(bursts == 1 and view.impacts[0].frames == view.series.impact, "Gai Bay: one burst where the thorn stopped (%d)" % bursts)
+		else:
+			check(bursts == snap.boss.casts.size() and cells > 0 and view.impacts[0].frames == view.series.cross_tile, "%s: one cell burst per cast (%d)" % [spec[0], bursts])
+	view.impacts = []
+	var trapped: Dictionary = fixtures.cactusTrapped
+	view.boss = {}
+	online._on_snapshot(trapped)
+	await frames()
+	check(trapped.boss.trapped.has("me") and view.raider_spots.has("me"), "Trapped raider placed for its bubble")
+	check(online.boss_note.text == "Bạn bị nhốt! Chờ đồng đội cứu", "Trapped note: " + online.boss_note.text)
+	check(online.piece_layer.z_index > 4 and view.overlay.z_index > online.piece_layer.z_index, "Raiders and bubbles drawn above blast art")
+	await create_timer(0.4).timeout  # the raider's slide ends
+	await capture("twin-trapped.png")
+
 	# SĂN BOSS page (popup of the lobby): open event -> three ways in; closed -> disabled.
 	game.show_pc_screen("lobby")
 	var lobby = game.pc_screens["lobby"]

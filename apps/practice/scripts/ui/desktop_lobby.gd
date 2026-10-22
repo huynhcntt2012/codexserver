@@ -4,6 +4,7 @@ extends Control
 ## room on that map, or the server opens a new one (rooms appear on demand).
 ## Bot practice stays available offline from its own button; friends and chat use
 ## the account API, ranked shows an honest empty state.
+const PopupHeader := preload("res://scripts/ui/popup_header.gd")
 const DESIGN := Vector2(1920, 1080)
 const PAGE_SIZE := 8
 const INK := Color("345581")
@@ -18,6 +19,7 @@ const NAV_HOME := 0
 const NAV_SHOP := 1
 const NAV_EQUIPMENT := 2
 const NAV_MISSIONS := 3
+const NAV_RANKING := 4
 const MISSIONS_SECONDS := 60.0
 const TIER_COLORS := {"Dễ": Color("4fa8ef"), "Trung bình": Color("ffaa45"), "Khó": Color("f4738d")}
 const FOLD := {
@@ -130,6 +132,78 @@ class Glyph extends Control:
 			"search":
 				draw_arc(pt(0.42, 0.42), 0.28 * _s, 0, TAU, 32, tint, 0.11 * _s, true)
 				line([0.63, 0.63], [0.92, 0.92], 0.14)
+			"user":
+				draw_circle(pt(0.5, 0.3), 0.2 * _s, tint)
+				var body := []
+				for i in 13:
+					body.append([0.5 + cos(PI + i * PI / 12) * 0.36, 0.95 + sin(PI + i * PI / 12) * 0.4])
+				poly(body)
+			"keyboard":
+				draw_rect(Rect2(pt(0.04, 0.24), Vector2(0.92, 0.52) * _s), tint)
+				for r in 3:
+					for c in 6:
+						draw_rect(Rect2(pt(0.1 + c * 0.14, 0.31 + r * 0.13), Vector2(0.1, 0.08) * _s), tint.darkened(0.45))
+				draw_rect(Rect2(pt(0.26, 0.66), Vector2(0.48, 0.05) * _s), tint.darkened(0.45))
+			"monitor":
+				draw_rect(Rect2(pt(0.06, 0.12), Vector2(0.88, 0.58) * _s), tint)
+				draw_rect(Rect2(pt(0.13, 0.19), Vector2(0.74, 0.44) * _s), tint.darkened(0.45))
+				draw_rect(Rect2(pt(0.43, 0.7), Vector2(0.14, 0.14) * _s), tint)
+				draw_rect(Rect2(pt(0.26, 0.84), Vector2(0.48, 0.08) * _s), tint)
+			"pad":
+				var pad := []
+				for i in 25:
+					var a := i * TAU / 24
+					pad.append([0.5 + cos(a) * 0.44, 0.52 + sin(a) * 0.26])
+				poly(pad)
+				var ink := tint.darkened(0.55)
+				draw_line(pt(0.18, 0.52), pt(0.38, 0.52), ink, 0.08 * _s, true)
+				draw_line(pt(0.28, 0.42), pt(0.28, 0.62), ink, 0.08 * _s, true)
+				draw_circle(pt(0.68, 0.46), 0.05 * _s, tint.darkened(0.45))
+				draw_circle(pt(0.78, 0.56), 0.05 * _s, tint.darkened(0.45))
+			"globe":
+				draw_arc(pt(0.5, 0.5), 0.4 * _s, 0, TAU, 32, tint, 0.08 * _s, true)
+				draw_set_transform(pt(0.5, 0.5), 0.0, Vector2(0.45, 1.0))
+				draw_arc(Vector2.ZERO, 0.4 * _s, 0, TAU, 32, tint, 0.07 * _s, true)
+				draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+				line([0.1, 0.5], [0.9, 0.5], 0.07)
+				line([0.5, 0.1], [0.5, 0.9], 0.07)
+			"music":
+				line([0.4, 0.2], [0.4, 0.74], 0.09)
+				line([0.78, 0.12], [0.78, 0.64], 0.09)
+				poly([[0.4, 0.16], [0.82, 0.08], [0.82, 0.24], [0.4, 0.32]])
+				draw_circle(pt(0.3, 0.76), 0.13 * _s, tint)
+				draw_circle(pt(0.68, 0.66), 0.13 * _s, tint)
+			"bell":
+				poly([[0.5, 0.1], [0.72, 0.26], [0.76, 0.62], [0.9, 0.76], [0.1, 0.76], [0.24, 0.62], [0.28, 0.26]])
+				draw_circle(pt(0.5, 0.86), 0.09 * _s, tint)
+			"mic":
+				draw_rect(Rect2(pt(0.36, 0.08), Vector2(0.28, 0.5) * _s), tint)
+				draw_circle(pt(0.5, 0.1), 0.14 * _s, tint)
+				draw_arc(pt(0.5, 0.46), 0.26 * _s, 0, PI, 16, tint, 0.07 * _s, true)
+				line([0.5, 0.72], [0.5, 0.9], 0.07)
+				line([0.3, 0.92], [0.7, 0.92], 0.07)
+			"link":
+				for c in [[0.36, 0.64], [0.64, 0.36]]:
+					draw_set_transform(pt(c[0], c[1]), -PI / 4, Vector2(1.0, 0.6))
+					draw_arc(Vector2.ZERO, 0.24 * _s, 0, TAU, 24, tint, 0.09 * _s, true)
+					draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			"phone":
+				draw_rect(Rect2(pt(0.28, 0.06), Vector2(0.44, 0.88) * _s), tint)
+				draw_rect(Rect2(pt(0.33, 0.14), Vector2(0.34, 0.62) * _s), tint.darkened(0.45))
+				draw_circle(pt(0.5, 0.85), 0.04 * _s, tint.darkened(0.45))
+			"shield":
+				poly([[0.5, 0.06], [0.88, 0.2], [0.82, 0.6], [0.5, 0.94], [0.18, 0.6], [0.12, 0.2]])
+				draw_circle(pt(0.5, 0.46), 0.12 * _s, tint.darkened(0.45))
+			"logout":
+				draw_rect(Rect2(pt(0.12, 0.12), Vector2(0.4, 0.76) * _s), tint, false, 0.08 * _s)
+				line([0.42, 0.5], [0.9, 0.5], 0.09)
+				line([0.74, 0.34], [0.9, 0.5], 0.09)
+				line([0.74, 0.66], [0.9, 0.5], 0.09)
+			"sun":
+				draw_circle(pt(0.5, 0.5), 0.2 * _s, tint)
+				for i in 8:
+					var a := i * PI / 4
+					line([0.5 + cos(a) * 0.3, 0.5 + sin(a) * 0.3], [0.5 + cos(a) * 0.44, 0.5 + sin(a) * 0.44], 0.08)
 			"speaker", "mute":
 				poly([[0.08, 0.36], [0.3, 0.36], [0.56, 0.12], [0.56, 0.88], [0.3, 0.64], [0.08, 0.64]])
 				if kind == "speaker":
@@ -263,6 +337,8 @@ var nav_tabs: Array[Dictionary] = []
 var nav_index := -1
 var store := Control.new()
 var store_title: Label
+var store_header: Control
+var mail_badge: Label
 var store_area: Control
 var store_pages: Dictionary = {}
 var toast: Label
@@ -270,7 +346,6 @@ var toast_tween: Tween
 var modal_title: Label
 var modal_icon: Glyph
 var modal_message: Label
-var modal_settings: VBoxContainer
 var modal_packs: VBoxContainer
 var modal_ok: Button
 var modal_extra: Button
@@ -299,8 +374,6 @@ var gold: Label
 var gem: Label
 var hero_list: VBoxContainer
 var hero_scroll: ScrollContainer
-var fullscreen_toggle: Button
-var audio_toggle: Button
 var hero_buttons: Array[Button] = []
 var hero_states: Array[Label] = []
 ## Eight reusable map cards (one page); filled from `maps` + `rooms` on refresh.
@@ -496,7 +569,7 @@ func build_top_bar(parent: Control) -> void:
 		["nav_shop", "Cửa hàng", func(): open_shop("shop")],
 		["nav_bag", "Trang bị", func(): open_shop("equipment")],
 		["nav_trophy", "Nhiệm vụ", func(): open_shop("missions")],
-		["nav_star", "Xếp hạng", func(): notice("Chế độ chơi bot chưa có bảng xếp hạng online.", "XẾP HẠNG", "trophy", 4)],
+		["nav_star", "Xếp hạng", func(): open_shop("ranking")],
 	]
 	for i in nav.size():
 		var tab := button("", nav[i][2], NAV_OFF[0], INK, 20, 18, NAV_OFF[1])
@@ -529,7 +602,20 @@ func build_top_bar(parent: Control) -> void:
 	spacer(line)
 	gold = wallet(line, "coin", 250)
 	gem = wallet(line, "gem", 210)
-	line.add_child(icon_button("mail", func(): notice("Hộp thư trống. Thư hệ thống sẽ có ở bản online.", "HỘP THƯ", "mail")))
+	var mail := icon_button("mail", func(): open_shop("mail"))
+	mail.name = "Mail"
+	line.add_child(mail)
+	mail_badge = Label.new()
+	mail_badge.name = "MailBadge"
+	mail_badge.add_theme_font_size_override("font_size", 16)
+	mail_badge.add_theme_color_override("font_color", Color.WHITE)
+	mail_badge.add_theme_stylebox_override("normal", box(Color("ff4d6a"), Color.WHITE, 13, 3, 3))
+	mail_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mail_badge.custom_minimum_size = Vector2(28, 28)
+	mail_badge.position = Vector2(36, -10)
+	mail_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mail_badge.hide()
+	mail.add_child(mail_badge)
 	line.add_child(icon_button("gear", open_settings))
 	# Far right X: quit the game (asks first). Friends live in the left column tab.
 	var quit := icon_button("close", confirm_quit, 58, Color("f4738d"), 29)
@@ -885,11 +971,9 @@ func build_modal() -> void:
 	var balance := Control.new()
 	balance.custom_minimum_size = Vector2(54, 0)
 	head.add_child(balance)
-	modal_title = pill("", Color("2a86d0"), Color.WHITE, 26, head)
-	modal_title.get_parent().size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
-	(modal_title.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).set_content_margin_all(10)
-	(modal_title.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).content_margin_left = 40
-	(modal_title.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).content_margin_right = 40
+	var modal_header := PopupHeader.new(true)
+	head.add_child(modal_header)
+	modal_title = modal_header.title_label
 	head.add_child(icon_button("close", close_modal, 54, Color("f4738d"), 27))
 	var badge := card(Color("dff6ff"), Color("8fdcf5"), 60, 5, 0)
 	badge.custom_minimum_size = Vector2(120, 120)
@@ -914,12 +998,6 @@ func build_modal() -> void:
 	name_input.text_submitted.connect(func(_value): save_name())
 	name_input.hide()
 	stack.add_child(name_input)
-	modal_settings = column(12, stack)
-	fullscreen_toggle = setting_row("Toàn màn hình", func(on): DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED))
-	audio_toggle = setting_row("Âm thanh", _on_audio_toggled)
-	var out := button("ĐĂNG XUẤT" if signed_in_on_entry else "VỀ MÀN HÌNH ĐĂNG NHẬP", leave, Color("f4738d"), Color.WHITE, 22, 20)
-	out.custom_minimum_size = Vector2(0, 62)
-	modal_settings.add_child(out)
 	var actions := row(16, stack)
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	modal_extra = button("", func(): var action := modal_extra_action; close_modal(); action.call(), Color("3fd39a"), Color("0d4b3a"), 24, 22)
@@ -930,23 +1008,6 @@ func build_modal() -> void:
 	modal_ok.custom_minimum_size = Vector2(260, 66)
 	actions.add_child(modal_ok)
 
-func setting_row(label_text: String, action: Callable) -> Button:
-	var holder := card(Color("e4f7ff"), Color("b8e9f7"), 20, 3, 14)
-	modal_settings.add_child(holder)
-	var line := row(12, holder)
-	stretch(text(label_text, 24, INK, line))
-	var toggle := button("", func(): pass, Color("3fd39a"), Color.WHITE, 20, 24)
-	toggle.toggle_mode = true
-	toggle.custom_minimum_size = Vector2(130, 52)
-	toggle.add_theme_stylebox_override("normal", box(Color("b9cbdc"), Color.WHITE, 24, 3, 8))
-	toggle.add_theme_stylebox_override("hover", box(Color("c8d8e7"), Color.WHITE, 24, 3, 8))
-	toggle.add_theme_stylebox_override("pressed", box(Color("3fd39a"), Color.WHITE, 24, 3, 8))
-	toggle.add_theme_stylebox_override("hover_pressed", box(Color("52dea8"), Color.WHITE, 24, 3, 8))
-	toggle.toggled.connect(func(on): toggle.text = "BẬT" if on else "TẮT")
-	toggle.toggled.connect(action)
-	line.add_child(toggle)
-	return toggle
-
 func open_modal(title: String, icon: String, message: String, with_settings := false, nav := -1) -> void:
 	modal_nav = nav
 	modal_title.text = title
@@ -954,7 +1015,6 @@ func open_modal(title: String, icon: String, message: String, with_settings := f
 	modal_message.text = message
 	modal_message.visible = message != ""
 	modal_icon.get_parent().show()
-	modal_settings.visible = with_settings
 	modal_packs.hide()
 	name_input.hide()
 	modal_ok.text = "ĐÓNG" if with_settings else "ĐÃ HIỂU"
@@ -1023,7 +1083,7 @@ func sync_nav() -> void:
 		for key in store_pages:
 			if store_pages[key].visible:
 				shown = key
-		set_nav({"equipment": NAV_EQUIPMENT, "missions": NAV_MISSIONS, "boss": NAV_HOME}.get(shown, NAV_SHOP))
+		set_nav({"equipment": NAV_EQUIPMENT, "missions": NAV_MISSIONS, "ranking": NAV_RANKING, "boss": NAV_HOME, "settings": NAV_HOME, "mail": NAV_HOME}.get(shown, NAV_SHOP))
 	else:
 		set_nav(NAV_HOME)
 
@@ -1088,11 +1148,9 @@ func build_store() -> void:
 	var balance := Control.new()
 	balance.custom_minimum_size = Vector2(54, 0)
 	head.add_child(balance)
-	store_title = pill("", Color("2a86d0"), Color.WHITE, 26, head)
-	store_title.get_parent().size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
-	(store_title.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).set_content_margin_all(10)
-	(store_title.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).content_margin_left = 40
-	(store_title.get_parent().get_theme_stylebox("panel") as StyleBoxFlat).content_margin_right = 40
+	store_header = PopupHeader.new()
+	head.add_child(store_header)
+	store_title = store_header.title_label
 	head.add_child(icon_button("close", close_store, 54, Color("f4738d"), 27))
 	store_area = Control.new()
 	store_area.custom_minimum_size = Vector2(1700, 760)
@@ -1101,10 +1159,12 @@ func build_store() -> void:
 ## Pages are built on first use; the kit scales them to the popup's rect.
 func store_page(target: String) -> Control:
 	if not store_pages.has(target):
-		var scripts := {"shop": preload("res://scripts/ui/pc/pc_shop.gd"), "equipment": preload("res://scripts/ui/pc/pc_equipment.gd"), "missions": preload("res://scripts/ui/pc/pc_missions.gd"), "boss": preload("res://scripts/ui/pc/pc_boss.gd")}
+		var scripts := {"shop": preload("res://scripts/ui/pc/pc_shop.gd"), "equipment": preload("res://scripts/ui/pc/pc_equipment.gd"), "missions": preload("res://scripts/ui/pc/pc_missions.gd"), "ranking": preload("res://scripts/ui/pc/pc_leaderboard.gd"), "settings": preload("res://scripts/ui/pc/pc_settings.gd"), "mail": preload("res://scripts/ui/pc/pc_mail.gd"), "boss": preload("res://scripts/ui/pc/pc_boss.gd")}
 		var page_node = scripts[target].new()
 		if target == "missions":
 			page_node.claimable_changed.connect(set_mission_dot)
+		if target == "mail":
+			page_node.unread_changed.connect(set_mail_badge)
 		if target == "boss":
 			page_node.play.connect(play_boss)
 		page_node.embedded = true
@@ -1114,7 +1174,9 @@ func store_page(target: String) -> Control:
 	return store_pages[target]
 
 func _on_store_navigate(destination: String) -> void:
-	if destination == "home":
+	if destination == "logout":
+		leave()
+	elif destination == "home":
 		close_store()
 	else:
 		open_shop(destination)
@@ -1122,9 +1184,12 @@ func _on_store_navigate(destination: String) -> void:
 func open_shop(target: String) -> void:
 	modal.hide()
 	var shown := store_page(target)
+	if target == "settings":
+		shown.hero_id = game.HEROES[game.selected_hero]
 	for key in store_pages:
 		store_pages[key].visible = store_pages[key] == shown
-	store_title.text = {"shop": "CỬA HÀNG", "equipment": "TRANG BỊ", "missions": "NHIỆM VỤ & SỰ KIỆN", "boss": "ĐẠI CHIẾN BOSS"}[target]
+	store_header.set_icon(Glyph.new({"shop": "shop", "equipment": "nav_bag", "missions": "nav_trophy", "ranking": "trophy", "settings": "gear", "mail": "mail", "boss": "star"}.get(target, "star"), Color("ffc93c"), 56))
+	store_title.text = {"shop": "CỬA HÀNG", "equipment": "TRANG BỊ", "missions": "NHIỆM VỤ & SỰ KIỆN", "ranking": "BẢNG XẾP HẠNG", "settings": "CÀI ĐẶT", "mail": "HỘP THƯ", "boss": "ĐẠI CHIẾN BOSS"}[target]
 	store.show()
 	sync_nav()
 
@@ -1155,11 +1220,6 @@ func show_toast(message: String) -> void:
 	toast_tween.tween_interval(2.0)
 	toast_tween.tween_property(holder, "modulate:a", 0.0, 0.4)
 	toast_tween.tween_callback(holder.hide)
-
-func _on_audio_toggled(on: bool) -> void:
-	if on != game.music_enabled:
-		game._toggle_audio()
-	refresh()
 
 func guest_name() -> String:
 	var prefs := ConfigFile.new()
@@ -1236,11 +1296,9 @@ func buy_pack(pack_id: String, pack_name: String) -> void:
 		show_toast("Đã nạp " + pack_name)
 		refresh()
 
+## Gear: the settings window (scripts/ui/pc/pc_settings.gd) in the store popup.
 func open_settings() -> void:
-	for pair in [[fullscreen_toggle, DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]], [audio_toggle, game.music_enabled]]:
-		pair[0].set_pressed_no_signal(pair[1])
-		pair[0].text = "BẬT" if pair[1] else "TẮT"
-	open_modal("CÀI ĐẶT", "gear", "", true)
+	open_shop("settings")
 
 func show_social(tab: int) -> void:
 	hero_scroll.visible = tab == 0
@@ -1610,6 +1668,11 @@ func leave() -> void:
 func _exit_tree() -> void:
 	ScreenFill.set_fill(get_tree(), false)
 
+func set_mail_badge(count: int) -> void:
+	if mail_badge:
+		mail_badge.text = str(count) if count < 100 else "99+"
+		mail_badge.visible = count > 0
+
 func set_mission_dot(count: int) -> void:
 	if mission_dot:
 		mission_dot.visible = count > 0
@@ -1619,12 +1682,17 @@ func set_mission_dot(count: int) -> void:
 func fetch_missions() -> void:
 	if missions_busy or not AuthSession.has_session():
 		set_mission_dot(0)
+		set_mail_badge(0)
 		return
 	missions_busy = true
 	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/quests")
-	missions_busy = false
 	if reply.status == 200 and reply.data is Dictionary:
 		set_mission_dot(int(reply.data.get("claimable", 0)))
+	# Unread mail for the badge on the mail button, on the same minute clock.
+	var mail_reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/mail")
+	missions_busy = false
+	if mail_reply.status == 200 and mail_reply.data is Dictionary:
+		set_mail_badge(int(mail_reply.data.get("unread", 0)))
 
 ## Live room list from the arena (every 5 s while the lobby shows) plus the
 ## accepted friends list for "Chỉ bạn bè" (every 20 s).

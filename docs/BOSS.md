@@ -161,7 +161,7 @@ tại. Cảnh báo: phòng riêng có thưởng, thưởng KC lớn, đội 8 ng
 
 ## Admin portal
 
-**Sự kiện → Tạo từ mẫu “Đại Chiến Boss”** (hoặc bước **6. Boss** của sự kiện bất kỳ): Boss &
+**Sự kiện → Tạo từ mẫu “Đại Chiến Boss” / “Robot Bom Dây Cót” / “Vua Xương Rồng” / “Cừu Sấm Sét”** (hoặc bước **6. Boss** của sự kiện bất kỳ): Boss &
 bản đồ, HP/sát thương/phase, kỹ năng, vật phẩm cho phép, phiên chơi, điều kiện nhận thưởng,
 thưởng thắng/thua. **Thống kê → Xem số liệu Boss**: số trận, kết quả, tỉ lệ thắng, TTK trung
 vị/p95, người tham gia, phát thưởng, lý do bị từ chối, chi tiết từng trận, **Kết toán**.
@@ -194,6 +194,55 @@ vị/p95, người tham gia, phát thưởng, lý do bị từ chối, chi tiế
 - Bom Robot (`assets/bombs/strong_black.png`) bay từ lưng tới ô, nhấp nháy nhanh dần tới lúc nổ;
   bom mini nhảy theo ô server gửi; lane lướt có mũi tên; Hút Boom có bom xoay quanh thân. Bị hạ:
   nghiêng, mờ dần, một làn khói.
+
+## Vua Xương Rồng & Cừu Sấm Sét
+
+Theo tài liệu "Boom Boss Cừu Sấm Sét & Vua Xương Rồng" v1.0 (số liệu mẫu, cần playtest). Admin
+tạo sự kiện từ mẫu **“Vua Xương Rồng”** / **“Cừu Sấm Sét”** (`/admin/v1/events/template?kind=cactus|ram`);
+mỗi sự kiện một boss, chạy song song với các boss khác, quản lý (lịch, phiên, thưởng, nhiệm vụ,
+shop, tạm dừng, thống kê, kết toán) như mọi sự kiện Boss.
+
+Chung cho cả hai (`CACTUS_RULES` / `RAM_RULES` trong `apps/arena/src/boss.ts`):
+
+- Thân 2×2 ô, biết đi (bám một người ~7 s rồi đổi mục tiêu), 1-8 người, 7 phút.
+- HP = 8 000 × (0,6 + 0,1 × số người) (`hp_formula: "team"`: 1 người 5 600, 4 người 8 000,
+  8 người 11 200); mỗi quả bom trúng 100; phase ở 70 % / 30 %. P1: SK01-02, P2: + SK03, P3: + ULT.
+- **Nhốt bóng nước** (`rescue_ms: 4000`): trúng đòn Boss thì bị nhốt (không đi, không đặt bom);
+  đồng đội bước vào ô đó là cứu được (+1 hỗ trợ, miễn nhiễm 1,2 s); hết 4 s thì bị loại. Khiên /
+  thú cưỡi vẫn đỡ một lần. Hết người còn đứng được = LOSE.
+- Mọi ô trúng đòn do server gửi (`boss.casts[].tiles`); trước mỗi chiêu, ai cũng phải tới được ô
+  an toàn kịp lúc, không thì đổi hướng hoặc không ra chiêu. Mỗi lúc một chiêu.
+
+| Boss       | Kỹ năng                                     | Luật (server)                                                                                          |
+| ---------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Xương Rồng | SK01 Lăn Gai `cactus_thorn_roll`            | Báo làn 0,9 s, lăn tối đa 4 ô (4 ô/s), dừng ở vật cản; đâm tường cứng thì choáng 1,5 s. Hồi 9 s        |
+|            | SK02 Gai Bay `cactus_thorn_shot`            | Báo 0,7 s, 3 gai theo hướng nhìn, 6 ô/s, tối đa 5 ô; tường chặn; mỗi gai trúng người đầu tiên. Hồi 7 s |
+|            | SK03 Gai Nổ Chữ Thập `cactus_thorn_cross`   | Báo 1,2 s, dấu + 3 ô từ mỗi cạnh; tường chặn, thùng bị phá và chặn. Hồi 12 s                           |
+|            | ULT Bão Gai Xoáy `cactus_thorn_storm`       | Báo 1,5 s, 3 vòng gai cách 0,55 s, mỗi vòng chừa hành lang 2 ô. Hồi 24 s                               |
+| Cừu        | SK01 Húc Sấm `ram_thunder_charge`           | Báo làn 0,9 s, húc tối đa 5 ô (5 ô/s); người trong làn bị đẩy ra rồi nhốt. Hồi 9 s                     |
+|            | SK02 Cầu Điện `ram_thunder_ball`            | Báo 0,8 s, 1 quả cầu 5 ô/s tối đa 6 ô; chạm bom thì kích nổ; cuối đường nổ + nhỏ. Hồi 7 s              |
+|            | SK03 Điện Nổ Chữ Thập `ram_lightning_cross` | Báo 1,1 s, dấu + 3 ô; như Gai Nổ. Hồi 12 s                                                             |
+|            | ULT Thiên Lôi Liên Kích `ram_thunder_storm` | 3 đợt 2-8 ô quanh người chơi, mỗi đợt báo 1 s, sét 0,18 s + 0,25 s; không khóa hết lối. Hồi 25 s       |
+
+App PC: hình đi 4 hướng + đứng (Xương Rồng có 4 khung đứng), to ~1,7× thân; ô cảnh báo vàng/cam có
+viền và ký hiệu; hình hiệu ứng từ tài liệu (lăn, gai, cầu điện, chữ thập, bão); chữ báo chiêu ("LĂN
+GAI", "HÚC SẤM", "BÃO SÉT"…) ~1,2 s trước đòn; sao quanh đầu khi choáng; bóng nước + đếm ngược trên
+người bị nhốt; người chơi và bom luôn vẽ trên hiệu ứng. Cừu Sấm Sét cắt bằng `tools/slice_twin_bosses.gd`.
+
+Vua Xương Rồng dùng bộ sprite của team design (mỗi khung một PNG; đi 6 khung/hướng 9 FPS, đứng 4
+khung 5 FPS, hiệu ứng 8 khung 18 FPS). Phạm vi đòn luôn lấy ô của server, không lấy kích thước hình:
+
+- Lăn Gai: lúc báo, boss quay về hướng lăn; sau đó boss ẩn, quả cầu gai lăn dọc làn tới ô `to`, nổ ở
+  đó và boss hiện lại ngay tại ô cuối (không trượt ngược qua làn).
+- Gai Bay: mỗi làn một viên gai riêng, trượt từng ô theo nhịp server (167 ms/ô); viên cuối nổ nơi dừng.
+- Gai Nổ Chữ Thập và Bão Gai: mỗi ô báo có cảnh báo riêng, khi nổ mỗi ô phát hiệu ứng một ô; bão có
+  tâm xoáy trên boss trong suốt các đợt.
+
+![Vua Xương Rồng](screenshots/boss/twin-cactus.png)
+![Cừu Sấm Sét](screenshots/boss/twin-ram.png)
+
+**Chưa làm theo tài liệu:** tùy chọn "Giảm hiệu ứng" và rung camera, âm thanh riêng, hoạt ảnh
+trúng đòn/thua riêng của 2 boss (dùng hiệu ứng chung), tính năng vào giữa trận (late join).
 
 ## Triển khai
 

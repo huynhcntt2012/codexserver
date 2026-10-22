@@ -14,6 +14,13 @@ extends Node2D
 ## Its bombs (cast.bombs) fly from its back onto their cells and blink until the
 ## server resolves them; the blast itself is the server's flames. The mini
 ## chaser (cast.mini) hops after its target; dash lanes get arrows.
+##
+## Vua Xương Rồng (cactus_king) and Cừu Sấm Sét (thunder_ram) walk like the robot
+## (walk_<dir>/NN.png) and their skills use the art in <pack>/vfx: the lane is
+## warned (yellow/orange tiles, an outline and a symbol), the boss rolls/charges
+## along it, thorns / the thunder ball fly cell by cell, crosses and storms light
+## up on their tiles. A trapped raider (boss.trapped) sits in a water bubble with
+## its rescue countdown. A banner names the skill 0.6-1.5 s before the hit.
 
 const TILE := 64.0
 ## Outline colour and symbol per skill, so the warning reads without colour too.
@@ -30,7 +37,36 @@ const SKILL_LOOK := {
 	"robot_magnet_pull": [Color("9a6bff"), "!"],
 	"robot_overheat": [Color("ff7a1a"), "!!"],
 	"robot_reactor": [Color("ff2d55"), "!!"],
+	"cactus_thorn_roll": [Color("ff9a1a"), ""],
+	"cactus_thorn_shot": [Color("ffc21a"), "▲"],
+	"cactus_thorn_cross": [Color("ff9a1a"), "+"],
+	"cactus_thorn_storm": [Color("ff7a1a"), "!!"],
+	"ram_thunder_charge": [Color("ffc21a"), ""],
+	"ram_thunder_ball": [Color("ffd84d"), "●"],
+	"ram_lightning_cross": [Color("ffb21a"), "+"],
+	"ram_thunder_storm": [Color("ff9a1a"), "ϟ"],
 }
+## VFX art per skill (in <pack>/vfx) and where it is drawn: "boss" on the
+## moving boss, "fly" on the projectile's cell, "centre" once on the boss for
+## a cross, "tiles" on every hit cell.
+const TWIN_VFX := {
+	"cactus_thorn_roll": ["roll", "boss"],
+	"cactus_thorn_shot": ["thorn", "fly"],
+	"cactus_thorn_cross": ["cross", "centre"],
+	"cactus_thorn_storm": ["storm", "tiles"],
+	"ram_thunder_charge": ["dash", "boss"],
+	"ram_thunder_ball": ["ball", "fly"],
+	"ram_lightning_cross": ["cross", "centre"],
+	"ram_thunder_storm": ["strike", "tiles"],
+}
+const BANNERS := {
+	"cactus_thorn_roll": "LĂN GAI", "cactus_thorn_shot": "GAI BAY", "cactus_thorn_cross": "GAI NỔ",
+	"cactus_thorn_storm": "BÃO GAI XOÁY", "ram_thunder_charge": "HÚC SẤM", "ram_thunder_ball": "CẦU ĐIỆN",
+	"ram_lightning_cross": "ĐIỆN NỔ", "ram_thunder_storm": "BÃO SÉT",
+}
+const BANNER_SECONDS := 1.2
+const IMPACT_SECONDS := 0.45
+const TWIN_ART := 1.7  # art width / footprint (spec: ~1.7-2.1 x a hero's height)
 const DIRS := ["down", "left", "right", "up"]
 const ROBOT_BOMB := "res://assets/bombs/strong_black.png"
 const ROBOT_ART := 1.4  # robot art width / footprint width (feet on the footprint)
@@ -55,6 +91,7 @@ const PEAK := (1.0 + PHASE_GROW * 2.0) * (1.0 + BREATH + KICK) * (1.0 + SQUASH)
 
 var boss: Dictionary = {}
 var now := 0.0
+var hold_clock := false  # tests: keep `now` where they set it (screenshots)
 var clock := 0.0
 var flash := 0.0
 var lunge := 0.0  # seconds left of the phase-change dash frame
@@ -71,12 +108,22 @@ var bursts: Array = []  # {kind, tiles, left}
 ## The boss texture in use (null = placeholder silhouette).
 var art: Texture2D
 var walks: Dictionary = {}  # direction -> [Texture2D] (directional packs only)
+var idles: Array = []  # idle/NN.png frames (Cactus King has 4)
 var bomb_tex: Texture2D
 var slide_from := Vector2.ZERO  # footprint top-left in px, sliding to the server cell
 var slide_to := Vector2.ZERO
 var slide_t := 1.0
 var slide_len := 0.2
 var minis_at: Dictionary = {}  # cast id -> {from, to, t}
+var vfx: Dictionary = {}  # vfx name -> Texture2D (twin bosses)
+var series: Dictionary = {}  # design-team sprite pack: "orb", "warning", ... -> [Texture2D] (vfx/<name>_NN.png)
+var banner_text := ""
+var banner_left := 0.0
+var impacts: Array = []  # {tex, tiles, centre, left} short hit flashes
+## Set by the online screen: raider id -> its holder node (followed every frame).
+var raider_spots: Dictionary = {}
+## Node drawn above the raiders (pc_online), for bubbles and the banner.
+var overlay: Node2D
 
 func _init() -> void:
 	for kind in ["mini_bomb", "sticky"]:
@@ -90,6 +137,9 @@ func show_boss(data: Dictionary, server_now: float) -> void:
 		pack_name = pack
 		textures = load_pack(pack)
 		walks = load_walks(pack) if not textures.is_empty() else {}
+		vfx = load_vfx(pack)
+		series = load_series(pack)
+		idles = load_idles(pack)
 		if textures.is_empty():
 			textures = load_pack(DEFAULT_PACK)
 		art = textures.get("idle")
@@ -124,11 +174,23 @@ func show_boss(data: Dictionary, server_now: float) -> void:
 		current[int(cast.id)] = cast
 		if not casts_seen.has(int(cast.id)) and THROWN.has(str(cast.skill)):
 			throw_kick = 0.35
+		if not casts_seen.has(int(cast.id)) and BANNERS.has(str(cast.skill)) and int(cast.get("volley", 0)) == 0 and int(cast.get("wave", 1)) <= 1:
+			banner_text = BANNERS[str(cast.skill)]
+			banner_left = BANNER_SECONDS
+		elif not casts_seen.has(int(cast.id)) and cast.get("volley") != null and not _volley_seen(int(cast.volley)):
+			banner_text = BANNERS.get(str(cast.skill), "")
+			banner_left = BANNER_SECONDS
 	for id in casts_seen:
 		if not current.has(id):
 			var gone: Dictionary = casts_seen[id]
 			if THROWN.has(str(gone.skill)):
 				bursts.append({"kind": THROWN[str(gone.skill)], "tiles": gone.tiles, "left": BURST_SECONDS})
+			elif TWIN_VFX.has(str(gone.skill)):
+				twin_impact(gone)
+				if TWIN_VFX[str(gone.skill)][1] == "boss":
+					# The orb / charge art already carried it to the end cell.
+					slide_from = cell
+					slide_t = 1.0
 	casts_seen = current
 	# Mini chasers glide one cell per server step.
 	var alive_minis := {}
@@ -196,11 +258,18 @@ func _process(delta: float) -> void:
 		burst.left -= delta
 	bursts = bursts.filter(func(b): return b.left > 0.0)
 	slide_t = minf(1.0, slide_t + delta / maxf(0.05, slide_len))
+	banner_left = maxf(0.0, banner_left - delta)
+	for hit in impacts:
+		hit.left -= delta
+	impacts = impacts.filter(func(h): return h.left > 0.0)
 	for id in minis_at:
 		minis_at[id].t = minf(1.0, minis_at[id].t + delta / MINI_STEP)
-	now += delta * 1000.0  # between 20 Hz snapshots
+	if not hold_clock:
+		now += delta * 1000.0  # between 20 Hz snapshots
 	if not boss.is_empty():
 		queue_redraw()
+		if overlay:
+			overlay.queue_redraw()
 
 func current_anim() -> String:
 	if int(boss.get("hp", 1)) <= 0 and int(boss.get("maxHp", 0)) > 0 and textures.has("defeat"):
@@ -265,6 +334,11 @@ func _draw() -> void:
 			draw_magnet(cast)
 	for burst in bursts:
 		draw_burst(burst)
+	if not vfx.is_empty() or not series.is_empty():
+		for cast in boss.get("casts", []):
+			draw_twin(cast)
+		for hit in impacts:
+			draw_impact(hit)
 
 ## Thin pulsing outline on each warned cell, under the slime that lands there.
 func draw_marks(cast: Dictionary) -> void:
@@ -325,6 +399,9 @@ func draw_sprite(tex: Texture2D, pos: Vector2, width: float, feet: bool, tint :=
 
 ## Warning tiles (Wave Push, weak point, or when no slime art ships).
 func draw_cast(cast: Dictionary) -> void:
+	if series.has("warning"):
+		draw_pack_warning(cast)
+		return
 	var look: Array = SKILL_LOOK.get(str(cast.skill), [Color("ff4d6a"), "!"])
 	var tint: Color = look[0]
 	var span := maxf(1.0, float(cast.resolveAt) - float(cast.castAt))
@@ -438,17 +515,33 @@ func draw_boss() -> void:
 func draw_robot() -> void:
 	var rect := footprint()
 	var dir := str(boss.get("facing", "down"))
+	var aiming := false
+	if not series.is_empty():
+		# Sprite pack: faces the skill's direction (roll lane, thorn line) while warning.
+		for cast in boss.get("casts", []):
+			if cast.has("dir"):
+				dir = str(cast.dir)
+				aiming = true
 	var frames: Array = walks.get(dir, walks.down)
 	var moving := walking()
-	var tex: Texture2D = frames[int(clock * 8.0) % frames.size()] if moving else frames[0]
+	var pack := not series.is_empty()
+	var tex: Texture2D = frames[int(clock * (PACK_WALK_FPS if pack else 10.0)) % frames.size()] if moving else frames[0]
+	if not moving and not aiming and (dir == "down" or pack) and idles.size() > 1:
+		tex = idles[int(clock * (PACK_IDLE_FPS if pack else 7.0)) % idles.size()]
+	# A roll / charge carries it (the orb / charge art): the body is not drawn then.
+	for cast in boss.get("casts", []):
+		if TWIN_VFX.get(str(cast.skill), ["", ""])[1] == "boss" and now - float(cast.castAt) > float(SKILL_TIMING_MS.get(str(cast.skill), 900)):
+			return
 	art = tex
 	var phase := int(boss.get("phase", 1))
 	var casting: bool = not boss.get("casts", []).is_empty()
 	var defeated := int(boss.get("hp", 1)) <= 0 and int(boss.get("maxHp", 0)) > 0
-	var width := rect.size.x * ROBOT_ART * (1.0 + 0.02 * sin(clock * 3.0))
+	var width := rect.size.x * (TWIN_ART if not vfx.is_empty() else ROBOT_ART) * (1.0 + 0.02 * sin(clock * 3.0))
 	var extent := Vector2(width, width * tex.get_height() / tex.get_width())
 	var bob := 0.0 if moving else 2.0 * sin(clock * 2.4)
 	var feet := Vector2(rect.get_center().x, rect.end.y + bob)
+	if pack:
+		feet.y += extent.y * (1.0 - PACK_FEET)  # the pack's frames stand above the canvas edge
 	# Shadow on the footprint (no part in collisions).
 	draw_set_transform(Vector2(rect.get_center().x, rect.end.y - 6), 0.0, Vector2(1.0, 0.3))
 	draw_circle(Vector2.ZERO, rect.size.x * 0.5, Color(0, 0, 0, 0.28))
@@ -473,6 +566,13 @@ func draw_robot() -> void:
 	draw_texture_rect(tex, Rect2(feet - Vector2(extent.x * 0.5, extent.y), extent), false, tint)
 	if casting:
 		draw_cast_marks(feet - Vector2(0, extent.y), extent.x)
+	if bool(boss.get("stunned", false)):
+		# Stars circling the head while it is stunned.
+		for i in 3:
+			var angle := clock * 4.0 + i * TAU / 3.0
+			var star := feet - Vector2(0, extent.y * 0.95) + Vector2(cos(angle) * 30.0, sin(angle) * 9.0)
+			draw_circle(star, 6.0, Color("ffe14d"))
+			draw_circle(star, 3.0, Color.WHITE)
 
 ## Where the robot's back bomb launches from (above its head).
 func launch_point() -> Vector2:
@@ -536,3 +636,277 @@ func draw_magnet(cast: Dictionary) -> void:
 		var pos := rect.get_center() + Vector2(cos(angle), sin(angle) * 0.6) * radius
 		draw_sprite(bomb_tex, pos, BOMB_WIDTH * 0.6, false)
 	draw_arc(rect.get_center(), rect.size.x * 1.2, clock * 4.0, clock * 4.0 + PI, 24, Color("9a6bff", 0.6), 4.0)
+
+# ------------------------------------------------------------ Vua Xương Rồng / Cừu Sấm Sét
+
+## Idle frames: assets/boss/<pack>/idle/01..NN.png.
+static func load_idles(pack: String) -> Array:
+	var out := []
+	for i in range(1, 9):
+		var path := "res://assets/boss/%s/idle/%02d.png" % [pack, i]
+		if not ResourceLoader.exists(path):
+			break
+		out.append(load(path))
+	return out
+
+## VFX of a twin-boss pack: assets/boss/<pack>/vfx/<name>.png.
+static func load_vfx(pack: String) -> Dictionary:
+	var out := {}
+	var dir := "res://assets/boss/%s/vfx" % pack
+	for name in ["roll", "thorn", "cross", "storm", "dash", "impact", "ball", "ring", "strike", "leap", "blast"]:
+		var path := "%s/%s.png" % [dir, name]
+		if ResourceLoader.exists(path):
+			out[name] = load(path)
+	return out
+
+func _volley_seen(volley: int) -> bool:
+	for id in casts_seen:
+		if int(casts_seen[id].get("volley", -1)) == volley:
+			return true
+	return false
+
+func cell_centre(t) -> Vector2:
+	return (Vector2(float(t[0]), float(t[1])) + Vector2(0.5, 0.5)) * TILE
+
+## A short flash where a twin skill hit (the server's tiles only).
+func twin_impact(cast: Dictionary) -> void:
+	var spec: Array = TWIN_VFX[str(cast.skill)]
+	var name: String = spec[0]
+	if str(cast.skill) == "ram_thunder_charge" or str(cast.skill) == "cactus_thorn_roll":
+		name = "impact" if vfx.has("impact") else name
+	if bool(cast.get("final", false)) and vfx.has("blast"):
+		name = "blast"
+	if not series.is_empty():
+		pack_impact(cast)
+		return
+	var tex: Texture2D = vfx.get(name)
+	if tex == null:
+		return
+	impacts.append({"tex": tex, "tiles": cast.get("tiles", []), "mode": spec[1], "left": IMPACT_SECONDS})
+
+## While a twin skill is warned / flying, its art moves with it.
+func draw_twin(cast: Dictionary) -> void:
+	var skill := str(cast.skill)
+	if not TWIN_VFX.has(skill):
+		return
+	if not series.is_empty():
+		draw_pack_skill(cast)
+		return
+	var spec: Array = TWIN_VFX[skill]
+	var tex: Texture2D = vfx.get(spec[0])
+	if tex == null:
+		return
+	var rect := footprint()
+	match str(spec[1]):
+		"boss":
+			# Gathering speed on the boss, then rolling / charging along the lane.
+			var warn := float(SKILL_TIMING_MS.get(skill, 900))
+			var started := now - float(cast.castAt) > warn
+			var glow := 0.55 + 0.25 * sin(clock * 16.0)
+			draw_sprite(tex, rect.get_center() + Vector2(0, -rect.size.y * 0.1), rect.size.x * (1.6 if started else 1.2), false, Color(1, 1, 1, glow if not started else 0.95))
+		"fly":
+			# Each projectile cast is one cell of the flight: drawn while it is next.
+			# Only the step in flight now (between the previous cell and this one).
+			var lead := float(cast.resolveAt) - now
+			if lead > 220.0 or lead < -60.0:
+				return
+			for t in cast.get("tiles", []):
+				draw_sprite(tex, cell_centre(t), TILE * (1.1 if skill == "ram_thunder_ball" else 0.8), false)
+		"centre":
+			# The cross gathers on the boss during the warning.
+			var p := clampf((now - float(cast.castAt)) / maxf(1.0, float(cast.resolveAt) - float(cast.castAt)), 0.0, 1.0)
+			draw_sprite(tex, rect.get_center(), rect.size.x * (0.8 + 0.8 * p), false, Color(1, 1, 1, 0.35 + 0.5 * p))
+		"tiles":
+			# Thunder Ram: the leap art on the boss while it calls the storm.
+			if skill == "ram_thunder_storm" and vfx.has("leap") and int(cast.get("wave", 1)) == 1:
+				draw_sprite(vfx.leap, rect.get_center() - Vector2(0, rect.size.y * 0.6), rect.size.x * 1.5, false, Color(1, 1, 1, 0.8))
+			if skill == "ram_thunder_storm" and vfx.has("ring") and now >= float(cast.castAt):
+				for t in cast.get("tiles", []):
+					draw_sprite(vfx.ring, cell_centre(t), TILE * 0.95, false, Color(1, 1, 1, 0.75))
+
+const SKILL_TIMING_MS := {"cactus_thorn_roll": 900, "ram_thunder_charge": 900, "cactus_thorn_shot": 700}
+## Design-team sprite pack (manifest.json: walk 9 FPS, idle 5 FPS, effects 18 FPS,
+## feet at 93.4 % of the frame height). Sizes are art only: hits stay on cells.
+const PACK_SERIES := ["orb", "projectile", "impact", "warning", "cross_tile", "storm"]
+const PACK_SERIES_FRAMES := 8
+const PACK_WALK_FPS := 9.0
+const PACK_IDLE_FPS := 5.0
+const PACK_FX_FPS := 18.0
+const PACK_WARN_FPS := 12.0
+const PACK_STORM_FPS := 16.0
+const PACK_FEET := 0.9336
+const PACK_ORB := 1.15  # orb canvas / footprint (the 2-cell lane)
+const PACK_THORN := 0.95
+const PACK_THORN_STEP_MS := 167.0  # arena THORN_MS_PER_CELL
+const PACK_HIT := 1.4
+const PACK_STORM := 1.9
+
+func draw_impact(hit: Dictionary) -> void:
+	var tex: Texture2D = hit.tex
+	var left: float = hit.left
+	if hit.has("frames"):
+		# Sprite pack: plays once at PACK_FX_FPS, on each cell or at one point.
+		var frames: Array = hit.frames
+		var k := clampi(int((float(hit.total) - left) * PACK_FX_FPS), 0, frames.size() - 1)
+		var fade := clampf(left / float(hit.total) * 4.0, 0.0, 1.0)
+		if hit.has("at"):
+			draw_sprite(frames[k], hit.at, float(hit.width), false, Color(1, 1, 1, fade))
+		else:
+			for t in hit.tiles:
+				draw_sprite(frames[k], cell_centre(t), float(hit.width), false, Color(1, 1, 1, fade))
+		return
+	var alpha := clampf(left / IMPACT_SECONDS * 1.5, 0.0, 1.0)
+	var grow := 1.0 + 0.3 * (1.0 - left / IMPACT_SECONDS)
+	var tiles: Array = hit.tiles
+	if tiles.is_empty():
+		return
+	if str(hit.mode) == "centre":
+		draw_sprite(tex, footprint().get_center(), footprint().size.x * 2.6 * grow, false, Color(1, 1, 1, alpha))
+		return
+	for t in tiles:
+		draw_sprite(tex, cell_centre(t), TILE * 1.1 * grow, false, Color(1, 1, 1, alpha))
+
+## Trapped raiders: a water bubble over them and the seconds left to rescue.
+func draw_bubbles(on: CanvasItem) -> void:
+	var trapped: Dictionary = boss.get("trapped", {})
+	var font := ThemeDB.fallback_font
+	for id in trapped:
+		var holder = raider_spots.get(str(id))
+		if not (holder is Node2D) or not is_instance_valid(holder):
+			continue
+		var pos: Vector2 = (holder as Node2D).position + Vector2(0, 4)
+		var left := maxf(0.0, (float(trapped[id]) - now) / 1000.0)
+		var wobble := 1.0 + 0.04 * sin(clock * 6.0)
+		on.draw_circle(pos, 36.0 * wobble, Color(0.45, 0.8, 1.0, 0.5))
+		on.draw_arc(pos, 36.0 * wobble, 0.0, TAU, 48, Color(0.9, 0.98, 1.0, 1.0), 5.0)
+		on.draw_arc(pos, 30.0 * wobble, 0.0, TAU, 48, Color(0.3, 0.65, 1.0, 0.8), 2.0)
+		on.draw_arc(pos + Vector2(-12, -14), 9.0, PI * 1.1, PI * 1.6, 8, Color(1, 1, 1, 0.9), 3.0)
+		var share := clampf(left / maxf(1.0, float(boss.get("rescueMs", 4000)) / 1000.0), 0.0, 1.0)
+		on.draw_arc(pos, 40.0, -PI / 2.0, -PI / 2.0 + TAU * share, 32, Color("ffd84d") if share > 0.35 else Color("ff4d6a"), 4.0)
+		var label := "%.1f" % left
+		on.draw_string_outline(font, pos + Vector2(-30, 54), label, HORIZONTAL_ALIGNMENT_CENTER, 60, 18, 5, Color("0d2f5c"))
+		on.draw_string(font, pos + Vector2(-30, 54), label, HORIZONTAL_ALIGNMENT_CENTER, 60, 18, Color.WHITE)
+
+## The skill's name over the boss for a moment before the hit (spec: 0.6-1.5 s).
+func draw_banner(on: CanvasItem) -> void:
+	if banner_left <= 0.0 or banner_text == "":
+		return
+	var rect := footprint()
+	var font := ThemeDB.fallback_font
+	var alpha := clampf(banner_left / 0.3, 0.0, 1.0)
+	var pos := rect.get_center() + Vector2(-160, -rect.size.y * 1.15)
+	on.draw_string_outline(font, pos, banner_text, HORIZONTAL_ALIGNMENT_CENTER, 320, 30, 9, Color(0.05, 0.1, 0.25, alpha))
+	on.draw_string(font, pos, banner_text, HORIZONTAL_ALIGNMENT_CENTER, 320, 30, Color(1, 0.88, 0.3, alpha))
+
+## Drawn by the board's top layer (above raiders and bombs): bubbles and the banner.
+func draw_overlay(on: CanvasItem) -> void:
+	if boss.is_empty() or vfx.is_empty():
+		return
+	draw_bubbles(on)
+	draw_banner(on)
+
+## Design-team sprite pack (Vua Xương Rồng): assets/boss/<pack>/vfx/<name>_01..08.png,
+## each frame a separate PNG: the rolling orb, a thorn, a hit, a one-cell warning,
+## a one-cell burst and the storm centre. Areas are built from the server's
+## cells in code, never from one long image.
+static func load_series(pack: String) -> Dictionary:
+	var out := {}
+	for name in PACK_SERIES:
+		var frames := []
+		for i in range(1, 9):
+			var path := "res://assets/boss/%s/vfx/%s_%02d.png" % [pack, name, i]
+			if not ResourceLoader.exists(path):
+				break
+			frames.append(load(path))
+		if not frames.is_empty():
+			out[name] = frames
+	return out if out.size() == PACK_SERIES.size() else {}
+
+## Every warned cell gets its own animated warning; the roll lane keeps an arrow.
+func draw_pack_warning(cast: Dictionary) -> void:
+	var frames: Array = series.warning
+	var tex: Texture2D = frames[int(clock * PACK_WARN_FPS) % frames.size()]
+	var span := maxf(1.0, float(cast.resolveAt) - float(cast.castAt))
+	var progress := clampf((now - float(cast.castAt)) / span, 0.0, 1.0)
+	var look: Array = SKILL_LOOK.get(str(cast.skill), [Color("ff4d6a"), "!"])
+	var pulse := 0.5 + 0.5 * sin(clock * 12.0)
+	for t in cast.get("tiles", []):
+		var cell := Rect2(Vector2(float(t[0]), float(t[1])) * TILE, Vector2(TILE, TILE)).grow(-3)
+		# Readable on the light map: a warm fill that fills up, then the pack's warning.
+		draw_rect(cell, Color(look[0], 0.3 + 0.15 * pulse))
+		draw_rect(Rect2(cell.get_center(), Vector2.ZERO).grow(cell.size.x * 0.5 * progress), Color(look[0], 0.3))
+		draw_sprite(tex, cell.get_center(), TILE * 1.0, false, Color(1.6, 1.3, 0.9))
+		draw_rect(cell, Color(look[0].lightened(0.2), 0.75 + 0.25 * pulse), false, 3.0)
+		if str(cast.skill) == "cactus_thorn_roll" and cast.has("dir"):
+			var dir: Vector2 = ARROWS.get(str(cast.dir), Vector2.RIGHT)
+			var c := cell.get_center() + dir * 14.0
+			draw_line(c + dir * 10, c + dir * -2 + dir.orthogonal() * 8, Color.WHITE, 4.0)
+			draw_line(c + dir * 10, c + dir * -2 - dir.orthogonal() * 8, Color.WHITE, 4.0)
+
+## Where the rolling orb is: on the boss during the warning (none drawn), then
+## along the lane to the server's end cell by the resolve time.
+func orb_position(cast: Dictionary) -> Vector2:
+	var rect := footprint()
+	var warn := float(SKILL_TIMING_MS.get(str(cast.skill), 900))
+	var size := rect.size.x
+	var to := rect.get_center()
+	if cast.get("to") != null:
+		to = Vector2(float(cast.to[0]), float(cast.to[1])) * TILE + Vector2(size, size) * 0.5
+	var q := clampf((now - float(cast.castAt) - warn) / maxf(1.0, float(cast.resolveAt) - float(cast.castAt) - warn), 0.0, 1.0)
+	return rect.get_center().lerp(to, q)
+
+## Sprite pack skills: the boss is hidden while the orb rolls (draw_robot); a
+## thorn is one projectile on the cell it is crossing; the storm turns on the boss.
+func draw_pack_skill(cast: Dictionary) -> void:
+	var rect := footprint()
+	match str(cast.skill):
+		"cactus_thorn_roll":
+			if now - float(cast.castAt) <= float(SKILL_TIMING_MS.cactus_thorn_roll):
+				return
+			var at := orb_position(cast)
+			draw_set_transform(at + Vector2(0, rect.size.y * 0.42), 0.0, Vector2(1.0, 0.3))
+			draw_circle(Vector2.ZERO, rect.size.x * 0.42, Color(0, 0, 0, 0.3))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			var frames: Array = series.orb
+			draw_sprite(frames[int(clock * PACK_FX_FPS) % frames.size()], at, rect.size.x * PACK_ORB, false)
+		"cactus_thorn_shot":
+			# Each cast is one cell of the flight: the thorn slides in from the
+			# cell behind during the last step before this cast resolves.
+			var q := 1.0 - (float(cast.resolveAt) - now) / PACK_THORN_STEP_MS
+			if q < 0.0 or q > 1.0:
+				return
+			var back: Vector2 = ARROWS.get(str(cast.get("dir", "up")), Vector2.UP) * -TILE
+			var frames: Array = series.projectile
+			for t in cast.get("tiles", []):
+				draw_sprite(frames[int(clock * PACK_FX_FPS) % frames.size()], cell_centre(t) + back * (1.0 - q), TILE * PACK_THORN, false)
+		"cactus_thorn_storm":
+			# One storm centre for all waves, from the first wave still to come.
+			for other in boss.get("casts", []):
+				if str(other.skill) == "cactus_thorn_storm":
+					if int(other.id) != int(cast.id):
+						return
+					break
+			if now < float(cast.castAt):
+				return
+			var frames: Array = series.storm
+			draw_sprite(frames[int(clock * PACK_STORM_FPS) % frames.size()], rect.get_center(), rect.size.x * PACK_STORM, false, Color(1, 1, 1, 0.9))
+
+## Hits: the orb bursts at its end cell; the last thorn of a volley bursts where
+## it stopped; the cross and each storm wave burst on every server cell.
+func pack_impact(cast: Dictionary) -> void:
+	var rect := footprint()
+	var total := float(PACK_SERIES_FRAMES) / PACK_FX_FPS + 0.1
+	match str(cast.skill):
+		"cactus_thorn_roll":
+			var at := rect.get_center()
+			if cast.get("to") != null:
+				var size := rect.size.x
+				at = Vector2(float(cast.to[0]), float(cast.to[1])) * TILE + Vector2(size, size) * 0.5
+			impacts.append({"frames": series.impact, "tex": series.impact[0], "at": at, "width": rect.size.x * PACK_HIT, "total": total, "left": total})
+		"cactus_thorn_shot":
+			for other in boss.get("casts", []):
+				if int(other.get("volley", -1)) == int(cast.get("volley", -2)) and int(other.id) != int(cast.id):
+					return  # thorns of this volley still flying
+			impacts.append({"frames": series.impact, "tex": series.impact[0], "tiles": cast.get("tiles", []), "width": TILE * 1.4, "total": total, "left": total})
+		_:
+			impacts.append({"frames": series.cross_tile, "tex": series.cross_tile[0], "tiles": cast.get("tiles", []), "width": TILE * 1.1, "total": total, "left": total})

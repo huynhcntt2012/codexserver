@@ -29,9 +29,34 @@ export const ROBOT_SKILLS: Record<string, string> = {
     'SK07 Lò Bom (2 đợt hàng/cột, chừa hành lang, mệt 2,5 s, phase 3)',
 };
 
+/** Vua Xương Rồng (spec "Cừu Sấm Sét & Vua Xương Rồng" v1.0). */
+export const CACTUS_SKILLS: Record<string, string> = {
+  cactus_thorn_roll:
+    'SK01 Lăn Gai (báo làn 0,9 s, lăn 4 ô, nhốt; đâm tường thì choáng 1,5 s)',
+  cactus_thorn_shot:
+    'SK02 Gai Bay (3 gai theo hướng nhìn, tối đa 5 ô, báo 0,7 s)',
+  cactus_thorn_cross:
+    'SK03 Gai Nổ Chữ Thập (+ 3 ô mỗi hướng, báo 1,2 s, phase 2)',
+  cactus_thorn_storm:
+    'ULT Bão Gai Xoáy (3 vòng gai cách 0,55 s, chừa lối hở, HP ≤ 30 %)',
+};
+
+/** Cừu Sấm Sét (spec "Cừu Sấm Sét & Vua Xương Rồng" v1.0). */
+export const RAM_SKILLS: Record<string, string> = {
+  ram_thunder_charge: 'SK01 Húc Sấm (báo làn 0,9 s, húc 5 ô, đẩy lùi rồi nhốt)',
+  ram_thunder_ball:
+    'SK02 Cầu Điện (1 quả cầu tối đa 6 ô, kích nổ bom, báo 0,8 s)',
+  ram_lightning_cross:
+    'SK03 Điện Nổ Chữ Thập (+ 3 ô mỗi hướng, báo 1,1 s, phase 2)',
+  ram_thunder_storm:
+    'ULT Thiên Lôi Liên Kích (3 đợt 6-8 ô, mỗi đợt báo 1 s, HP ≤ 30 %)',
+};
+
 export const SKILLS: Record<string, string> = {
   ...SLIME_SKILLS,
   ...ROBOT_SKILLS,
+  ...CACTUS_SKILLS,
+  ...RAM_SKILLS,
 };
 
 export const ITEMS: Record<string, string> = {
@@ -70,6 +95,8 @@ export type BossConfig = {
   mount: boolean;
   footprint: number;
   walk_ms: number;
+  rescue_ms: number;
+  hp_formula: 'per_extra' | 'team';
   reward_private_room: boolean;
   sessions: BossSession[];
   eligibility: {
@@ -105,6 +132,8 @@ export function defaultBoss(): BossConfig {
     mount: true,
     footprint: 3,
     walk_ms: 0,
+    rescue_ms: 0,
+    hp_formula: 'per_extra',
     reward_private_room: false,
     sessions: [],
     eligibility: {
@@ -145,6 +174,8 @@ export function fullBoss(boss: Partial<BossConfig> | null | undefined) {
 }
 
 function hp(boss: BossConfig, n: number) {
+  if (boss.hp_formula === 'team')
+    return Math.round(boss.base_hp * (0.6 + 0.1 * n));
   return Math.round(boss.base_hp * (1 + boss.hp_per_extra_player * (n - 1)));
 }
 
@@ -378,7 +409,42 @@ export default function BossEditor({
               onChange={num('bomb_damage')}
             />
           </Field>
-          <Field label="Thân Boss (ô)" hint="Vua Slime 3×3, Robot 2×2">
+          <Field
+            label="Công thức HP"
+            hint={
+              boss.hp_formula === 'team'
+                ? 'HP cơ sở = HP lúc 4 người; × (0,6 + 0,1 × số người)'
+                : 'HP cơ sở = HP 1 người; × (1 + hệ số × (số người − 1))'
+            }
+          >
+            <select
+              className="input"
+              value={boss.hp_formula}
+              onChange={(e) =>
+                set({ hp_formula: e.target.value as BossConfig['hp_formula'] })
+              }
+            >
+              <option value="per_extra">Cộng theo mỗi người thêm</option>
+              <option value="team">Theo cả đội (Cừu / Xương Rồng)</option>
+            </select>
+          </Field>
+          <Field
+            label="Thời gian giải cứu (ms, 0 = bị loại ngay)"
+            hint="Trúng đòn Boss thì bị nhốt bóng nước; đồng đội bước vào để cứu"
+          >
+            <input
+              className="input"
+              type="number"
+              min={0}
+              step={500}
+              value={boss.rescue_ms}
+              onChange={num('rescue_ms')}
+            />
+          </Field>
+          <Field
+            label="Thân Boss (ô)"
+            hint="Vua Slime 3×3; Robot, Vua Xương Rồng, Cừu Sấm Sét 2×2"
+          >
             <select
               className="input"
               value={boss.footprint}
@@ -438,6 +504,8 @@ export default function BossEditor({
             [
               ['Vua Slime', SLIME_SKILLS],
               ['Robot Bom Dây Cót', ROBOT_SKILLS],
+              ['Vua Xương Rồng', CACTUS_SKILLS],
+              ['Cừu Sấm Sét', RAM_SKILLS],
             ] as const
           ).map(([group, skills]) => (
             <div className="stack" key={group}>

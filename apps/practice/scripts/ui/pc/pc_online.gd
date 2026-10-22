@@ -5,7 +5,10 @@ extends "res://scripts/ui/pc/pc_kit.gd"
 ## blasts, deaths, timer and winner always come from the server.
 const TILE := 64
 const MOVE_SECONDS := 0.15
-const RESEND := 0.09
+## Holding a key: the next step is asked for once the server has moved us
+## (one step per intent), or after RESEND_FALLBACK when blocked. A tap is one cell.
+const REPEAT_DELAY := 0.2
+const RESEND_FALLBACK := 0.3
 const CHAT_POLL := 3.0
 const ItemUi := preload("res://scripts/ui/pc/battle_item_ui.gd")
 const PetSprite := preload("res://scripts/pet_sprite.gd")
@@ -18,6 +21,9 @@ const SKILL_NAMES := {
 	"robot_bomb_launch": "Bom Bật Sau Lưng", "robot_bomb_chain": "Chuỗi Boom", "robot_mini_chaser": "Bom Đuổi",
 	"robot_recoil_dash": "Phản Lực Boom", "robot_magnet_pull": "Hút Boom Về Lưng", "robot_overheat": "Quá Tải Dây Cót",
 	"robot_reactor": "ULTIMATE Lò Bom",
+	"cactus_thorn_roll": "LĂN GAI", "cactus_thorn_shot": "GAI BAY", "cactus_thorn_cross": "GAI NỔ",
+	"cactus_thorn_storm": "BÃO GAI XOÁY", "ram_thunder_charge": "HÚC SẤM", "ram_thunder_ball": "CẦU ĐIỆN",
+	"ram_lightning_cross": "ĐIỆN NỔ CHỮ THẬP", "ram_thunder_storm": "BÃO SÉT",
 }
 const RAID_TITLES := {"WIN": "ĐÃ HẠ BOSS!", "LOSE": "CẢ ĐỘI BỊ HẠ", "TIMEOUT": "HẾT GIỜ!", "ABORT": "TRẬN BỊ HỦY"}
 
@@ -43,6 +49,7 @@ var chat_key := ""
 # Battle
 var board_area: Control
 var board: Node2D
+var auto_ready_sent := false
 var floor_layer: Node2D
 var block_layer: Node2D
 var piece_layer: Node2D
@@ -76,6 +83,8 @@ var invited: Dictionary = {}  # account id -> unix time of the last invite
 var invite_on_open := false
 var seats_title: Label
 var resend := 0.0
+var held_time := 0.0
+var sent_from := Vector2i(-1, -1)  # our server cell when the last step was sent
 var last_phase := ""
 var item_ui: RefCounted
 var selected_slot := 0
@@ -97,6 +106,11 @@ func _init() -> void:
 	super("sky")
 
 func _ready() -> void:
+	Settings.changed.connect(func():
+		for f in fighters.values():
+			var tag: Node = (f.root as Node).get_node_or_null("NameTag")
+			if tag:
+				tag.visible = Settings.on("display", "show_names"))
 	name = "PcOnline"
 	setup()
 	reload_levels()
@@ -248,7 +262,7 @@ func poll_chat() -> void:
 	for message in reply.data.get("messages", []):
 		chat_after = maxi(chat_after, int(message.id))
 		if not bool(message.get("mine", false)):
-			add_chat("%s: %s" % [str(message.sender.name), str(message.body)])
+			add_chat("%s: %s" % [str(message.sender.name), Settings.clean_chat(str(message.body))])
 
 func press_ready() -> void:
 	OnlineArena.send_action("ready")
@@ -292,7 +306,7 @@ func render_room(snap: Dictionary) -> void:
 		if i < players.size():
 			var p: Dictionary = players[i]
 			var mine := str(p.id) == OnlineArena.session_id
-			seat.face.texture = load("res://assets/characters/portraits/%s.png" % hero_of(p))
+			seat.face.texture = HeroPortrait.texture(hero_of(p))
 			seat.name.text = str(p.name) + (" (Bạn)" if mine else "")
 			seat.name.add_theme_color_override("font_color", INK)
 			var bot := bool(p.get("bot", false))
@@ -311,6 +325,12 @@ func render_room(snap: Dictionary) -> void:
 	ready_button.disabled = phase != "waiting" or bool(me.get("ready", false))
 	invite_button.disabled = phase != "waiting" or humans >= seat_count
 	ready_button.text = "ĐÃ SẴN SÀNG" if bool(me.get("ready", false)) else "SẴN SÀNG"
+	# Settings › Trò chơi › Tự động sẵn sàng: once per waiting phase.
+	if phase != "waiting":
+		auto_ready_sent = false
+	elif Settings.on("game", "auto_ready") and not me.is_empty() and not bool(me.get("ready", false)) and not auto_ready_sent:
+		auto_ready_sent = true
+		press_ready()
 	if phase != "countdown" and practice:
 		status_label.text = "%d người + %d bot · Bot luôn sẵn sàng, bạn bè vào sẽ thay ghế bot. Bấm SẴN SÀNG để bắt đầu." % [humans, players.size() - humans]
 	elif phase == "countdown":
@@ -374,7 +394,11 @@ func build_battle(root: VBoxContainer) -> void:
 	boss_view = BossView.new()
 	boss_view.name = "BossView"
 	boss_view.hide()
-	for layer in [floor_layer, block_layer, boss_view, piece_layer]:
+	var boss_overlay := Node2D.new()
+	boss_overlay.name = "BossOverlay"
+	boss_overlay.draw.connect(func(): boss_view.draw_overlay(boss_overlay))
+	boss_view.overlay = boss_overlay
+	for layer in [floor_layer, block_layer, boss_view, piece_layer, boss_overlay]:
 		board.add_child(layer)
 	build_boss_hud()
 	banner = title_text("", 96, Color.WHITE, board_area)
@@ -566,6 +590,7 @@ func render_battle(snap: Dictionary) -> void:
 	else:
 		boss_view.hide()
 		boss_hud.hide()
+		piece_layer.z_index = 0
 	# Bombs.
 	var seen := {}
 	for b in snap.get("bombs", []):
@@ -608,6 +633,8 @@ func render_battle(snap: Dictionary) -> void:
 			flames.erase(cell)
 	if fresh:
 		game._sound("explosion")
+		Settings.shake(board)
+		Settings.rumble()
 	# Players: smooth 150 ms slide toward the server cell.
 	var present := {}
 	for p in snap.get("players", []):
@@ -782,6 +809,8 @@ func spawn_fighter(p: Dictionary, cell: Vector2i) -> Dictionary:
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tag.size = Vector2(160, 24)
 	tag.position = Vector2(-80, -66)
+	tag.name = "NameTag"
+	tag.visible = Settings.on("display", "show_names")
 	holder.add_child(tag)
 	return {"root": holder, "sprite": visual, "from": holder.position, "to": cell, "t": 1.0, "rest": 0.0, "alive": true}
 
@@ -807,7 +836,7 @@ func render_side(snap: Dictionary) -> void:
 		var p: Dictionary = players[i]
 		var hero := hero_of(p)
 		var mine := str(p.id) == OnlineArena.session_id
-		entry.face.texture = load("res://assets/characters/portraits/%s.png" % hero)
+		entry.face.texture = HeroPortrait.texture(hero)
 		entry.face.modulate.a = 1.0 if p.alive else 0.45
 		entry.name.text = str(p.name) + (" (Bạn)" if mine else "")
 		entry.name.tooltip_text = entry.name.text
@@ -886,14 +915,27 @@ func build_boss_hud() -> void:
 func render_boss(snap: Dictionary) -> void:
 	var boss: Dictionary = snap.get("boss", {})
 	boss_view.visible = true
+	# Spec priority: raiders + bombs > warnings > skill VFX: above the blast art (z 4).
+	piece_layer.z_index = 5
+	boss_view.overlay.z_index = 6
+	# Where each raider is drawn, for the rescue bubbles.
+	for id in fighters:
+		boss_view.raider_spots[id] = fighters[id].root
 	boss_view.show_boss(boss, float(snap.get("now", 0)))
 	boss_hud.show()
 	boss_title.text = str(boss.get("name", "Boss"))
 	boss_phase.text = "PHASE %d" % int(boss.get("phase", 1))
 	boss_bar.set_values(float(boss.get("hp", 0)), float(boss.get("maxHp", 1)), boss.get("thresholds", []), bool(boss.get("weak", false)))
 	var casts: Array = boss.get("casts", [])
-	if bool(boss.get("weak", false)):
+	var trapped: Dictionary = boss.get("trapped", {})
+	if bool(boss.get("stunned", false)):
+		boss_note.text = "CHOÁNG! Đặt bom ngay"
+	elif bool(boss.get("weak", false)):
 		boss_note.text = "ĐIỂM YẾU! Sát thương ×1,5"
+	elif trapped.has(OnlineArena.session_id):
+		boss_note.text = "Bạn bị nhốt! Chờ đồng đội cứu"
+	elif not trapped.is_empty():
+		boss_note.text = "Đồng đội bị nhốt: chạm vào để cứu!"
 	elif not casts.is_empty():
 		boss_note.text = "⚠ %s" % SKILL_NAMES.get(str(casts[0].skill), "Cảnh báo")
 	else:
@@ -1127,7 +1169,7 @@ func invite(friend_id: String, holder: Control) -> void:
 		invite_note.text = {409: "Phòng không còn nhận người (đang chơi hoặc đã đầy).", 429: "Bạn mời quá nhanh, chờ một chút nhé.", 403: "Chưa gửi được: phòng chưa sẵn sàng, thử lại sau vài giây."}.get(int(reply.status), "Chưa gửi được: %s" % str(reply.error))
 
 func ask_leave() -> void:
-	if str(OnlineArena.snapshot.get("phase", "")) == "playing" and OnlineArena.me().get("alive", false):
+	if Settings.on("game", "confirm_leave") and str(OnlineArena.snapshot.get("phase", "")) == "playing" and OnlineArena.me().get("alive", false):
 		notice("RỜI TRẬN?", "Trận đang diễn ra. Rời phòng sẽ bị tính là bị hạ.", leave, "RỜI PHÒNG")
 	else:
 		leave()
@@ -1153,6 +1195,29 @@ func _on_visibility() -> void:
 		if not OnlineArena.snapshot.is_empty():
 			_on_snapshot(OnlineArena.snapshot)
 
+## Gamepad (Settings › Điều khiển › Tay cầm): same actions as the keys.
+func _input(event: InputEvent) -> void:
+	var pad := Settings.pad_action(event)
+	if pad == "" or not is_visible_in_tree():
+		return
+	if pad == "pause":
+		if modal.visible:
+			close_modal()
+		else:
+			ask_leave()
+	elif battle_view.visible:
+		match pad:
+			"bomb":
+				OnlineArena.send_action("bomb")
+			"use":
+				use_slot()
+			"mount":
+				toggle_mount()
+			"prev", "next":
+				var slots: int = ItemUi.SLOTS.size()
+				select_slot((selected_slot + (slots - 1 if pad == "prev" else 1)) % slots)
+	get_viewport().set_input_as_handled()
+
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not is_visible_in_tree() or not (event is InputEventKey) or not event.pressed or event.echo:
 		return
@@ -1162,7 +1227,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		else:
 			ask_leave()
 		get_viewport().set_input_as_handled()
-	elif not battle_view.visible or chat_input.has_focus():
+	elif not battle_view.visible or chat_input.has_focus() or not Settings.keyboard():
 		return
 	elif event.keycode == KEY_SPACE:
 		OnlineArena.send_action("bomb")
@@ -1180,6 +1245,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func held_direction() -> String:
 	if chat_input.has_focus():
 		return ""
+	if not Settings.keyboard():
+		return {Vector2i.LEFT: "left", Vector2i.RIGHT: "right", Vector2i.UP: "up", Vector2i.DOWN: "down"}.get(Settings.pad_direction(), "")
 	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
 		return "left"
 	if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
@@ -1202,12 +1269,22 @@ func _process(delta: float) -> void:
 			chat_clock = CHAT_POLL
 			poll_chat()
 	if battle_view.visible:
-		# Intent only: a held key is re-sent so the server's one-step buffer stays full.
+		# Intent only, one step per press: a new key sends at once; while it is held
+		# the next step goes out after REPEAT_DELAY, and only once the server moved
+		# us (else a fast tap would queue a second step on the server).
 		var direction := held_direction()
+		var me: Dictionary = OnlineArena.me()
+		var cell := Vector2i(int(me.get("x", -1)), int(me.get("y", -1)))
 		resend -= delta
-		if direction != "" and (direction != held or resend <= 0.0):
+		held_time = held_time + delta if direction == held else 0.0
+		if direction != "" and direction != held:
 			OnlineArena.send_action(direction)
-			resend = RESEND
+			sent_from = cell
+			resend = RESEND_FALLBACK
+		elif direction != "" and held_time >= REPEAT_DELAY and (cell != sent_from or resend <= 0.0):
+			OnlineArena.send_action(direction)
+			sent_from = cell
+			resend = RESEND_FALLBACK
 		held = direction
 		for f in fighters.values():
 			f.t = minf(1.0, f.t + delta / MOVE_SECONDS)

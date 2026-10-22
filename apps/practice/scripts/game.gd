@@ -1,6 +1,7 @@
 extends Node2D
 ## Game Boom step 3 - single-player arcade arena, three levels, procedural audio,
 ## six-frame movement and pathfinding bot AI. All assets custom-generated.
+const HeroPortrait := preload("res://scripts/hero_portrait.gd")
 
 const TILE: int = 64
 ## Board size of the loaded level (15x11 classic maps, 17x13 Boom World maps).
@@ -20,6 +21,7 @@ const LEVEL_FILES = [
 const DIRECTIONS = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 const HERO_SCRIPT = preload("res://scripts/hero_sprite.gd")
 const MapBlocks = preload("res://scripts/map_blocks.gd")
+const REPEAT_DELAY: float = 0.2  # hold a key this long before it repeats
 
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var selected_hero: int = 0
@@ -65,6 +67,9 @@ var reporter: Node = preload("res://scripts/practice_report.gd").new()
 var arena_layout := Rect2(ARENA_POS, Vector2(15 * TILE, 11 * TILE))
 var background: Sprite2D
 var battle_items: Node = preload("res://scripts/battle_items.gd").new()
+var held_direction := Vector2i.ZERO
+var held_time := 0.0
+var move_pending := false  # a new key press waiting for the step cooldown
 var pc_screens: Dictionary = {}  # PC menus inside `menu`: lobby, matchmaking, room
 
 
@@ -96,6 +101,7 @@ func _create_audio() -> void:
 	music.name = "OriginalMusic"
 	music.stream = load("res://assets/audio/music_loop.wav")
 	music.volume_db = -22.0
+	music.bus = "Music"
 	music.finished.connect(_restart_music)
 	add_child(music)
 	if music_enabled:
@@ -117,6 +123,7 @@ func _sound(sound_id: String) -> void:
 	next_audio = (next_audio + 1) % audio_players.size()
 	track.stop()
 	track.stream = load(path)
+	track.bus = Settings.bus_for(sound_id)
 	track.play()
 
 
@@ -160,7 +167,7 @@ func _create_ui() -> void:
 	for i in range(HEROES.size()):
 		var card = _panel(menu, Vector2(158 + i * 195, 238), Vector2(184, 205), Color("18527d"), HERO_COLORS[i])
 		var portrait = TextureRect.new()
-		portrait.texture = load("res://assets/characters/portraits/%s.png" % HEROES[i])
+		portrait.texture = HeroPortrait.texture(HEROES[i])
 		portrait.position = Vector2(22, 7)
 		portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -371,6 +378,9 @@ func _new_round() -> void:
 	_build_map()
 	player = _spawn_fighter(HEROES[selected_hero], spawn_cell(0), false)
 	player["sprite"].dress(UIState.profile.get("loadout", {}))
+	held_direction = Vector2i.ZERO
+	held_time = 0.0
+	move_pending = false
 	battle_items.start_round()
 	var enemy_names: Array = bot_heroes()
 	for i in 3:
@@ -478,6 +488,10 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	var pad := Settings.pad_action(event)
+	if pad != "":
+		_pad_action(pad)
+		return
 	if not (event is InputEventKey):
 		return
 	var key: InputEventKey = event as InputEventKey
@@ -495,7 +509,7 @@ func _input(event: InputEvent) -> void:
 	if key.keycode == KEY_R and game_state in ["playing", "paused", "ended"]:
 		_new_round()
 		return
-	if game_state != "playing":
+	if game_state != "playing" or not Settings.keyboard():
 		return
 	if key.keycode == KEY_SPACE:
 		_place_bomb(player)
@@ -505,6 +519,30 @@ func _input(event: InputEvent) -> void:
 		battle_items.use_selected()
 	elif key.keycode == KEY_Q:
 		battle_items.toggle_mount()
+
+
+## Gamepad (Settings › Điều khiển › Tay cầm): same actions as the keys.
+func _pad_action(action: String) -> void:
+	if action == "pause":
+		if game_state == "playing":
+			_pause_game()
+		elif game_state == "paused":
+			_resume_game()
+		return
+	if game_state != "playing":
+		return
+	var slots: int = battle_items.SLOTS.size()
+	match action:
+		"bomb":
+			_place_bomb(player)
+		"use":
+			battle_items.use_selected()
+		"mount":
+			battle_items.toggle_mount()
+		"prev":
+			battle_items.select((battle_items.selected + slots - 1) % slots)
+		"next":
+			battle_items.select((battle_items.selected + 1) % slots)
 
 
 func _pause_game() -> void:
@@ -526,8 +564,10 @@ func _resume_game() -> void:
 func _update_player_input() -> void:
 	if player.is_empty() or not player["alive"]:
 		return
-	var direction = Vector2i.ZERO
-	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
+	var direction = Settings.pad_direction()
+	if not Settings.keyboard():
+		pass
+	elif Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
 		direction = Vector2i.LEFT
 	elif Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
 		direction = Vector2i.RIGHT
@@ -537,7 +577,17 @@ func _update_player_input() -> void:
 		direction = Vector2i.DOWN
 	if direction != Vector2i.ZERO:
 		battle_items.facing = direction
-	if direction != Vector2i.ZERO and player_move_cooldown <= 0.0:
+	# A tap moves one cell: a new direction steps at once, a held key repeats
+	# only after REPEAT_DELAY (then at the walking speed).
+	if direction != held_direction:
+		held_direction = direction
+		held_time = 0.0
+		move_pending = direction != Vector2i.ZERO
+	else:
+		held_time += get_process_delta_time()
+	var wants := move_pending or held_time >= REPEAT_DELAY
+	if direction != Vector2i.ZERO and wants and player_move_cooldown <= 0.0:
+		move_pending = false
 		player_move_cooldown = 0.155 / (float(player["speed"]) * battle_items.speed_factor())
 		if _move_fighter(player, direction):
 			_sound("footstep")
@@ -939,6 +989,8 @@ func _explode_bomb(bomb: Dictionary) -> void:
 		vfx.append(splash)
 	bursts.append({"cells":affected,"visuals":vfx,"duration":0.52,"owner":bomb["owner"]})
 	_sound("explosion")
+	Settings.shake(world)
+	Settings.rumble()
 	for actor in fighters:
 		if actor["alive"] and actor["cell"] in affected:
 			_hit_fighter(actor, bomb["owner"])

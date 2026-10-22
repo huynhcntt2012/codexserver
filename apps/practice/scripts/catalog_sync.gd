@@ -5,6 +5,7 @@ extends Node
 ##   against its hash, then lives in user://catalog/icons forever.
 ## - At most MAX_PARALLEL downloads run, and none start while a match is running.
 ## - Until an icon arrives (or when offline) the bundled res:// art is used.
+const HeroPortrait := preload("res://scripts/hero_portrait.gd")
 signal catalog_applied()
 signal icon_ready(item_id: String)
 
@@ -87,6 +88,10 @@ func apply(items: Array) -> void:
 				item[key] = entry[key]
 		item["shop_enabled"] = true
 		var bundled := "res://assets/" + str(entry.get("icon", ""))
+		if HeroPortrait.for_path(bundled) != null:
+			# A hero portrait (outfits) or a pet: the bundled animation, not a still copy.
+			item["icon"] = bundled
+			continue
 		if not item.has("icon") or not has_icon(str(item.get("icon", ""))):
 			item["icon"] = bundled if ResourceLoader.exists(bundled) else ""
 		if str(entry.get("icon_sha256", "")) != "":
@@ -152,6 +157,9 @@ func texture(path: String) -> Texture2D:
 	if path == "":
 		return null
 	if not path.begins_with("user://"):
+		var portrait := HeroPortrait.for_path(path)
+		if portrait != null:
+			return portrait
 		return load(path) if ResourceLoader.exists(path) else null
 	if textures.has(path):
 		return textures[path]

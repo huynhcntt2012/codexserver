@@ -90,8 +90,10 @@ func _apply() -> void:
 	if not AuthSession.configure(api_field.text):
 		connection_status.text = AuthSession.last_error
 		return
-	var volume: float = float($Volume.value) / 100.0
-	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(volume, 0.001)))
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if $Fullscreen.button_pressed else DisplayServer.WINDOW_MODE_WINDOWED)
+	# Same values as the in-game settings window (Settings autoload), so they last.
+	var values: Dictionary = Settings.draft()
+	values.audio.master = int($Volume.value)
+	values.display.mode = "fullscreen" if $Fullscreen.button_pressed else "window"
+	Settings.save(values)
 	applied.emit(float($Volume.value), $Fullscreen.button_pressed)
 	hide()

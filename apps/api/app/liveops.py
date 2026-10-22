@@ -183,8 +183,28 @@ ROBOT_SKILLS = (
     "robot_overheat",
     "robot_reactor",
 )
-BOSS_SKILLS = SLIME_SKILLS + ROBOT_SKILLS
-HITTING_SKILLS = {"boss_basic_hit", "boss_aoe_mark", *ROBOT_SKILLS}
+# Spec "Cừu Sấm Sét & Vua Xương Rồng" v1.0: SK01, SK02, SK03 (phase 2), ULT (HP ≤ 30 %).
+CACTUS_SKILLS = (
+    "cactus_thorn_roll",
+    "cactus_thorn_shot",
+    "cactus_thorn_cross",
+    "cactus_thorn_storm",
+)
+RAM_SKILLS = (
+    "ram_thunder_charge",
+    "ram_thunder_ball",
+    "ram_lightning_cross",
+    "ram_thunder_storm",
+)
+BOSS_SKILLS = SLIME_SKILLS + ROBOT_SKILLS + CACTUS_SKILLS + RAM_SKILLS
+HITTING_SKILLS = {"boss_basic_hit", "boss_aoe_mark", *ROBOT_SKILLS, *CACTUS_SKILLS, *RAM_SKILLS}
+# Skill families: one boss uses one family (its art and moves match them).
+SKILL_FAMILIES = {
+    "slime": SLIME_SKILLS,
+    "robot": ROBOT_SKILLS,
+    "cactus": CACTUS_SKILLS,
+    "ram": RAM_SKILLS,
+}
 BOSS_ITEMS = ("throw_bomb", "dart", "blue_shield", "speed_shoes", "freeze_bomb", "push_glove")
 
 
@@ -229,6 +249,10 @@ class BossRules(BaseModel):
     # Footprint side in cells (Slime King 3, robot 2) and ms per walking step (0 = stays put).
     footprint: int = Field(default=3, ge=2, le=3)
     walk_ms: int = Field(default=0, ge=0, le=5000)
+    # A boss hit traps the raider this long for a teammate rescue (0 = out at once).
+    rescue_ms: int = Field(default=0, ge=0, le=10_000)
+    # per_extra: base × (1 + k × (n − 1)); team: base × (0.6 + 0.1 × n), base = HP at 4 players.
+    hp_formula: Literal["per_extra", "team"] = "per_extra"
     reward_private_room: bool = False
     # Empty = playable for the whole event window.
     sessions: list[BossSession] = Field(default_factory=list, max_length=7)
@@ -444,6 +468,51 @@ def seed_defaults(db: Session) -> int:
             added += 1
     db.commit()
     return added
+
+
+def template_twin_event(boss: Literal["cactus", "ram"]) -> dict:
+    """Cactus King / Thunder Ram events (spec "Cừu Sấm Sét & Vua Xương Rồng" v1.0, samples)."""
+    cactus = boss == "cactus"
+    event = template_boss_event()
+    name = "Vua Xương Rồng" if cactus else "Cừu Sấm Sét"
+    event.update(
+        name="Đấu Trường Gai Xanh" if cactus else "Đấu Trường Sấm Sét",
+        description=f"Cả đội 1-8 người hạ {name}; đồng đội bị nhốt có 4 giây để giải cứu.",
+    )
+    event["config"].update(
+        banner=(
+            "Vua Xương Rồng lăn gai và chia cắt đấu trường!"
+            if cactus
+            else "Cừu Sấm Sét húc dọc làn và gọi bão sét!"
+        ),
+        intro=(
+            "Né làn lăn gai và gai bay, đứng ngoài dấu cộng khi gai nổ; ở dưới 30 % HP "
+            "Vua tung Bão Gai Xoáy, luôn có lối hở. Bị nhốt trong bóng nước thì chờ đồng đội cứu."
+            if cactus
+            else "Né làn húc và cầu điện, đứng ngoài dấu cộng khi điện nổ; dưới 30 % HP Cừu "
+            "bật cao gọi Thiên Lôi Liên Kích 3 đợt. Bị nhốt trong bóng nước thì chờ đồng đội cứu."
+        ),
+        npc=name,
+    )
+    event["config"]["boss"].update(
+        boss_id="boss_cactus_king" if cactus else "boss_thunder_ram",
+        asset_pack_id="cactus_king" if cactus else "thunder_ram",
+        display_name=name,
+        map_id="harbor",
+        base_hp=8000,
+        hp_formula="team",
+        phase_thresholds=[0.7, 0.3],
+        skills=list(CACTUS_SKILLS if cactus else RAM_SKILLS),
+        bomb_damage=100,
+        min_players=1,
+        max_players=8,
+        duration_seconds=420,
+        footprint=2,
+        walk_ms=650 if cactus else 550,
+        rescue_ms=4000,
+        full_reward_limit_per_day=3,
+    )
+    return event
 
 
 def template_robot_event() -> dict:
@@ -876,6 +945,19 @@ def validate_boss(db: Session, boss: BossRules, maps: set[str], days: int):
         errors.append("Boss: kỹ năng bị trùng")
     if not HITTING_SKILLS & set(boss.skills):
         errors.append("Boss: cần ít nhất một đòn gây sát thương (Basic Hit, AOE hoặc Robot)")
+    families = [f for f, skills in SKILL_FAMILIES.items() if set(skills) & set(boss.skills)]
+    if len(families) > 1:
+        warnings.append(
+            "Boss: kỹ năng của nhiều boss khác nhau (" + ", ".join(families) + "); hình và "
+            "cách di chuyển chỉ khớp một bộ"
+        )
+    twin = set(CACTUS_SKILLS + RAM_SKILLS) & set(boss.skills)
+    if twin and not boss.walk_ms:
+        warnings.append("Boss: Vua Xương Rồng / Cừu Sấm Sét nên di chuyển (walk_ms > 0)")
+    if twin and boss.footprint != 2:
+        errors.append("Boss: Vua Xương Rồng / Cừu Sấm Sét chiếm 2×2 ô (footprint 2)")
+    if boss.rescue_ms and boss.rescue_ms < 1500:
+        warnings.append("Boss: thời gian cứu dưới 1,5 s khó kịp")
     if 0 < boss.walk_ms < 300:
         errors.append("Boss: bước đi tối thiểu 300 ms (0 = đứng yên)")
     if boss.walk_ms and boss.footprint == 3:
@@ -891,7 +973,11 @@ def validate_boss(db: Session, boss: BossRules, maps: set[str], days: int):
         warnings.append("Boss: phòng riêng nhận thưởng, cần luật chống cày (anti-abuse)")
     if sum(r.amount for r in boss.win_rewards if r.type == "gem") > 100:
         warnings.append("Boss: thưởng kim cương mỗi trận lớn, cần người duyệt kinh tế xem lại")
-    hp8 = round(boss.base_hp * (1 + boss.hp_per_extra_player * 7))
+    hp8 = (
+        round(boss.base_hp * 1.4)
+        if boss.hp_formula == "team"
+        else round(boss.base_hp * (1 + boss.hp_per_extra_player * 7))
+    )
     bombs = -(-hp8 // boss.bomb_damage)
     if bombs > boss.duration_seconds:
         warnings.append(f"Boss 8 người cần {bombs} quả bom trúng trong {boss.duration_seconds}s")
@@ -1646,9 +1732,13 @@ def admin_validate_event(body: EventCheck, _: Reader, db: Db):
 
 
 @router.get("/admin/v1/events/template")
-def admin_event_template(_: Reader, kind: Literal["story", "boss", "robot"] = "story"):
+def admin_event_template(
+    _: Reader, kind: Literal["story", "boss", "robot", "cactus", "ram"] = "story"
+):
     if kind == "robot":
         return template_robot_event()
+    if kind in ("cactus", "ram"):
+        return template_twin_event(kind)
     return template_boss_event() if kind == "boss" else template_event()
 
 

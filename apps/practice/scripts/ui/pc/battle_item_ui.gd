@@ -100,14 +100,14 @@ func build_panel(parent: Control) -> PanelContainer:
 	active_reach = kit.stretch(kit.text("", 11, Color("d5f3ff"), words))
 	active_cooldown = kit.stretch(kit.text("", 12, Color("7ff0c2"), words))
 	var buttons: HBoxContainer = kit.row(6, stack)
-	use_button = kit.candy("Ctrl  DÙNG", func(): on_use.call(), "sun", 14)
+	use_button = kit.candy(keyed("use", "DÙNG"), func(): on_use.call(), "sun", 14)
 	use_button.name = "UseItem"
 	use_button.tooltip_text = "Dùng vật phẩm đang chọn theo hướng nhìn (Ctrl)"
 	use_button.focus_mode = Control.FOCUS_NONE
 	use_button.custom_minimum_size = Vector2(0, 38)
 	use_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buttons.add_child(use_button)
-	mount_button = kit.candy("Q  THÚ CƯỠI", func(): on_mount.call(), "mint", 14)
+	mount_button = kit.candy(keyed("mount", "THÚ CƯỠI"), func(): on_mount.call(), "mint", 14)
 	mount_button.name = "Mount"
 	mount_button.tooltip_text = "Lên / xuống thú cưỡi (Q): +25% tốc độ, đỡ 1 lần trúng bom"
 	mount_button.focus_mode = Control.FOCUS_NONE
@@ -228,7 +228,8 @@ func render(view: Dictionary) -> void:
 	var mounted := bool(view.get("mounted", false))
 	var used := bool(view.get("pet_used", false))
 	mount_button.disabled = pet == "" or (used and not mounted)
-	mount_button.text = "Q  XUỐNG THÚ" if mounted else "Q  THÚ CƯỠI"
+	mount_button.text = keyed("mount", "XUỐNG THÚ" if mounted else "THÚ CƯỠI")
+	use_button.text = keyed("use", "DÙNG")
 	if pet == "":
 		pet_icon.texture = null
 		pet_name.text = "Chưa có thú cưỡi"
@@ -239,3 +240,8 @@ func render(view: Dictionary) -> void:
 	pet_name.text = str(item.get("name", pet)).to_upper()
 	pet_state.text = ("Đang cưỡi +25%" if mounted else "Chưa cưỡi") + " · Lá chắn: %s" % ("đã dùng" if used else "1 lượt")
 	pet_state.tooltip_text = "Thú cưỡi: +25% tốc độ, chịu thay 1 lần trúng bom rồi biến mất tới ván sau"
+
+## "Ctrl  DÙNG" / "X  DÙNG": the key or pad button first, when hints are on.
+static func keyed(action: String, word: String) -> String:
+	var key: String = Engine.get_main_loop().root.get_node("Settings").hint(action)
+	return "%s  %s" % [key, word] if key != "" else word

@@ -132,16 +132,12 @@ func run() -> void:
 	prefs.save("user://launch_preferences.cfg")
 	lobby.refresh()
 	lobby.notice("Hộp thư trống.", "HỘP THƯ", "mail")
-	check(lobby.modal.visible and lobby.modal_title.text == "HỘP THƯ" and lobby.modal_message.text == "Hộp thư trống." and not lobby.modal_settings.visible, "Notice uses in-game modal")
+	check(lobby.modal.visible and lobby.modal_title.text == "HỘP THƯ" and lobby.modal_message.text == "Hộp thư trống.", "Notice uses in-game modal")
 	lobby.modal_ok.pressed.emit()
 	check(not lobby.modal.visible, "Notice closes")
 	lobby.open_settings()
-	check(lobby.modal.visible and lobby.modal_settings.visible and lobby.audio_toggle.text == ("BẬT" if game.music_enabled else "TẮT"), "Settings modal shows game toggles")
-	var audio_before: bool = game.music_enabled
-	lobby.audio_toggle.button_pressed = not audio_before
-	check(game.music_enabled != audio_before and lobby.audio_toggle.text == ("BẬT" if game.music_enabled else "TẮT"), "Audio toggle works")
-	lobby.audio_toggle.button_pressed = audio_before
-	lobby.close_modal()
+	check(lobby.store.visible and lobby.store_pages.settings.visible and lobby.store_title.text == "CÀI ĐẶT", "Gear opens the settings window")
+	lobby.close_store()
 	if not OS.get_environment("SUNI_CAPTURE_DIR").is_empty():
 		await RenderingServer.frame_post_draw
 		check(root.get_texture().get_image().save_png(OS.get_environment("SUNI_CAPTURE_DIR") + "/practice-main-lobby.png") == OK, "Screenshot saved")

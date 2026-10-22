@@ -201,7 +201,7 @@ export class Arena {
   startedAt = 0;
   /** Called after a round becomes finished; must not block the tick. */
   onRoundEnd: ((result: RoundResult) => void) | null = null;
-  private flameOwners = new Map<string, string>();
+  protected flameOwners = new Map<string, string>();
   /** Players needed before an all-ready lobby counts down (boss raids allow 1). */
   protected minPlayers = 2;
   protected roundMs = ROUND_MS;
@@ -350,19 +350,14 @@ export class Arena {
         p.nextMove = this.now + this.moveMs(p);
         const gear = this.gear.get(p.id);
         if (gear) gear.facing = action as Gear['facing'];
-        if (
-          this.isWalkable(x, y) &&
-          ![...this.players.values()].some(
-            (other) =>
-              other.id !== p.id &&
-              other.alive &&
-              other.x === x &&
-              other.y === y,
-          )
-        ) {
+        const blocker = [...this.players.values()].find(
+          (other) =>
+            other.id !== p.id && other.alive && other.x === x && other.y === y,
+        );
+        if (this.isWalkable(x, y) && !blocker) {
           p.x = x;
           p.y = y;
-        }
+        } else if (blocker) this.onBump(p, blocker);
       }
     }
     this.step();
@@ -388,6 +383,14 @@ export class Arena {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected onFlame(_x: number, _y: number, _bomb: Bomb): boolean {
     return false;
+  }
+  /** `p` tried to step onto `other`'s cell (boss raids: rescuing a trapped raider). */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected onBump(_p: Player, _other: Player): void {}
+  /** Whether the flame on (x, y) knocks `p` out; boss raids trap instead. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected flameHits(_p: Player, _owner: string | undefined): boolean {
+    return true;
   }
   /** The server accepted an item use (support actions in boss raids). */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -454,6 +457,7 @@ export class Arena {
   protected killInFlames(): void {
     for (const p of this.players.values()) {
       if (!p.alive || !this.flames.has(key(p.x, p.y))) continue;
+      if (!this.flameHits(p, this.flameOwners.get(key(p.x, p.y)))) continue;
       if (this.guarded(p)) continue;
       p.alive = false;
       const stats = this.stats.get(p.id);

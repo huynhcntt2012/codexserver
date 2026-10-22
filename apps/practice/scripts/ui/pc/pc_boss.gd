@@ -21,6 +21,14 @@ const SKILLS := {
 	"robot_magnet_pull": "Hút Boom Về Lưng: nổ + 2 ô quanh thân",
 	"robot_overheat": "Quá Tải Dây Cót: 8 bom quanh Boss",
 	"robot_reactor": "ULTIMATE Lò Bom: 2 đợt theo hàng / cột, luôn chừa lối né",
+	"cactus_thorn_roll": "Lăn Gai: lăn 4 ô theo làn báo trước; đâm tường thì choáng",
+	"cactus_thorn_shot": "Gai Bay: 3 gai bay tối đa 5 ô",
+	"cactus_thorn_cross": "Gai Nổ Chữ Thập: dấu + 3 ô mỗi hướng",
+	"cactus_thorn_storm": "ULTIMATE Bão Gai Xoáy: 3 vòng gai, luôn có lối hở",
+	"ram_thunder_charge": "Húc Sấm: húc 5 ô theo làn, đẩy lùi",
+	"ram_thunder_ball": "Cầu Điện: bay tối đa 6 ô, kích nổ bom",
+	"ram_lightning_cross": "Điện Nổ Chữ Thập: dấu + 3 ô mỗi hướng",
+	"ram_thunder_storm": "ULTIMATE Thiên Lôi Liên Kích: 3 đợt sét, không khóa hết lối thoát",
 }
 const ITEM_NAMES := {"throw_bomb": "Bom ném xa", "dart": "Phi tiêu", "blue_shield": "Khiên", "speed_shoes": "Giày", "freeze_bomb": "Bom băng", "push_glove": "Găng đẩy"}
 
@@ -207,6 +215,8 @@ func raid_card(e: Dictionary) -> PanelContainer:
 		"Thắng: %s · Thua/hết giờ: %s" % [reward_text(rules.get("win_rewards", []), str(e.get("badge_name", ""))), reward_text(rules.get("lose_rewards", []), str(e.get("badge_name", "")))],
 		"Lượt thưởng đầy đủ hôm nay: %d/%d · Đã thắng %d trận · Chờ nhận %d" % [int(me.get("full_rewards_today", 0)), int(rules.get("full_reward_limit_per_day", 3)), int(me.get("wins", 0)), int(me.get("pending_rewards", 0))],
 	]
+	if int(rules.get("rescue_ms", 0)) > 0:
+		facts.append("Trúng đòn Boss bị nhốt bóng nước %.0f giây: đồng đội chạm vào để cứu" % (float(rules.rescue_ms) / 1000.0))
 	if events.size() > 1:
 		# The page header shows one event's badges and timer; with several, each card does.
 		var until := parse_time(e.end_at if phase != "scheduled" else e.start_at)

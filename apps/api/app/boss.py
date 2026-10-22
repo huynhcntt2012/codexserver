@@ -211,6 +211,8 @@ def arena_rules(event) -> dict:
             "mount",
             "footprint",
             "walk_ms",
+            "rescue_ms",
+            "hp_formula",
         }
     )
     return data
@@ -368,13 +370,21 @@ def record_raid(db: Session, event_in) -> BossRaidMatch | None:
 
 
 def rules_view(rules: BossRules, token_name: str) -> dict:
-    hp = [round(rules.base_hp * (1 + rules.hp_per_extra_player * (n - 1))) for n in (1, 8)]
+    hp = [
+        round(rules.base_hp * (0.6 + 0.1 * n))
+        if rules.hp_formula == "team"
+        else round(rules.base_hp * (1 + rules.hp_per_extra_player * (n - 1)))
+        for n in (1, 8)
+    ]
     return {
         "boss_id": rules.boss_id,
         "asset_pack_id": rules.asset_pack_id,
         "display_name": rules.display_name,
         "map_id": rules.map_id,
         "difficulty": rules.difficulty,
+        "rescue_ms": rules.rescue_ms,
+        "footprint": rules.footprint,
+        "walk_ms": rules.walk_ms,
         "min_players": rules.min_players,
         "max_players": rules.max_players,
         "duration_seconds": rules.duration_seconds,

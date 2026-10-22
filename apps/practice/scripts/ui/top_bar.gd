@@ -1,4 +1,5 @@
 extends PanelContainer
+const HeroPortrait := preload("res://scripts/hero_portrait.gd")
 signal back_requested
 const UISkin = preload("res://scripts/ui/ui_skin.gd")
 func _ready() -> void:
@@ -14,6 +15,6 @@ func refresh() -> void:
 	$Margin/Row/Gold.text = "Vàng: %d" % int(UIState.profile.get("gold", 0))
 	$Margin/Row/Gem.text = "KC: %d" % int(UIState.profile.get("gem", 0))
 	var selected = str(UIState.profile.get("selected_character", "mimi"))
-	$Margin/Row/Avatar.texture = load("res://assets/characters/portraits/%s.png" % selected)
+	$Margin/Row/Avatar.texture = HeroPortrait.texture(selected)
 	$Margin/Row/XP.max_value = maxf(1.0, float(UIState.profile.get("xp_max", 800)))
 	$Margin/Row/XP.value = float(UIState.profile.get("xp", 0))

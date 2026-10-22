@@ -139,6 +139,26 @@ Robot Bom Dây Cót (`apps/practice/assets/boss/clockwork_bot`: 4 hướng × 4 
 ghi rõ đây là concept do AI tạo; nguồn gốc và quyền chưa được xác minh độc lập, không có tên/logo
 Boom Online. Hash tại `apps/practice/licenses/CLOCKWORK_BOT_SOURCE.txt`; không gán lại MIT.
 
+## Chân dung nhân vật động do người dùng cung cấp
+
+Chân dung động 6 khung (đứng, cười, nháy mắt) của 5 nhân vật
+(`apps/practice/assets/characters/portraits/<hero>/`) cắt từ một ảnh chủ dự án gửi ngày 2026-10-21
+(`apps/practice/tools/source/hero_portraits_idle.webp`) bằng `apps/practice/tools/slice_hero_portraits.gd`:
+tách nền phẳng thành trong suốt, cắt và thu nhỏ, không vẽ thêm. Nguồn gốc và quyền
+chưa được xác minh độc lập, không có tên/logo Boom Online. Hash tại
+`apps/practice/licenses/HERO_PORTRAIT_ANIM_SOURCE.txt`; không gán lại MIT.
+
+## Hình Boss Vua Xương Rồng và Cừu Sấm Sét do người dùng cung cấp
+
+Hình Cừu Sấm Sét (`apps/practice/assets/boss/thunder_ram`: đi 4 hướng, đứng, hiệu ứng kỹ năng) lấy
+từ ảnh nhúng trong tài liệu "Boom Boss Cừu Sấm Sét & Vua Xương Rồng" chủ dự án gửi ngày 2026-10-20
+(giữ dạng WebP trong `apps/practice/tools/source`), cắt bằng `apps/practice/tools/slice_twin_bosses.gd`:
+chỉ cắt khung và thu nhỏ, không vẽ thêm. Hình Vua Xương Rồng (`apps/practice/assets/boss/cactus_king`)
+là bộ sprite đã chuẩn hóa của team design ("Boom_Cactus_Fixed_Pack_Godot4.zip", cùng ngày), chép
+nguyên PNG và chỉ đổi tên. Tài liệu ghi đây là ảnh concept do AI tạo; nguồn gốc và quyền chưa được
+xác minh độc lập, không có tên/logo Boom Online. Hash tại
+`apps/practice/licenses/TWIN_BOSS_SOURCE.txt`; không gán lại MIT.
+
 ## Bộ giao diện PC "Bubble Isles" do người dùng cung cấp
 
 Màn Tìm trận, Phòng, HUD, Kết quả, Cửa hàng và Trang bị của app PC

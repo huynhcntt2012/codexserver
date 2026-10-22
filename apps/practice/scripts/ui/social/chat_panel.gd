@@ -244,7 +244,7 @@ func format(message: Dictionary) -> String:
 	if str(message.channel) == "private" and message.get("to") != null:
 		var to := "Bạn" if str(message.to.id) == AuthSession.account_id else str(message.to.name)
 		who = "%s → %s" % [who, to]
-	return "%s [%s] %s: %s" % [clock_text(str(message.get("created_at", ""))), tag, who, str(message.body)]
+	return "%s [%s] %s: %s" % [clock_text(str(message.get("created_at", ""))), tag, who, Settings.clean_chat(str(message.body))]
 
 ## "HH:MM" in the player's local time from the server's UTC timestamp.
 static func clock_text(stamp: String) -> String:

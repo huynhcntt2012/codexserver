@@ -1,8 +1,10 @@
 extends SceneTree
 ## Cuts the owner-supplied pet sheets (229.png-238.png: 4 columns x 5 rows of
 ## idle, walk_down, walk_up, walk_left, walk_right) into assets/cosmetics/pets:
-## pets/<name>/<anim>/01-04.png at FRAME px. Every frame keeps its place in the
-## grid cell, so the pet does not jitter between frames.
+## pets/<name>/<anim>/01-04.png at FRAME px. The art drifts sideways across a
+## row of the sheet, so each frame is moved left/right until the art's centre
+## (alpha-weighted) is the frame's centre: the pet walks in place without
+## sliding. Its height in the frame is kept (the walk's bob).
 ## Usage: godot --headless --script tools/slice_pet_sheets.gd -- \
 ##   <folder with 229.png..238.png> "$PWD/assets/cosmetics/pets"
 const SHEETS := {
@@ -70,6 +72,27 @@ func bleed(img: Image) -> void:
 						img.set_pixel(x, y, Color(c.r, c.g, c.b, 0.0))
 						break
 
+## Moves the art horizontally so its alpha-weighted centre is the image centre,
+## never pushing it over an edge.
+func centre(img: Image) -> void:
+	var w := img.get_width()
+	var sum := 0.0
+	var weight := 0.0
+	for y in img.get_height():
+		for x in w:
+			var a := img.get_pixel(x, y).a
+			sum += x * a
+			weight += a
+	if weight <= 0.0:
+		return
+	var used := img.get_used_rect()
+	var shift := clampi(roundi(w * 0.5 - sum / weight), -used.position.x, w - used.end.x)
+	if shift == 0:
+		return
+	var moved := Image.create(w, img.get_height(), false, Image.FORMAT_RGBA8)
+	moved.blit_rect(img, used, used.position + Vector2i(shift, 0))
+	img.copy_from(moved)
+
 func _init():
 	var args := OS.get_cmdline_user_args()
 	var source: String = args[0]
@@ -85,6 +108,7 @@ func _init():
 			DirAccess.make_dir_recursive_absolute(folder)
 			for c in COLS:
 				var frame := cut(img, c * cw + (cw - side) / 2, r * ch + (ch - side) / 2, side, side)
+				centre(frame)
 				bleed(frame)
 				frame.resize(FRAME, FRAME, Image.INTERPOLATE_LANCZOS)
 				frame.save_png("%s/%02d.png" % [folder, c + 1])

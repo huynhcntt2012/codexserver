@@ -1,0 +1,149 @@
+# Cactus King and Thunder Ram boss art
+
+Source: "Boom_Boss_Cuu_Sam_Set_Vua_Xuong_Rong_Dev_Spec.pdf" (19 pages, spec
+v1.0 "Boss Đấu Trường Cừu Sấm Sét & Vua Xương Rồng"), supplied by the project
+owner in a Claude Code session on 2026-10-20.
+PDF SHA-256: 1efb3396b1dda9dcad9db146bd70f249495e511a947718a0d207565fada97a36
+
+Its embedded images (RGB + alpha mask) were extracted with poppler pdfimages,
+merged with their masks and kept as WebP in apps/practice/tools/source:
+- thunder_ram_move.webp (page 10: down, left, right, up rows)
+- thunder_ram_skills.webp (page 11: charge, thunder ball, cross, storm)
+
+The spec says the images are AI-generated concepts; origin and rights were not
+independently verified, and they carry no author, name, logo or text from Boom
+Online. Confirm ownership before a commercial release.
+
+tools/slice_twin_bosses.gd cut the Thunder Ram bodies into
+assets/boss/thunder_ram/walk_<dir>/NN.png and idle/NN.png (one
+scale per boss, 256 px canvas) and chosen skill frames into vfx/<name>.png.
+Only cutting, removing slivers of neighbouring frames and scaling; no pixels
+were painted.
+
+Source SHA-256 (relative to apps/practice/tools/source):
+0e0e5f0703db9d21fa03ed0b459ccefdf7a244db1e59a3697ebf4d93820c20f1  thunder_ram_move.webp
+c3b391c1300f6658c748273676d2d2503f4bf53ad96ab6f3edc1f29e81057187  thunder_ram_skills.webp
+
+Output SHA-256 (relative to assets/boss):
+41444dd0087f0a0476275dbaba5f4dc0c7d277fe82ad6c41a2d8156fb3029f07  thunder_ram/idle/01.png
+4cf84f5a0d9ee836d82480d20fd6854e5166ec800e14965a84464f2937b92d64  thunder_ram/vfx/ball.png
+b2a401fc3e0002e98d50e45d7de944981ed377c086a569e277c2591fb2f1939a  thunder_ram/vfx/blast.png
+925f260d3b4ed1c9b7066b5ec0ca7692c20e7aa687bfd54cf83a02833f58e230  thunder_ram/vfx/cross.png
+92899ebe69b3aa09dd506ed588467ad82beba432e9ea2498059c585f3f12c8de  thunder_ram/vfx/dash.png
+4e1516fce0e88f921b746426e15a6df464aedf55ce9b0e133a298db1c9c30620  thunder_ram/vfx/impact.png
+809cbc0a97dcdd054e757692ab02add7d322070d412fcf5578b00300b37185fe  thunder_ram/vfx/leap.png
+d2c006fd5c30d377aef85e21e19b9e7280f9ff6952b59f2391b27b8d8eb8931e  thunder_ram/vfx/ring.png
+3034a657c0f43514fbea3725f96a44c614f0500bb5d64819d88814ca68a72dec  thunder_ram/vfx/strike.png
+41444dd0087f0a0476275dbaba5f4dc0c7d277fe82ad6c41a2d8156fb3029f07  thunder_ram/walk_down/01.png
+dd6365b33d7732f9a41ed72a7d11b7c21beaa776f6b37ad675b1daedb6795d95  thunder_ram/walk_down/02.png
+0ff3c518904fe08201ee9efe58bc50711e5a12f9735b1d668c36e40ca0ea2b6c  thunder_ram/walk_down/03.png
+21e78edbe2056f79cbaca97e2ceb038a5cc69ab81b3bf4c78d51032c6b7799c9  thunder_ram/walk_down/04.png
+5551407e689508cc0df89ffc7e64924059430db338f4bef68bfead62b6f603a8  thunder_ram/walk_left/01.png
+d89cd0f2187233bddbdc350228f8be2dbcf210ff0f533564e160c39bb2a29d28  thunder_ram/walk_left/02.png
+6315b7ba93dcfde07dd3cb5f1db191105c0a3e5f64ed249bd14f96e47a8500ce  thunder_ram/walk_left/03.png
+1f31d4358a1141f27ff4b58d70e382c405b1995481a72a488e642458045e310d  thunder_ram/walk_left/04.png
+5b4e1aac28d57c26f21c5a9d1a795d804c9ea2fcb5ecc8e7d8aacbc81e8e3ca6  thunder_ram/walk_right/01.png
+6146b515b01362456b00401802f00945d737758d4e6e536f8c9cc95f85a62de2  thunder_ram/walk_right/02.png
+feb7e0c6d189b51b33603cc3ce986c00d4cc515048c4488d20d8b805dcd4c5d5  thunder_ram/walk_right/03.png
+92b2eb90207e4c01a89bacf43fc9dbcd894a6bdb05d148e02cb2523b89725fc3  thunder_ram/walk_right/04.png
+216580adc57262e9fec4181fc2e4849ab37151755b7d38c83fe755ca0cb05431  thunder_ram/walk_up/01.png
+500f7830af91969d815937ed8b4b847db207529e264b2b83406499d0b828ddee  thunder_ram/walk_up/02.png
+12f317a542aa43bd78e39bcdfaae6d3471b0d3ae05f3328496c800b51fe0d0e8  thunder_ram/walk_up/03.png
+817fed740931722dd3b2471a73288668e2914f17d8fbb54122971b1e74b4dfe8  thunder_ram/walk_up/04.png
+
+
+Cactus King (Vua Xương Rồng): design-team sprite pack
+"Boom_Cactus_Fixed_Pack_Godot4.zip" (README "Vua Xương Rồng: bộ sửa lỗi
+Sprite / Skill VFX v1.0"), supplied by the project owner from their design team
+in a Claude Code session on 2026-10-20.
+ZIP SHA-256: ab0cf5b5fb16c57c796d69cb4880c086015dfab3e52b8db7bbc7dca0f85e838c
+
+Per its README the walk/idle frames were cropped and aligned from the earlier
+AI-generated concept sheet, and the effects (rolling orb, thorn projectile,
+hit, one-cell warning, one-cell cross burst, storm centre) were made again as
+separate sprites; it is a technically normalised prototype pack, not final art.
+Origin and rights were not independently verified; the art carries no Boom
+Online name, logo or text. Confirm ownership before a commercial release.
+
+The PNGs were copied unchanged, only renamed: assets/boss/walk/<dir>_00..05 ->
+cactus_king/walk_<dir>/01..06, idle/idle_00..03 -> cactus_king/idle/01..04,
+vfx/{orb/rolling,orb/projectile,impact/impact,warning/warning,cross/cross_tile,
+storm/storm}_00..07 -> cactus_king/vfx/{orb,projectile,impact,warning,
+cross_tile,storm}_01..08. The pack's demo, tools and atlas sheets were not
+copied. Output SHA-256 (relative to assets/boss):
+b1db883c3cb81789305062fa242e381ee46b1befba5dcc8adab08178c9667cf3  cactus_king/idle/01.png
+f269c2d4fe52a5706af1b822b2e9b4f39fd9aec75049df6c64a8e4dc50b4e36e  cactus_king/idle/02.png
+cd3809baf38f8b709661484d884d7820dad61f8f7c74908e934fdd3cc02ce5e1  cactus_king/idle/03.png
+78e83a5029a0652e5299d4b1b0d459ffca088816b28d483a128aa77126a2ff5c  cactus_king/idle/04.png
+e5e5f0606f0eba2ece26ab917a25b5bb31c0a7768a00a7fd3f04255e27f15fc1  cactus_king/vfx/cross_tile_01.png
+903d9fd2fd1af5424131a2ff6876a386d79a2b9f6e86ee96581ba237ac8a2d9f  cactus_king/vfx/cross_tile_02.png
+67da715459ff0d448705443b22f83e114fcc7878b6df384cd2b84ae110cb61ee  cactus_king/vfx/cross_tile_03.png
+0ae5ac10fff1d7b141281c8af95a9831ebbaadb54d6d5f55e9f472da207b87a0  cactus_king/vfx/cross_tile_04.png
+253117b12ddd786b3f6e15533791957f7f233a8fd69af7a289bb524abe6bf44c  cactus_king/vfx/cross_tile_05.png
+e045ac4ab0ed92d7e1c4790a2265cfc87464c7b9d7241a7175162143037edded  cactus_king/vfx/cross_tile_06.png
+378a1385d5e36df8191b60d949b6eb459d6fd4005fe12618abd5f9ef7e897a56  cactus_king/vfx/cross_tile_07.png
+da8ca02aa2cc5056aab7e0478aa36968abfd90e8cd6d1edb668cb2d14cd27737  cactus_king/vfx/cross_tile_08.png
+666656d5476aeb987ea5bf6ad8087ed63ecea4372ea4b861b3a6bf95a3477b06  cactus_king/vfx/impact_01.png
+7901a846ee80aceac64bf070d0dfbcddff55a706d59c4031555e16948cbdfe58  cactus_king/vfx/impact_02.png
+94af640bf9ab52082b85e508bb7a3ae7bf67b75bdf02585029be34dbfac0fa00  cactus_king/vfx/impact_03.png
+0aaf12f2fc57f7e60dd8d9cffdbcb40679d9eef4c5844352f9e33a847c4380ad  cactus_king/vfx/impact_04.png
+177fcae9c3a6947dcb5bafc45b22033af3530133944abfc65957e6127604efc8  cactus_king/vfx/impact_05.png
+c8c77a44c51abff5c6383210299ff392b5f9f8ecd2133d2a535b344c8a8f4577  cactus_king/vfx/impact_06.png
+39d4f7d24086983d7dfc4c12c5faf8e10ca6271f771ed09ea28efba4ed9e5db3  cactus_king/vfx/impact_07.png
+b666d3abb93f21b76088af570da295b56d1189e3b334dfac34541cc84dcbe78b  cactus_king/vfx/impact_08.png
+fbda31cbe6d89bf29a2545d57a2a3c2570425e1f0028cc3d16e4cfec1da2e890  cactus_king/vfx/orb_01.png
+813ec071e9711d4d2a7ac221b3ae492ea052f2232ec910cf51488e0dcf517c0e  cactus_king/vfx/orb_02.png
+4a12c44a1e35fa94415f65c9540142fb25559f9a6d6a0f13839ecd0f28b202d4  cactus_king/vfx/orb_03.png
+17204779b24df8054e2064bf076129ab9a91fcf22c76076a4e6990eada7b02b3  cactus_king/vfx/orb_04.png
+6712399c35baa4dd2d4e25459abd4192fbf71643322fddf400ff6f97cf00d2ce  cactus_king/vfx/orb_05.png
+3965e8d03aaa32419cec060d2782c8a7506d0111ac47906fec54be67885a6f26  cactus_king/vfx/orb_06.png
+df872a1f31e75d0f969c5fa0d4cc09a9bd1df4cfc93ed57ed7031bcf8ecc91b7  cactus_king/vfx/orb_07.png
+2ccd7439e46b399af48be2b4c8244cf8dd8315d73414acebe1e4b5b33e78e527  cactus_king/vfx/orb_08.png
+ae8686823001ef0d0ad4a283509f109d34ce5a7ed70df44aee677a339f42aa36  cactus_king/vfx/projectile_01.png
+4870c8b0647fcc708915a91624c519d9d78881e0f69ed86c7aec133d25bd331b  cactus_king/vfx/projectile_02.png
+c5646ab9099a93cde27ce9cd5762518a240cd9c1852dd2bd789ce252e7137a5e  cactus_king/vfx/projectile_03.png
+92db03a49a96215e36efde8a06aa1a132807cd6f8154a6fb762720a3c85d2752  cactus_king/vfx/projectile_04.png
+c36da91324064013fda30baae9aeea879d4e31260b8fbeda55790abec9e63ef5  cactus_king/vfx/projectile_05.png
+bfbd70c1a6104f8910809e484daa8ed266e72984433b71a0ed504c098fbd4e49  cactus_king/vfx/projectile_06.png
+cdc460b8ec2620934b3ae27e1e156d455b2dbf930766fa1c1fd78e44cb9f9b6d  cactus_king/vfx/projectile_07.png
+6bd028d2c885c897f1b736de2398bb3856534bff50b49d11b04bf3ee73d40102  cactus_king/vfx/projectile_08.png
+17b1b8c4eb75cf1cfb8daab09cafadbfb023574981950ba81ace57e67fd86967  cactus_king/vfx/storm_01.png
+a0026eb77e097f23206ffc1635ee2a0df6b1ce15c4d8425523d080852a4dbe72  cactus_king/vfx/storm_02.png
+69b05eba7020d486f071225f125f3a9d44a31952bf66c2a8a8f603b146b3693c  cactus_king/vfx/storm_03.png
+f5034be3b1ee3e5e301432ecde5942d614a1f4b21c4d4375189b12d4ddbe1d1c  cactus_king/vfx/storm_04.png
+2b1e42630d2faa50de1cc7390dad9dcdc54a8464ec529f94a02b15bb80f6bb5e  cactus_king/vfx/storm_05.png
+77cf75a77aaf2eb3a579ce1735496d5e85e8491384d1636e620bb125249b13a2  cactus_king/vfx/storm_06.png
+a9256dce1a901c3099b507fc0913c2f62933af396ea4000c41fa1897356dfcdb  cactus_king/vfx/storm_07.png
+20ba63788f6170066128cc5d51d4308ca4931fc6ee7a293444912347c5547158  cactus_king/vfx/storm_08.png
+526ca017e5520409234db10fac0fba836174a790276d445de339163085d330b5  cactus_king/vfx/warning_01.png
+1440916c6b86d0880989dc1922707a3cae6793c8bebe4f1df2fe3b62e30a0d9c  cactus_king/vfx/warning_02.png
+f8bf93e60446eca4111bb4cb95b7b98c9701b4a6c3b4d236a636bf6ec17a3b38  cactus_king/vfx/warning_03.png
+1440916c6b86d0880989dc1922707a3cae6793c8bebe4f1df2fe3b62e30a0d9c  cactus_king/vfx/warning_04.png
+526ca017e5520409234db10fac0fba836174a790276d445de339163085d330b5  cactus_king/vfx/warning_05.png
+949ebf97644f73a2d12cb35a8a62e8b91e5772045075064b6bed2511ee64f83b  cactus_king/vfx/warning_06.png
+adbb84ccaa23da18d042497fa9cadbcc4f671454fb724213a97fdd34561e6c2b  cactus_king/vfx/warning_07.png
+949ebf97644f73a2d12cb35a8a62e8b91e5772045075064b6bed2511ee64f83b  cactus_king/vfx/warning_08.png
+124ced07043dffaddaf1c86c6be2aa7528d5717f4cb8bb8227e746f7f2fe22c3  cactus_king/walk_down/01.png
+cbefda3f885332b283cc2c412c28a9f7e646220947dd2333c215d55e7995067c  cactus_king/walk_down/02.png
+1eac504b3368d2c29d7e295ac7d8e04ab961b3a9f3161a1ec416c2afa9ae74a0  cactus_king/walk_down/03.png
+a353e7a3f3462d87286c137a6f279f5978295f28b22ace72eb06491b2cdefcf1  cactus_king/walk_down/04.png
+81bf44247ca09cc6ee5639adb617574a312ed5b03f20db25368e0d3874cc72b2  cactus_king/walk_down/05.png
+617217dfe8cca657d59b5c9165c07da29f9823027e87a97e154983a1e31123f3  cactus_king/walk_down/06.png
+21c67d57804ac7207efbb152b8d8b49cb5efb82e227c526e09a442cc0b6a97e9  cactus_king/walk_left/01.png
+300a80f9c48c8a28204e688c71cb121c37b91e623032d8418c90476536cb58d9  cactus_king/walk_left/02.png
+242dfc68a38fdaa09927789d2beaf5816b4aede865bda51e91b546e06b1f7d20  cactus_king/walk_left/03.png
+4be807c117843001249344e9a1517355e448153d3cc5b1e3d77f99123b984b71  cactus_king/walk_left/04.png
+29c364b780d88593934683d179e439a278117b3026529059205cbdc02311879a  cactus_king/walk_left/05.png
+f24bb9e6d95f0361d9af37f8dafba19376fdad546bc5eab7b7743cc9ee83c657  cactus_king/walk_left/06.png
+ba851e0e10c2e2a96da73c8cd2b9ca1f46f6a3ac43428a3a1ef1590e4c8b3514  cactus_king/walk_right/01.png
+74a0f151cea47aabee194cdc02bd27ee4f6403c4dc086e8e9a73475c7783246f  cactus_king/walk_right/02.png
+2ab8f72760b9930c62c327f6f5597987c6a080bb6839db0a1856fef2abbc150d  cactus_king/walk_right/03.png
+8509d5aa2d42964111c4303982793822e68392a510681f2f0f1faf899088685a  cactus_king/walk_right/04.png
+bc2adc07f916e2ca58818814960322b21b5e3370f4c634abcb54559833d95747  cactus_king/walk_right/05.png
+9e2b7cdd095f82055fd52cee4a679acace82a2b7f4659eb7d68cf7381243293d  cactus_king/walk_right/06.png
+66c9fd732fa69809a919ff8fe17bcc506071d9171d307b5b182dc883ddd0b0a4  cactus_king/walk_up/01.png
+dbb3729ec8dcc1c8636026077f7f3739cd4d52f10c16cd2d3063759fe6a0e427  cactus_king/walk_up/02.png
+2994848dc6dbfc25859b00ebd440c7c81facfb5a54948004ae46b87b0a489de6  cactus_king/walk_up/03.png
+12d6f40cb10fa37395bd8576affae93d40a4892cc2c7b96dbe04bdc3702e305c  cactus_king/walk_up/04.png
+9eab40c4ccc0b0393a153a32253ea4765fcd21b5baa21631c5c7571fdd1e0c3f  cactus_king/walk_up/05.png
+5d0e9d44653ecd2a81a6a9423a71280c4943e8395cefd8e2461127b81c0bcc80  cactus_king/walk_up/06.png

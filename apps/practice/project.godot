@@ -23,6 +23,7 @@ renderer/rendering_method.mobile="gl_compatibility"
 textures/default_filters/use_nearest_mipmap_filter=false
 
 [autoload]
+Settings="*res://scripts/settings.gd"
 AuthSession="*res://scripts/auth_session.gd"
 UIState="*res://scripts/ui/ui_state.gd"
 GameCursor="*res://scripts/ui/game_cursor.gd"
