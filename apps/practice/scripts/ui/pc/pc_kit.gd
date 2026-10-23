@@ -1,13 +1,18 @@
 extends Control
 ## Shared base for PC-only screens after the lobby (matchmaking, room, result,
 ## shop, equipment). Style follows the supplied "Bubble Isles" UI kit: sky or
-## sunset backdrop, cream panels, candy buttons with a thick darker bottom edge.
-## Everything is drawn in code; characters and items reuse the game's own art.
+## sunset backdrop, cream panels. Buttons, close, coin / gem and mail icons are
+## the glossy pills and stickers of the mailbox kit (assets/ui/kit, cut by
+## tools/slice_ui_kit.gd); characters and items reuse the game's own art.
 const HeroPortrait := preload("res://scripts/hero_portrait.gd")
 const Glyph := preload("res://scripts/ui/desktop_lobby.gd").Glyph
 const ScreenFill := preload("res://scripts/ui/screen_fill.gd")
 const PopupHeader := preload("res://scripts/ui/popup_header.gd")
 const DESIGN := Vector2(1280, 720)
+const KIT := "res://assets/ui/kit/"
+## Pill caps of the kit button textures (56 px high): left/right, top/bottom.
+const PILL_CAP := 28
+const PILL_EDGE := 20
 const INK := Color("2b3a67")
 const MUTED := Color("6b7a9c")
 const CREAM := Color("fff6e2")
@@ -265,7 +270,7 @@ func wallet_chip(parent: Control, icon: String) -> Label:
 	holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	parent.add_child(holder)
 	var line := row(8, holder)
-	line.add_child(Glyph.new(icon, Color.WHITE, 28))
+	line.add_child(sticker(icon, 30))
 	var amount := text("", 18, Color.WHITE, line)
 	amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return amount
@@ -347,19 +352,20 @@ func pill(value: String, fill: Color, color := Color.WHITE, font_size := 13, par
 		parent.add_child(holder)
 	return node
 
-## Candy button: flat fill, white rim, darker 6px bottom lip that sinks on press.
-func candy(value: String, action: Callable, kind := "sun", font_size := 20) -> Button:
+## Candy button: the kit's glossy pill in that colour, white words with a dark
+## rim, an optional kit glyph (glyph_<name>.png) before them; sinks on press.
+func candy(value: String, action: Callable, kind := "sun", font_size := 20, icon := "") -> Button:
 	var palette: Array = CANDY.get(kind, CANDY.sun)
-	var fill: Color = palette[0]
 	var lip: Color = palette[1]
 	var node := Button.new()
 	node.text = value
 	node.focus_mode = Control.FOCUS_ALL
-	node.add_theme_stylebox_override("normal", lipped(fill, lip, 6))
-	node.add_theme_stylebox_override("hover", lipped(fill.lightened(0.1), lip, 6))
-	node.add_theme_stylebox_override("pressed", lipped(fill.darkened(0.06), lip, 2))
-	node.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color(1, 1, 1, 0.9), 16, 3, 8))
-	node.add_theme_stylebox_override("disabled", lipped(Color("c3cfe0"), Color("9fb0c8"), 6))
+	node.add_theme_stylebox_override("normal", pill_style(kind))
+	node.add_theme_stylebox_override("hover", pill_style(kind, 1.08))
+	node.add_theme_stylebox_override("pressed", pill_style(kind, 0.9, 2))
+	node.add_theme_stylebox_override("hover_pressed", pill_style(kind, 0.9, 2))
+	node.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color(1, 1, 1, 0.9), PILL_CAP, 3, 8))
+	node.add_theme_stylebox_override("disabled", pill_style("off"))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		node.add_theme_color_override(state, palette[2])
 	node.add_theme_color_override("font_disabled_color", Color("f2f5fa"))
@@ -367,19 +373,74 @@ func candy(value: String, action: Callable, kind := "sun", font_size := 20) -> B
 	if kind != "ghost":
 		node.add_theme_color_override("font_outline_color", lip.darkened(0.3))
 		node.add_theme_constant_override("outline_size", 6)
+	if icon != "":
+		node.icon = load(KIT + "glyph_%s.png" % icon)
+		node.add_theme_constant_override("icon_max_width", int(font_size * 1.5))
+		node.add_theme_constant_override("h_separation", 10)
+		node.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		node.resized.connect(center_icon.bind(node))
+		node.draw.connect(center_icon.bind(node))
 	node.pressed.connect(action)
 	return node
 
-## Category tab: white when idle, sky blue while pressed (use a ButtonGroup).
-func tab(value: String, action: Callable, group: ButtonGroup) -> Button:
-	var node := candy(value, action, "ghost", 15)
+## Keeps an icon button's glyph and words centred together, as in the kit:
+## the left padding follows the button width and text (tab counts change).
+static func center_icon(node: Button) -> void:
+	var font_size := node.get_theme_font_size("font_size")
+	var words := node.get_theme_font("font").get_string_size(node.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var group := words + node.get_theme_constant("icon_max_width") + node.get_theme_constant("h_separation")
+	var pad := maxf(14.0, floorf((node.size.x - group) / 2))
+	var moved := false
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var style := node.get_theme_stylebox(state)
+		if style.content_margin_left != pad:
+			style.content_margin_left = pad
+			moved = true
+	if moved:
+		node.queue_redraw()
+
+## Kit pill texture (button_<kind>.png): `tone` lightens or darkens it and
+## `sink` moves the words down while pressed.
+static func pill_style(kind: String, tone := 1.0, sink := 0) -> StyleBoxTexture:
+	var style := StyleBoxTexture.new()
+	style.texture = load(KIT + "button_%s.png" % kind)
+	style.texture_margin_left = PILL_CAP
+	style.texture_margin_right = PILL_CAP
+	style.texture_margin_top = PILL_EDGE
+	style.texture_margin_bottom = PILL_EDGE
+	style.modulate_color = Color(tone, tone, tone)
+	style.content_margin_left = 20
+	style.content_margin_right = 20
+	style.content_margin_top = 6 + sink
+	style.content_margin_bottom = 10 - sink
+	return style
+
+## Kit sticker (icon_<name>.png) as a fixed-size picture.
+func sticker(name: String, side := 32.0) -> TextureRect:
+	var node := TextureRect.new()
+	node.texture = load(KIT + "icon_%s.png" % name)
+	node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	node.custom_minimum_size = Vector2(side, side)
+	node.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return node
+
+## Category tab: blue kit pill when idle, the yellow one while pressed (use a
+## ButtonGroup); words white on blue, brown on yellow.
+func tab(value: String, action: Callable, group: ButtonGroup, icon := "") -> Button:
+	var node := candy(value, action, "ghost", 15, icon)
 	node.toggle_mode = true
 	node.button_group = group
 	node.custom_minimum_size = Vector2(0, 40)
-	node.add_theme_stylebox_override("pressed", lipped(SKY, Color("2b88cf"), 3))
-	node.add_theme_stylebox_override("hover_pressed", lipped(SKY.lightened(0.08), Color("2b88cf"), 3))
-	node.add_theme_color_override("font_pressed_color", Color.WHITE)
-	node.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
+	node.add_theme_stylebox_override("normal", pill_style("tab_sky"))
+	node.add_theme_stylebox_override("hover", pill_style("tab_sky", 1.08))
+	node.add_theme_stylebox_override("pressed", pill_style("sun"))
+	node.add_theme_stylebox_override("hover_pressed", pill_style("sun", 1.05))
+	for state in ["font_color", "font_hover_color", "font_focus_color"]:
+		node.add_theme_color_override(state, Color.WHITE)
+	node.add_theme_color_override("font_pressed_color", Color("7a3d00"))
+	node.add_theme_color_override("font_hover_pressed_color", Color("7a3d00"))
 	return node
 
 func lipped(fill: Color, lip: Color, depth: int) -> StyleBoxFlat:
@@ -389,17 +450,49 @@ func lipped(fill: Color, lip: Color, depth: int) -> StyleBoxFlat:
 	style.expand_margin_bottom = 0
 	return style
 
+## Round icon button. "close" is the kit's red sticker; the others keep a flat
+## round candy face with a Glyph.
 func round_icon(icon: String, action: Callable, kind := "ghost", side := 50.0) -> Button:
+	if icon == "close":
+		return sticker_button("close", action, side)
+	var palette: Array = CANDY.get(kind, CANDY.sun)
 	var node := candy("", action, kind)
 	node.custom_minimum_size = Vector2(side, side)
 	node.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		(node.get_theme_stylebox(state) as StyleBoxFlat).set_corner_radius_all(int(side / 2))
+	var radius := int(side / 2)
+	node.add_theme_stylebox_override("normal", lipped(palette[0], palette[1], 6))
+	node.add_theme_stylebox_override("hover", lipped(palette[0].lightened(0.1), palette[1], 6))
+	node.add_theme_stylebox_override("pressed", lipped(palette[0].darkened(0.06), palette[1], 2))
+	node.add_theme_stylebox_override("hover_pressed", lipped(palette[0].darkened(0.06), palette[1], 2))
+	node.add_theme_stylebox_override("disabled", lipped(Color("c3cfe0"), Color("9fb0c8"), 6))
+	node.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color(1, 1, 1, 0.9), radius, 3, 8))
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		(node.get_theme_stylebox(state) as StyleBoxFlat).set_corner_radius_all(radius)
 	var tint: Color = SKY.darkened(0.15) if kind == "ghost" else Color.WHITE
 	var glyph := Glyph.new(icon, tint, side * 0.46)
 	glyph.position = Vector2(side, side * 0.92) * 0.27
 	glyph.size = Vector2(side, side) * 0.46
 	node.add_child(glyph)
+	return node
+
+## A kit sticker that is itself the button: brighter on hover, smaller on press.
+func sticker_button(name: String, action: Callable, side := 50.0) -> Button:
+	var node := Button.new()
+	node.focus_mode = Control.FOCUS_ALL
+	node.custom_minimum_size = Vector2(side, side)
+	node.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		node.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	node.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color(1, 1, 1, 0.9), int(side / 2), 3, 0))
+	var art := sticker(name, side)
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.pivot_offset = Vector2(side, side) / 2
+	node.add_child(art)
+	node.mouse_entered.connect(func(): art.modulate = Color(1.1, 1.1, 1.1))
+	node.mouse_exited.connect(func(): art.modulate = Color.WHITE)
+	node.button_down.connect(func(): art.scale = Vector2.ONE * 0.92)
+	node.button_up.connect(func(): art.scale = Vector2.ONE)
+	node.pressed.connect(action)
 	return node
 
 func sized(control: Control, minimum: Vector2) -> Control:

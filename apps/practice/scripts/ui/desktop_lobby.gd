@@ -6,6 +6,8 @@ extends Control
 ## the account API, ranked shows an honest empty state.
 const PopupHeader := preload("res://scripts/ui/popup_header.gd")
 const DESIGN := Vector2(1920, 1080)
+## Stickers of the mailbox UI kit (tools/slice_ui_kit.gd), shared with pc_kit.gd.
+const KIT := "res://assets/ui/kit/"
 const PAGE_SIZE := 8
 const INK := Color("345581")
 const SKY := Color("1569b3")
@@ -476,6 +478,8 @@ func button(value: String, action: Callable, fill := Color("ffd76a"), color := I
 	return node
 
 func icon_button(icon: String, action: Callable, side := 58.0, fill := Color("3aa6e6"), radius := 14) -> Button:
+	if icon == "close":
+		return sticker_button("close", action, side)
 	var node := button("", action, fill, Color.WHITE, 18, radius)
 	node.custom_minimum_size = Vector2(side, side)
 	node.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -483,6 +487,43 @@ func icon_button(icon: String, action: Callable, side := 58.0, fill := Color("3a
 	glyph.position = Vector2(side, side) * 0.225
 	glyph.size = Vector2(side, side) * 0.55
 	node.add_child(glyph)
+	return node
+
+## Kit sticker (icon_<name>.png) as a fixed-size picture.
+func kit_icon(name: String, side: float) -> TextureRect:
+	var node := TextureRect.new()
+	node.texture = load(KIT + "icon_%s.png" % name)
+	node.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	node.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	node.custom_minimum_size = Vector2(side, side)
+	node.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return node
+
+## Whole kit sticker as a panel / label background (badges, dots).
+func kit_box(name: String) -> StyleBoxTexture:
+	var style := StyleBoxTexture.new()
+	style.texture = load(KIT + "icon_%s.png" % name)
+	return style
+
+## A kit sticker that is itself the button: brighter on hover, smaller on press.
+func sticker_button(name: String, action: Callable, side: float) -> Button:
+	var node := Button.new()
+	node.focus_mode = Control.FOCUS_ALL
+	node.custom_minimum_size = Vector2(side, side)
+	node.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		node.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	node.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color("ffe17b"), int(side / 2), 4))
+	var art := kit_icon(name, side)
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.pivot_offset = Vector2(side, side) / 2
+	node.add_child(art)
+	node.mouse_entered.connect(func(): art.modulate = Color(1.1, 1.1, 1.1))
+	node.mouse_exited.connect(func(): art.modulate = Color.WHITE)
+	node.button_down.connect(func(): art.scale = Vector2.ONE * 0.92)
+	node.button_up.connect(func(): art.scale = Vector2.ONE)
+	node.pressed.connect(action)
 	return node
 
 func picture(path: String, side: Vector2) -> TextureRect:
@@ -592,7 +633,7 @@ func build_top_bar(parent: Control) -> void:
 			# Red dot: a mission reward is waiting (GET /v1/quests "claimable").
 			mission_dot = Panel.new()
 			mission_dot.name = "MissionDot"
-			mission_dot.add_theme_stylebox_override("panel", box(Color("ff4d6a"), Color.WHITE, 12, 3))
+			mission_dot.add_theme_stylebox_override("panel", kit_box("dot_red"))
 			mission_dot.size = Vector2(24, 24)
 			mission_dot.position = Vector2(96, 6)
 			mission_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -609,10 +650,16 @@ func build_top_bar(parent: Control) -> void:
 	mail_badge.name = "MailBadge"
 	mail_badge.add_theme_font_size_override("font_size", 16)
 	mail_badge.add_theme_color_override("font_color", Color.WHITE)
-	mail_badge.add_theme_stylebox_override("normal", box(Color("ff4d6a"), Color.WHITE, 13, 3, 3))
+	mail_badge.add_theme_color_override("font_outline_color", Color("b3122f"))
+	mail_badge.add_theme_constant_override("outline_size", 4)
+	var badge_style := kit_box("dot_red")
+	badge_style.content_margin_left = 6
+	badge_style.content_margin_right = 6
+	mail_badge.add_theme_stylebox_override("normal", badge_style)
 	mail_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mail_badge.custom_minimum_size = Vector2(28, 28)
-	mail_badge.position = Vector2(36, -10)
+	mail_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mail_badge.custom_minimum_size = Vector2(32, 32)
+	mail_badge.position = Vector2(34, -12)
 	mail_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mail_badge.hide()
 	mail.add_child(mail_badge)
@@ -629,7 +676,7 @@ func wallet(parent: Control, icon: String, width: float) -> Label:
 	holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	parent.add_child(holder)
 	var line := row(10, holder)
-	line.add_child(Glyph.new(icon, Color.WHITE, 46))
+	line.add_child(kit_icon(icon, 50))
 	var amount := text("", 28, Color.WHITE, line)
 	amount.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(icon_button("plus", open_topup, 40, Color("2fa8ec"), 20))
@@ -1188,7 +1235,10 @@ func open_shop(target: String) -> void:
 		shown.hero_id = game.HEROES[game.selected_hero]
 	for key in store_pages:
 		store_pages[key].visible = store_pages[key] == shown
-	store_header.set_icon(Glyph.new({"shop": "shop", "equipment": "nav_bag", "missions": "nav_trophy", "ranking": "trophy", "settings": "gear", "mail": "mail", "boss": "star"}.get(target, "star"), Color("ffc93c"), 56))
+	if target == "mail":
+		store_header.set_icon(kit_icon("winged_mail", 64))
+	else:
+		store_header.set_icon(Glyph.new({"shop": "shop", "equipment": "nav_bag", "missions": "nav_trophy", "ranking": "trophy", "settings": "gear", "boss": "star"}.get(target, "star"), Color("ffc93c"), 56))
 	store_title.text = {"shop": "CỬA HÀNG", "equipment": "TRANG BỊ", "missions": "NHIỆM VỤ & SỰ KIỆN", "ranking": "BẢNG XẾP HẠNG", "settings": "CÀI ĐẶT", "mail": "HỘP THƯ", "boss": "ĐẠI CHIẾN BOSS"}[target]
 	store.show()
 	sync_nav()

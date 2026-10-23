@@ -7,14 +7,14 @@ extends "res://scripts/ui/pc/pc_kit.gd"
 signal navigate(destination: String)
 signal unread_changed(count: int)
 
-const CATEGORY := {  # category -> [Glyph, colour, label]
-	"admin": ["user", Color("2f8cf0"), "Ban điều hành"],
-	"system": ["gear", Color("2f8cf0"), "Hệ thống"],
-	"event": ["star", Color("ff6b6b"), "Sự kiện"],
-	"maintenance": ["bell", Color("3b7fd6"), "Bảo trì"],
-	"reward": ["gem", Color("a98bf0"), "Quà tặng"],
+const CATEGORY := {  # category -> [kit sticker, label]
+	"admin": ["cat_admin", "Ban điều hành"],
+	"system": ["cat_system", "Hệ thống"],
+	"event": ["cat_event", "Sự kiện"],
+	"maintenance": ["cat_maintenance", "Bảo trì"],
+	"reward": ["cat_reward", "Quà tặng"],
 }
-const TABS := [["all", "Tất cả"], ["unread", "Chưa đọc"], ["claimed", "Đã nhận quà"]]
+const TABS := [["all", "Tất cả", "mail_navy"], ["unread", "Chưa đọc", "dot"], ["claimed", "Đã nhận quà", "gift_sky"]]
 
 var data: Dictionary = {}
 var state := "idle"  # idle | loading | ok | error | signed_out
@@ -45,7 +45,7 @@ func _ready() -> void:
 	var group := ButtonGroup.new()
 	for spec in TABS:
 		var key: String = spec[0]
-		var button := tab(str(spec[1]), func(): set_tab(key), group)
+		var button := tab(str(spec[1]), func(): set_tab(key), group, str(spec[2]))
 		button.name = "Tab_" + key
 		button.custom_minimum_size = Vector2(0, 52)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -61,19 +61,19 @@ func _ready() -> void:
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(list)
 	var actions := row(10, left_col)
-	var read_all := candy("Đọc tất cả", func(): bulk("/v1/mail/read-all"), "sky", 19)
+	var read_all := candy("Đọc tất cả", func(): bulk("/v1/mail/read-all"), "sky", 19, "mail_white")
 	read_all.name = "ReadAll"
-	read_all.custom_minimum_size = Vector2(220, 56)
+	read_all.custom_minimum_size = Vector2(210, 56)
 	actions.add_child(read_all)
-	var claim_all := candy("Nhận tất cả", func(): bulk("/v1/mail/claim-all"), "mint", 19)
+	var claim_all := candy("Nhận tất cả", func(): bulk("/v1/mail/claim-all"), "mint", 19, "gift_mint")
 	claim_all.name = "ClaimAll"
-	claim_all.custom_minimum_size = Vector2(240, 56)
+	claim_all.custom_minimum_size = Vector2(220, 56)
 	actions.add_child(claim_all)
 	footer_note = stretch(text("", 14, MUTED, actions))
-	var clean := candy("Xóa đã đọc", func(): bulk("/v1/mail/delete-read"), "ghost", 16)
+	var clean := candy("Xóa đã đọc", func(): bulk("/v1/mail/delete-read"), "coral", 16, "trash")
 	clean.name = "DeleteRead"
 	clean.tooltip_text = "Xóa các thư đã đọc (và đã nhận quà)"
-	clean.custom_minimum_size = Vector2(150, 56)
+	clean.custom_minimum_size = Vector2(170, 56)
 	actions.add_child(clean)
 	# Right: the open message.
 	var right := card(Color.WHITE, Color("cfe3f7"), 22, 2, 16)
@@ -200,11 +200,7 @@ static func when(iso: String) -> String:
 	return "%02d/%02d %s" % [at.day, at.month, clock]
 
 func badge(category: String, side: float) -> Control:
-	var look: Array = CATEGORY.get(category, CATEGORY.admin)
-	var holder := card(look[1], Color.WHITE, int(side * 0.3), 3, 6)
-	holder.custom_minimum_size = Vector2(side, side)
-	holder.add_child(Glyph.new(str(look[0]), Color.WHITE, side - 20))
-	return holder
+	return sticker(str(CATEGORY.get(category, CATEGORY.admin)[0]), side)
 
 func mail_row(m: Dictionary) -> Control:
 	var id := str(m.id)
@@ -244,13 +240,9 @@ func mail_row(m: Dictionary) -> Control:
 	if bool(m.claimed):
 		pill("Đã nhận quà", Color("ffb432"), Color.WHITE, 14, bottom)
 	elif bool(m.claimable):
+		bottom.add_child(sticker("gift", 26))
 		pill("Có quà", MINT, Color.WHITE, 14, bottom)
-	var dot := Panel.new()
-	dot.custom_minimum_size = Vector2(16, 16)
-	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	dot.add_theme_stylebox_override("panel", box(Color("ff4d6a") if not bool(m.read) else Color("b9c7dc"), Color.TRANSPARENT, 8))
-	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	line.add_child(dot)
+	line.add_child(sticker("dot_red" if not bool(m.read) else "dot_grey", 22))
 	button.pressed.connect(func(): open(id))
 	return button
 
@@ -277,11 +269,12 @@ func render_detail(m: Dictionary) -> void:
 	name_label.remove_theme_constant_override("outline_size")
 	var meta := row(12, who)
 	text(when(str(m.created_at)), 17, MUTED, meta)
-	text("● Chưa đọc" if not bool(m.read) else "Đã đọc", 17, CORAL if not bool(m.read) else MUTED, meta)
+	meta.add_child(sticker("dot_red" if not bool(m.read) else "dot_grey", 18))
+	text("Chưa đọc" if not bool(m.read) else "Đã đọc", 17, CORAL if not bool(m.read) else MUTED, meta)
 	var banner := card(Color("fff1c4"), Color.TRANSPARENT, 16, 0, 12)
 	detail.add_child(banner)
 	var banner_line := row(12, banner)
-	banner_line.add_child(Glyph.new(str(CATEGORY.get(str(m.category), CATEGORY.admin)[0]), Color("e0486f"), 44))
+	banner_line.add_child(sticker("winged_mail", 48))
 	var title := title_text(str(m.title), 24, Color("d9531e"), banner_line)
 	title.remove_theme_constant_override("outline_size")
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -294,7 +287,7 @@ func render_detail(m: Dictionary) -> void:
 	body.custom_minimum_size = Vector2(560, 0)
 	var rewards: Array = m.get("rewards", [])
 	if rewards.is_empty():
-		var del := candy("Xóa thư", func(): remove(str(m.id)), "ghost", 18)
+		var del := candy("Xóa thư", func(): remove(str(m.id)), "coral", 18, "trash")
 		del.name = "Delete"
 		del.custom_minimum_size = Vector2(180, 52)
 		del.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -303,14 +296,16 @@ func render_detail(m: Dictionary) -> void:
 	var gifts := card(Color("e4f1ff"), Color.TRANSPARENT, 16, 0, 12)
 	detail.add_child(gifts)
 	var gifts_col := column(10, gifts)
-	text("Phần thưởng đính kèm", 19, Color("2b6fc4"), gifts_col)
+	var gifts_head := row(8, gifts_col)
+	gifts_head.add_child(sticker("gift_box", 30))
+	text("Phần thưởng đính kèm", 19, Color("2b6fc4"), gifts_head)
 	var grid := HFlowContainer.new()
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	gifts_col.add_child(grid)
 	for r in rewards:
 		grid.add_child(reward_tile(r))
-	var claim := candy("ĐÃ NHẬN" if bool(m.claimed) else "NHẬN QUÀ", func(): claim_one(str(m.id)), "mint", 22)
+	var claim := candy("ĐÃ NHẬN" if bool(m.claimed) else "NHẬN QUÀ", func(): claim_one(str(m.id)), "mint", 22, "gift")
 	claim.name = "Claim"
 	claim.disabled = bool(m.claimed) or busy
 	claim.custom_minimum_size = Vector2(300, 60)
@@ -324,12 +319,8 @@ func reward_tile(r: Dictionary) -> Control:
 	var col := column(2, tile)
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	match str(r.type):
-		"gold":
-			var g := Glyph.new("coin", SUN, 56)
-			g.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-			col.add_child(g)
-		"gem":
-			var g := Glyph.new("gem", SKY, 56)
+		"gold", "gem":
+			var g := sticker("coin" if str(r.type) == "gold" else "gem", 60)
 			g.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			col.add_child(g)
 		_:

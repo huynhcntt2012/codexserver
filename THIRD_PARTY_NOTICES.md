@@ -167,3 +167,13 @@ Màn Tìm trận, Phòng, HUD, Kết quả, Cửa hàng và Trang bị của app
 Tài liệu ZIP ghi UI vẽ bằng code, thuộc dự án. Không sao chép file, avatar
 chibi, tên, logo hoặc ảnh mockup; dùng lại PNG Step 3 hiện có. Hash và ghi chú
 nguồn tại `apps/practice/licenses/PC_UI_KIT_SOURCE.txt`.
+
+## Bộ nút và icon hộp thư do người dùng cung cấp
+
+Nút viên thuốc (xanh, đỏ, lá, vàng), nút đóng, icon tiền, chấm trạng thái và icon
+danh mục thư trong `apps/practice/assets/ui/kit` cắt từ `button.zip` chủ dự án gửi
+ngày 2026-10-23 (giữ dạng WebP trong `apps/practice/tools/source/ui_kit`) bằng
+`apps/practice/tools/slice_ui_kit.gd`: chỉ cắt, tách nền, đổi màu và thu nhỏ;
+không dùng chữ in sẵn trên nút. Nguồn gốc và quyền chưa được xác minh độc lập,
+không có tên/logo Boom Online. Hash tại `apps/practice/licenses/UI_KIT_SOURCE.txt`;
+không gán lại MIT.
