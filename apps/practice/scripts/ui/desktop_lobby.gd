@@ -1120,7 +1120,7 @@ func tint_extra(fill: Color, color: Color) -> void:
 func quit_game() -> void:
 	if OnlineArena.connected:
 		OnlineArena.leave()
-	get_tree().quit()
+	Settings.quit_app()
 
 ## Lights the tab for whatever is open: a notice's own tab, the store page, else home.
 func sync_nav() -> void:

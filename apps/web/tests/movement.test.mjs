@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MovementVisual } from '../public/demo/movement.mjs';
+import { MovementVisual } from '../public/classic/movement.mjs';
 const state = () => ({
   phase: 'playing',
   round: 1,

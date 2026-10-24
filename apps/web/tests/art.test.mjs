@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-const root = new URL('../public/demo/art/boom/', import.meta.url);
+const root = new URL('../public/classic/art/boom/', import.meta.url);
 test('web and PC use unchanged source PNGs with the expected five-character sheet layout', async () => {
   const manifest = JSON.parse(
     await readFile(new URL('PROVENANCE.json', root), 'utf8'),

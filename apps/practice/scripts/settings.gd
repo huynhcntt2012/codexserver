@@ -104,6 +104,14 @@ func save(draft_values: Dictionary) -> void:
 	file.save(PATH)
 	changed.emit()
 
+## Quits the PC app; in the browser (/demo) a page cannot close itself, so it
+## goes back to the website instead.
+func quit_app() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.top.location.href = '/'")
+		return
+	get_tree().quit()
+
 ## Makes the values take effect now (the window previews volumes with it too).
 func apply(v: Dictionary, startup := false) -> void:
 	var display: Dictionary = v.display

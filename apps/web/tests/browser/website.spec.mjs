@@ -105,10 +105,11 @@ test('operator publishes news and edits the hero shown on the site', async ({
 
     const site = await page.context().newPage();
     const siteProblems = watch(site);
-    // Old /adminportal links redirect to the site root; the web game is at /demo/.
+    // Old /adminportal links redirect to the site root; the web game is at /demo/
+    // (the PC app's web build) and the earlier JS client at /classic/.
     await site.goto('/adminportal/news/');
     await expect(site).toHaveURL(/\/news\/$/);
-    await site.goto('/demo/');
+    await site.goto('/classic/');
     await expect(site.locator('#auth-title')).toHaveText('Đăng nhập');
     await site.goto('/news/');
     const card = site.locator('#news-list .card').first();

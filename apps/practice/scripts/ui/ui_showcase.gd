@@ -21,7 +21,7 @@ func open_page(page: String) -> void:
 		"battle":
 			get_tree().change_scene_to_file("res://scenes/main.tscn")
 		"home":
-			get_tree().change_scene_to_file("res://scenes/main.tscn" if OS.has_feature("web") or AuthSession.has_session() or UIState.get_meta("from_desktop_lobby", false) else "res://scenes/ui/launch/launch_screen.tscn")
+			get_tree().change_scene_to_file("res://scenes/main.tscn" if AuthSession.has_session() or UIState.get_meta("from_desktop_lobby", false) else "res://scenes/ui/launch/launch_screen.tscn")
 		_:
 			_show_toast("Tính năng đang được phát triển")
 

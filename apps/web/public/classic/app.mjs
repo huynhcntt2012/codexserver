@@ -130,7 +130,7 @@ function renderRooms() {
       button.disabled = !room.joinable || client.busy;
       const thumb = document.createElement('img');
       thumb.className = 'room-thumb';
-      thumb.src = '/demo/art/room-garden.svg';
+      thumb.src = '/classic/art/room-garden.svg';
       thumb.alt = '';
       thumb.width = 480;
       thumb.height = 288;
@@ -364,7 +364,7 @@ function render() {
           if (className === 'slot' && player) {
             const avatar = document.createElement('img');
             avatar.src =
-              '/demo/art/boom/characters/portraits/' +
+              '/classic/art/boom/characters/portraits/' +
               characterNames[
                 player.id === client.id && selectedCharacter !== null
                   ? selectedCharacter
@@ -404,7 +404,7 @@ function render() {
   $('result-avatar').hidden = phase !== 'finished' || !winner;
   if (winner)
     $('result-avatar').src =
-      '/demo/art/boom/characters/portraits/' +
+      '/classic/art/boom/characters/portraits/' +
       characterNames[
         winner.id === client.id && selectedCharacter !== null
           ? selectedCharacter

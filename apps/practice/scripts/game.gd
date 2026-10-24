@@ -203,19 +203,19 @@ func _create_ui() -> void:
 	_button(menu, "CỬA HÀNG / TRANG BỊ", Vector2(451, 808), Vector2(377, 34), Color("34b9dc")).pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/ui_showcase.tscn"))
 	_select_hero(maxi(0, HEROES.find(str(UIState.profile.get("selected_character", "bombo")))))
 	_select_level(0)
-	if not OS.has_feature("web"):
-		for child in menu.get_children():
-			child.hide()
-		var desktop := preload("res://scripts/ui/desktop_lobby.gd").new()
-		desktop.game = self
-		menu.add_child(desktop)
-		pc_screens["lobby"] = desktop
-		for entry in [["matchmaking", "res://scripts/ui/pc/pc_matchmaking.gd"], ["room", "res://scripts/ui/pc/pc_room.gd"], ["online", "res://scripts/ui/pc/pc_online.gd"]]:
-			var screen: Control = load(entry[1]).new()
-			screen.game = self
-			screen.hide()
-			menu.add_child(screen)
-			pc_screens[entry[0]] = screen
+	# The PC app and the web demo (/demo, same build) both use the PC lobby.
+	for child in menu.get_children():
+		child.hide()
+	var desktop := preload("res://scripts/ui/desktop_lobby.gd").new()
+	desktop.game = self
+	menu.add_child(desktop)
+	pc_screens["lobby"] = desktop
+	for entry in [["matchmaking", "res://scripts/ui/pc/pc_matchmaking.gd"], ["room", "res://scripts/ui/pc/pc_room.gd"], ["online", "res://scripts/ui/pc/pc_online.gd"]]:
+		var screen: Control = load(entry[1]).new()
+		screen.game = self
+		screen.hide()
+		menu.add_child(screen)
+		pc_screens[entry[0]] = screen
 
 	result = Control.new()
 	result.size = Vector2(1280, 920)
@@ -232,17 +232,16 @@ func _create_ui() -> void:
 	continue_button = _button(result, "TIẾP TỤC", Vector2(509, 624), Vector2(263, 45), Color("89df9a"))
 	continue_button.pressed.connect(_resume_game)
 	result.hide()
-	if not OS.has_feature("web"):
-		# PC replaces the HUD and result overlay with the kit-styled screens.
-		for layer in [hud, result]:
-			for child in layer.get_children():
-				child.hide()
-		var pc_hud: Control = load("res://scripts/ui/pc/pc_battle_hud.gd").new()
-		pc_hud.game = self
-		hud.add_child(pc_hud)
-		var pc_result: Control = load("res://scripts/ui/pc/pc_result.gd").new()
-		pc_result.game = self
-		result.add_child(pc_result)
+	# The kit-styled HUD and result overlay replace the old ones (PC and web).
+	for layer in [hud, result]:
+		for child in layer.get_children():
+			child.hide()
+	var pc_hud: Control = load("res://scripts/ui/pc/pc_battle_hud.gd").new()
+	pc_hud.game = self
+	hud.add_child(pc_hud)
+	var pc_result: Control = load("res://scripts/ui/pc/pc_result.gd").new()
+	pc_result.game = self
+	result.add_child(pc_result)
 
 
 func _select_hero(index: int) -> void:

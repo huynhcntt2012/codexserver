@@ -6,7 +6,7 @@ test('switching auth forms preserves input entered immediately after navigation'
   page,
   baseURL,
 }) => {
-  await page.goto(`${baseURL}/demo/`);
+  await page.goto(`${baseURL}/classic/`);
   await expect(page.locator('#auth-title')).toHaveText('Đăng nhập');
   await page.evaluate(() => {
     document.getElementById('auth-switch').click();
@@ -64,8 +64,8 @@ test('desktop and mobile browsers authenticate, play a round, and retain account
   const screenshots = process.env.SUNI_CAPTURE_DIR || 'build/web-screenshots';
   await mkdir(screenshots, { recursive: true });
   try {
-    await a.goto(`${baseURL}/demo/`);
-    await b.goto(`${baseURL}/demo/`);
+    await a.goto(`${baseURL}/classic/`);
+    await b.goto(`${baseURL}/classic/`);
     await expect(a.locator('#join')).toBeEnabled();
     await a.screenshot({ path: `${screenshots}/web-home.png`, fullPage: true });
     await b.screenshot({
@@ -79,7 +79,7 @@ test('desktop and mobile browsers authenticate, play a round, and retain account
     ).toBe(true);
     await expect(a.locator('#rooms-panel')).toBeHidden();
     await expect(a.locator('#board')).toBeHidden();
-    await a.goto(`${baseURL}/demo/#rooms`);
+    await a.goto(`${baseURL}/classic/#rooms`);
     await expect(a.locator('#auth-panel')).toBeVisible();
     await a.getByRole('link', { name: 'Đăng ký', exact: true }).click();
     await expect(a).toHaveURL(/#register$/);
@@ -194,7 +194,7 @@ test('character chooser loads five supplied characters and supports keyboard dis
   page,
   baseURL,
 }) => {
-  await page.goto(`${baseURL}/demo/`);
+  await page.goto(`${baseURL}/classic/`);
   await page.getByRole('button', { name: 'Nhân vật', exact: true }).click();
   const dialog = page.locator('#characters');
   await expect(dialog).toBeVisible();

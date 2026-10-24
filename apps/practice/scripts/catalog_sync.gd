@@ -94,7 +94,9 @@ func apply(items: Array) -> void:
 			continue
 		if not item.has("icon") or not has_icon(str(item.get("icon", ""))):
 			item["icon"] = bundled if ResourceLoader.exists(bundled) else ""
-		if str(entry.get("icon_sha256", "")) != "":
+		# Entries without a server file have icon_url null: keep the bundled art.
+		var url = entry.get("icon_url")
+		if str(entry.get("icon_sha256", "")) != "" and url is String and url != "":
 			var cached := icon_path(entry)
 			if FileAccess.file_exists(cached):
 				item["icon"] = cached

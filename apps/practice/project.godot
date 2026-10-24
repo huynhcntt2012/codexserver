@@ -4,7 +4,6 @@ config_version=5
 [application]
 config/name="Bụp Bụp! — Chơi với bot"
 run/main_scene="res://scenes/ui/launch/launch_screen.tscn"
-run/main_scene.web="res://scenes/ui/ui_showcase.tscn"
 config/features=PackedStringArray("4.0", "GL Compatibility")
 
 [display]

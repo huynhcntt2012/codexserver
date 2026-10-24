@@ -52,8 +52,9 @@ func _ready() -> void:
 	$CanvasRoot/FooterNav.guide_requested.connect(_on_guide)
 	$CanvasRoot/FooterNav.news_requested.connect(_on_events)
 	$CanvasRoot/FooterNav.register_requested.connect(_on_register)
-	$CanvasRoot/FooterNav.exit_requested.connect(func(): get_tree().quit())
+	$CanvasRoot/FooterNav.exit_requested.connect(func(): Settings.quit_app())
 	$CanvasRoot/FooterNav.change_password_requested.connect(_on_change_password)
+	print("PRACTICE_LAUNCH_READY")
 
 func _exit_tree() -> void:
 	preload("res://scripts/ui/screen_fill.gd").set_fill(get_tree(), false)

@@ -1,6 +1,6 @@
 const load = (path) => {
   const image = new Image();
-  image.src = '/demo/art/boom/' + path;
+  image.src = '/classic/art/boom/' + path;
   return image;
 };
 const names = ['bombo', 'mimi', 'zin', 'lala', 'kai'];

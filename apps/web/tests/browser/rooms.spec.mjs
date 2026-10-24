@@ -21,7 +21,7 @@ for (const width of [1440, 390]) {
     await page.route('**/arena/rooms', (route) =>
       route.fulfill({ json: { rooms } }),
     );
-    await page.goto('/demo/');
+    await page.goto('/classic/');
     await page.locator('#username').fill('grid_test');
     await page.locator('#password').fill('test-password');
     await page.locator('#join').click();
