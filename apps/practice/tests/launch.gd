@@ -16,19 +16,17 @@ func _run() -> void:
 	launch.auth_panel.get_node("Login").pressed.emit()
 	assert(launch.info_dialog.visible)
 	launch.info_dialog.hide_dialog()
-	launch.mode_selector.select_mode("duo")
-	launch.auth_panel.get_node("Guest").pressed.emit()
-	assert(launch.info_dialog.visible)
-	assert(current_scene == launch)
-	launch.info_dialog.hide_dialog()
+	# Server status, CÀI ĐẶT / ÂM and the 1P / 2P buttons were removed.
+	for removed in ["ModeSelector", "ServerStatus", "TopActions"]:
+		assert(launch.get_node_or_null("CanvasRoot/" + removed) == null)
+	assert(launch.get_node("BgStage/SkyArt").texture.resource_path.ends_with("bg_island.webp"))
 	await process_frame
 	assert(not launch.get_node("CanvasRoot/ShopEquipment").visible)
-	launch.mode_selector.select_mode("solo")
 	current_scene.auth_panel.get_node("Guest").pressed.emit()
 	await process_frame
 	await process_frame
 	assert(current_scene.scene_file_path == "res://scenes/main.tscn")
-	print("PRACTICE_LAUNCH_OK: startup, validation, unsupported duo, no shop before login, guest")
+	print("PRACTICE_LAUNCH_OK: startup, validation, removed buttons, island background, no shop before login, guest")
 	if current_scene.music_enabled:
 		current_scene._toggle_audio()
 	current_scene.queue_free()

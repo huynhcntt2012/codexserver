@@ -177,3 +177,11 @@ ngày 2026-10-23 (giữ dạng WebP trong `apps/practice/tools/source/ui_kit`) b
 không dùng chữ in sẵn trên nút. Nguồn gốc và quyền chưa được xác minh độc lập,
 không có tên/logo Boom Online. Hash tại `apps/practice/licenses/UI_KIT_SOURCE.txt`;
 không gán lại MIT.
+
+## Nền màn đăng nhập "đảo nước" do người dùng cung cấp
+
+`apps/practice/assets/ui/launch/bg_island.webp` (1672×941, nền màn đăng nhập PC và web) là ảnh
+chủ dự án gửi trong phiên Claude Code ngày 2026-10-24, chép nguyên file, không chỉnh sửa
+(SHA-256 `dd1f3930d031066dfd6c586206cee4892ece0128870af65bd444b8f37b5e6f33`). Ảnh trông như do
+AI tạo, không có tác giả, tên hoặc logo Boom Online; nguồn gốc và quyền chưa được xác minh độc
+lập. Xác nhận quyền trước khi phát hành thương mại; không gán lại MIT.

@@ -10,7 +10,6 @@ signal events_requested()
 const BASE_SIZE := Vector2(1280.0, 720.0)
 @onready var canvas_root: Control = $CanvasRoot
 @onready var auth_panel: Control = $CanvasRoot/AuthPanel
-@onready var mode_selector: Control = $CanvasRoot/ModeSelector
 @onready var info_dialog: Control = $CanvasRoot/InfoDialog
 @onready var settings_dialog: Control = $CanvasRoot/SettingsDialog
 var password_dialog: Control = preload("res://scripts/ui/launch/password_dialog.gd").new()
@@ -47,8 +46,6 @@ func _ready() -> void:
 	auth_panel.guest_requested.connect(_on_guest)
 	auth_panel.forgot_password_requested.connect(_on_forgot)
 	auth_panel.validation_failed.connect(_show_validation)
-	$CanvasRoot/TopActions.settings_requested.connect(func(): settings_dialog.open())
-	$CanvasRoot/ServerStatus.server_clicked.connect(_on_server_clicked)
 	$CanvasRoot/FooterNav.guide_requested.connect(_on_guide)
 	$CanvasRoot/FooterNav.news_requested.connect(_on_events)
 	$CanvasRoot/FooterNav.register_requested.connect(_on_register)
@@ -69,9 +66,6 @@ func _update_layout() -> void:
 func _on_login(username: String, password: String) -> void:
 	if AuthSession.busy:
 		return
-	if mode_selector.get_selected_mode() != "solo":
-		info_dialog.show_info("CHƠI CÙNG BẠN", "Chọn 1P để chơi với bot. 2P chưa hỗ trợ trong bản này.")
-		return
 	_set_busy(true)
 	var success: bool = await AuthSession.authenticate(username, password, auth_panel.registering, auth_panel.email_field.text)
 	auth_panel.reset_password_field()
@@ -80,12 +74,11 @@ func _on_login(username: String, password: String) -> void:
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 	else:
 		info_dialog.show_info("KHÔNG THỂ ĐĂNG NHẬP", AuthSession.last_error)
-		$CanvasRoot/ServerStatus.update_connection(false)
 
 ## Locks every control that would start another flow while the server answers.
 func _set_busy(value: bool) -> void:
 	auth_panel.set_busy(value)
-	for path in ["ShopEquipment", "FooterNav/Register", "FooterNav/ChangePassword", "TopActions/Settings", "ModeSelector/Solo", "ModeSelector/Duo"]:
+	for path in ["ShopEquipment", "FooterNav/Register", "FooterNav/ChangePassword"]:
 		var node: Button = get_node("CanvasRoot/" + path)
 		node.disabled = value
 		node.mouse_default_cursor_shape = Control.CURSOR_WAIT if value else Control.CURSOR_POINTING_HAND
@@ -93,10 +86,7 @@ func _set_busy(value: bool) -> void:
 func _on_guest() -> void:
 	if AuthSession.busy:
 		return
-	guest_requested.emit(mode_selector.get_selected_mode())
-	if mode_selector.get_selected_mode() != "solo":
-		info_dialog.show_info("CHƠI CÙNG BẠN", "Bản này hỗ trợ một người chơi với bot. Hãy chọn 1P rồi CHƠI THỬ.")
-		return
+	guest_requested.emit("solo")
 	AuthSession.logout()
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
@@ -136,9 +126,6 @@ func _on_events() -> void:
 func _on_guide() -> void:
 	info_dialog.show_info("HƯỚNG DẪN", "Di chuyển: WASD hoặc phím mũi tên. Đặt bóng nước: Space. Đừng để bóng nổ chạm vào mình!")
 
-func _on_server_clicked() -> void:
-	settings_dialog.open()
-
 func _show_validation(message: String) -> void:
 	info_dialog.show_info("KIỂM TRA THÔNG TIN", message)
 
@@ -159,7 +146,3 @@ func _process(_delta: float) -> void:
 	# Shop and equipment belong to an account; before login only play/auth show.
 	$CanvasRoot/ShopEquipment.visible = signed_in
 	$CanvasRoot/Logout.disabled = AuthSession.busy
-	if signed_in:
-		$CanvasRoot/ServerStatus/Connection.text = "Tài khoản: " + AuthSession.account_name
-	else:
-		$CanvasRoot/ServerStatus/Connection.text = "Đang đăng nhập…" if AuthSession.busy else "Chưa đăng nhập"

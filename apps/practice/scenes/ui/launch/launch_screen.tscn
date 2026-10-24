@@ -1,13 +1,10 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/launch/launch_screen.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/ui/launch/components/bgstage.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/launch/components/herostage.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/ui/launch/components/brandheader.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/ui/launch/components/authpanel.tscn" id="5"]
-[ext_resource type="PackedScene" path="res://scenes/ui/launch/components/modeselector.tscn" id="6"]
-[ext_resource type="PackedScene" path="res://scenes/ui/launch/components/serverstatus.tscn" id="7"]
-[ext_resource type="PackedScene" path="res://scenes/ui/launch/components/topactions.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/ui/launch/components/footernav.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://scenes/ui/launch/components/announcementribbon.tscn" id="10"]
 [ext_resource type="PackedScene" path="res://scenes/ui/launch/components/infodialog.tscn" id="11"]
@@ -56,27 +53,6 @@ offset_left = 398.0
 offset_top = 287.0
 offset_right = 882.0
 offset_bottom = 610.0
-
-[node name="ModeSelector" parent="CanvasRoot" instance=ExtResource("6")]
-layout_mode = 0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 1280.0
-offset_bottom = 720.0
-
-[node name="ServerStatus" parent="CanvasRoot" instance=ExtResource("7")]
-layout_mode = 0
-offset_left = 35.0
-offset_top = 39.0
-offset_right = 264.0
-offset_bottom = 102.0
-
-[node name="TopActions" parent="CanvasRoot" instance=ExtResource("8")]
-layout_mode = 0
-offset_left = 1008.0
-offset_top = 45.0
-offset_right = 1249.0
-offset_bottom = 93.0
 
 [node name="FooterNav" parent="CanvasRoot" instance=ExtResource("9")]
 layout_mode = 0
