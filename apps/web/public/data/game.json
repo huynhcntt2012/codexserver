@@ -1,0 +1,260 @@
+{
+  "characters": [
+    {
+      "id": "bombo",
+      "name": "Bombo",
+      "role": "Thủ lĩnh",
+      "desc": "Thủ lĩnh vui tính, thích những quả bom màu xanh.",
+      "stats": {
+        "speed": 3,
+        "bombs": 2,
+        "range": 2
+      },
+      "portrait": "/assets/characters/portraits/bombo.png"
+    },
+    {
+      "id": "mimi",
+      "name": "Mimi",
+      "role": "Nhanh nhẹn",
+      "desc": "Nhanh nhẹn, đáng yêu và tràn đầy năng lượng.",
+      "stats": {
+        "speed": 4,
+        "bombs": 2,
+        "range": 2
+      },
+      "portrait": "/assets/characters/portraits/mimi.png"
+    },
+    {
+      "id": "zin",
+      "name": "Zin",
+      "role": "Sức nổ lớn",
+      "desc": "Dũng cảm, luôn sẵn sàng bước vào đấu trường.",
+      "stats": {
+        "speed": 3,
+        "bombs": 3,
+        "range": 2
+      },
+      "portrait": "/assets/characters/portraits/zin.png"
+    },
+    {
+      "id": "lala",
+      "name": "Lala",
+      "role": "Hỗ trợ",
+      "desc": "Năng động, mang tới niềm vui mỗi trận đấu.",
+      "stats": {
+        "speed": 4,
+        "bombs": 1,
+        "range": 3
+      },
+      "portrait": "/assets/characters/portraits/lala.png"
+    },
+    {
+      "id": "kai",
+      "name": "Kai",
+      "role": "Chiến thuật",
+      "desc": "Bình tĩnh, khéo léo khi chọn vị trí đặt bom.",
+      "stats": {
+        "speed": 3,
+        "bombs": 2,
+        "range": 3
+      },
+      "portrait": "/assets/characters/portraits/kai.png"
+    }
+  ],
+  "maps": [
+    {
+      "id": "pastry",
+      "name": "Tiệm Bánh Mây",
+      "subtitle": "Dễ • Xứ sở bánh ngọt",
+      "story": "Chiếc lò bánh của cô Mây bỗng nguội lạnh, để lại cả thị trấn không còn mùi bánh mới. Tìm lại Tia Lửa Hồng bị giấu sau những khay bánh biết đi.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/pastry.png",
+      "pack": "004"
+    },
+    {
+      "id": "forest",
+      "name": "Rừng Nấm Đom Đóm",
+      "subtitle": "Trung bình • Khu rừng kỳ ảo",
+      "story": "Những cây nấm ngừng phát sáng khi Đom Đóm Trưởng Lão đánh mất chiếc chuông rừng. Trong những vạt nấm, một cơn mưa bào tử đang chờ người lạ.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/forest.png",
+      "pack": "005"
+    },
+    {
+      "id": "harbor",
+      "name": "Bến Cảng Bong Bóng",
+      "subtitle": "Trung bình • Bến cảng biển",
+      "story": "Những con thuyền bong bóng bị mắc kẹt vì dòng thủy triều kỳ lạ. Thuyền trưởng Bọt gửi một thông điệp: mảnh pha lê trôi về phía tuyến tàu cầu vồng.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/harbor.png",
+      "pack": "006"
+    },
+    {
+      "id": "station",
+      "name": "Ga Tàu Cầu Vồng",
+      "subtitle": "Trung bình • Nhà ga sắc màu",
+      "story": "Đường ray sáng rực nhưng đoàn tàu vẫn chạy vòng quanh ga không người lái. Muốn bước tiếp, nhóm bạn phải đưa các mảnh bản đồ về đúng toa tàu.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/station.png",
+      "pack": "007"
+    },
+    {
+      "id": "clock",
+      "name": "Tháp Đồng Hồ",
+      "subtitle": "Khó • Tháp máy thời gian",
+      "story": "Đồng hồ thị trấn mắc kẹt ở phút thứ mười ba, lặp lại cùng một ngày. Mỗi tiếng chuông khiến nhịp nổ của bom thay đổi trong vùng bánh răng.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/clock.png",
+      "pack": "008"
+    },
+    {
+      "id": "crystal",
+      "name": "Hang Pha Lê",
+      "subtitle": "Trung bình • Hang động lấp lánh",
+      "story": "Một viên pha lê biết hát tiết lộ bí mật: Kẻ Xám đang thu thập bảy tia sáng để nhuộm cả vương quốc thành một màu. Hang động đáp lời mỗi tiếng bom bằng nhịp vang nhỏ.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/crystal.png",
+      "pack": "009"
+    },
+    {
+      "id": "market",
+      "name": "Chợ Đêm Đèn Lồng",
+      "subtitle": "Trung bình • Phố chợ đêm",
+      "story": "Một đêm hội bắt đầu nhưng không ai nhìn thấy bóng của mình. Người bán đèn lồng nhờ đội bạn thắp lại đủ bốn góc quảng trường để đẩy lùi màn sương tím.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/market.png",
+      "pack": "010"
+    },
+    {
+      "id": "sky",
+      "name": "Đền Gió Trên Mây",
+      "subtitle": "Khó • Ngôi đền trên trời",
+      "story": "Chuông gió trên đỉnh mây vang lệch nhịp, khiến các quả bom tự lăn khỏi chỗ đặt. Thần Gió nhỏ đang cố giữ đền khỏi bị gió thổi bay.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/sky.png",
+      "pack": "011"
+    },
+    {
+      "id": "volcano",
+      "name": "Núi Lửa Kẹo Đỏ",
+      "subtitle": "Khó • Núi lửa caramel",
+      "story": "Dòng caramel đỏ đang sôi tràn khỏi miệng núi lửa. Hạt Lửa bị hút vào một chiếc nồi khổng lồ và mọi sinh vật kẹo có nguy cơ bị hóa cứng.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/volcano.png",
+      "pack": "012"
+    },
+    {
+      "id": "star",
+      "name": "Vườn Sao Rơi",
+      "subtitle": "Trung bình • Vườn thiên văn",
+      "story": "Bầu trời đã mất một chòm sao, và những ngôi sao nhỏ lần lượt rơi xuống khu vườn. Người Giữ Sao xin các bạn gom ánh sáng trước khi trăng mới xuất hiện.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/star.png",
+      "pack": "013"
+    },
+    {
+      "id": "factory",
+      "name": "Xưởng Robot Kẹo",
+      "subtitle": "Khó • Nhà máy robot",
+      "story": "Tất cả những chiếc máy làm kẹo chuyển sang sản xuất hộp màu xám. Robot Bíp bí mật chỉ ra cỗ máy đã bị điều khiển từ Cung Điện Trăng.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/factory.png",
+      "pack": "014"
+    },
+    {
+      "id": "moon",
+      "name": "Cung Điện Trăng",
+      "subtitle": "Khó • Cung trăng nhiệm màu",
+      "story": "Tại điện trăng, Kẻ Xám để lộ bí mật: hắn chỉ sợ sắc màu làm ai cũng khác biệt. Vượt qua ba vệ binh cuối cùng và khôi phục Lõi Cầu Vồng, bầu trời sẽ sáng trở lại.",
+      "size": "17×13",
+      "players": "2–4",
+      "image": "/assets/level_previews/moon.png",
+      "pack": "015"
+    },
+    {
+      "id": "coast",
+      "name": "Đảo Nắng Vàng",
+      "subtitle": "Khó • Bùng nổ liên hoàn",
+      "story": "",
+      "size": "15×11",
+      "players": "2–4",
+      "image": "/assets/level_previews/coast.png",
+      "pack": "999"
+    },
+    {
+      "id": "frost",
+      "name": "Lâu Đài Băng",
+      "subtitle": "Trung bình • Lối đi hẹp",
+      "story": "",
+      "size": "15×11",
+      "players": "2–4",
+      "image": "/assets/level_previews/frost.png",
+      "pack": "999"
+    },
+    {
+      "id": "park",
+      "name": "Công Viên Kẹo",
+      "subtitle": "Dễ • Thùng gỗ và bụi cây",
+      "story": "",
+      "size": "15×11",
+      "players": "2–4",
+      "image": "/assets/level_previews/park.png",
+      "pack": "999"
+    }
+  ],
+  "items": [
+    {
+      "id": "throw_bomb",
+      "slot": 1,
+      "name": "Bom ném xa",
+      "desc": "Ném bom tới 3 ô theo hướng nhìn",
+      "icon": "/assets/items/range.png"
+    },
+    {
+      "id": "dart",
+      "slot": 2,
+      "name": "Phi tiêu kích nổ",
+      "desc": "Bay 5 ô, chạm bom là nổ ngay",
+      "icon": "/assets/items/lightning.png"
+    },
+    {
+      "id": "blue_shield",
+      "slot": 3,
+      "name": "Khiên bảo vệ",
+      "desc": "Chặn 1 lần trúng bom (8 giây)",
+      "icon": "/assets/items/shield.png"
+    },
+    {
+      "id": "speed_shoes",
+      "slot": 4,
+      "name": "Giày tăng tốc",
+      "desc": "+35% tốc độ trong 5 giây",
+      "icon": "/assets/items/shoe.png"
+    },
+    {
+      "id": "freeze_bomb",
+      "slot": 5,
+      "name": "Bom đóng băng",
+      "desc": "Làm chậm đối thủ vùng 3×3 trong 3 giây",
+      "icon": "/assets/items/ice.png"
+    },
+    {
+      "id": "push_glove",
+      "slot": 6,
+      "name": "Găng đẩy bom",
+      "desc": "Đẩy quả bom phía trước trượt đi",
+      "icon": "/assets/items/magnet.png"
+    }
+  ]
+}

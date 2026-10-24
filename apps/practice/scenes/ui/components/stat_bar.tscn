@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/stat_bar.gd" id="1_script"]
+
+[node name="StatBar" type="HBoxContainer"]
+script = ExtResource("1_script")
+custom_minimum_size = Vector2(0, 32)
+
+[node name="Name" type="Label" parent="."]
+text = "Tốc độ"
+custom_minimum_size = Vector2(100, 0)
+
+[node name="Value" type="ProgressBar" parent="."]
+min_value = 0.0
+max_value = 5.0
+value = 3.0
+show_percentage = false
+custom_minimum_size = Vector2(130, 22)
+size_flags_horizontal = 3
+
+[node name="Amount" type="Label" parent="."]
+text = "3/5"

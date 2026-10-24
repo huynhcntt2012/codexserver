@@ -1,0 +1,60 @@
+{
+  "id": "volcano",
+  "name": "NÚI LỬA KẸO ĐỎ",
+  "subtitle": "Khó • Núi lửa caramel",
+  "theme": "volcano",
+  "crate": "tnt_barrel",
+  "wall": "brick_wall",
+  "bomb": "piercing_red",
+  "fx": "fire_horizontal",
+  "bot_step": 0.29,
+  "bot_bomb": 2.1,
+  "bg": "#FFE5C8",
+  "columns": 17,
+  "rows": 13,
+  "layout": [
+    "#################",
+    "#...CCC...CCC...#",
+    "#.#.#.#.#.#.#.#.#",
+    "#.CC...CCC...CC.#",
+    "#C#C#.#.#.#.#C#C#",
+    "#CC..C..C..C..CC#",
+    "#.#.#.#.#.#.#.#.#",
+    "#CC..C..C..C..CC#",
+    "#C#C#.#.#.#.#C#C#",
+    "#.CC...CCC...CC.#",
+    "#.#.#.#.#.#.#.#.#",
+    "#...CCC...CCC...#",
+    "#################"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      15,
+      1
+    ],
+    [
+      15,
+      11
+    ],
+    [
+      1,
+      11
+    ]
+  ],
+  "pack_id": "012",
+  "story": "Dòng caramel đỏ đang sôi tràn khỏi miệng núi lửa. Hạt Lửa bị hút vào một chiếc nồi khổng lồ và mọi sinh vật kẹo có nguy cơ bị hóa cứng.",
+  "walls": [
+    "brick_wall",
+    "stone_block",
+    "cactus"
+  ],
+  "crates": [
+    "tnt_barrel",
+    "cracked_brick",
+    "rusty_barrel"
+  ]
+}

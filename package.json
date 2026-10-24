@@ -1,0 +1,25 @@
+{
+  "name": "suni-bomb-arena",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/arena"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @suni/arena",
+    "lint": "npm run lint -w @suni/arena",
+    "test": "npm run test -w @suni/arena",
+    "build": "npm run build -w @suni/arena",
+    "test:web": "node --test apps/web/tests/*.test.mjs",
+    "test:web:smoke": "node apps/web/tests/smoke.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "prettier": "3.6.2"
+  }
+}

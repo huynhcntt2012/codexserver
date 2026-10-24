@@ -1,0 +1,56 @@
+{
+  "id": "coast",
+  "name": "ĐẢO NẮNG VÀNG",
+  "subtitle": "Khó • Bùng nổ liên hoàn",
+  "theme": "sand",
+  "crate": "sandbags",
+  "wall": "stone_block",
+  "bomb": "star",
+  "fx": "fire_horizontal",
+  "bot_step": 0.29,
+  "bot_bomb": 2.1,
+  "bg": "#F1C878",
+  "columns": 15,
+  "rows": 11,
+  "layout": [
+    "###############",
+    "#.......C.....#",
+    "#.#.#C#C#.#.#.#",
+    "#...C#CCC#C...#",
+    "#.#.#C#C#.#C#.#",
+    "#.CCCCCCC.CCC.#",
+    "#.#.#.#.#C#C#.#",
+    "#...C#...#C...#",
+    "#.#.#C#C#.#.#.#",
+    "#.....C.......#",
+    "###############"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      13,
+      1
+    ],
+    [
+      13,
+      9
+    ],
+    [
+      1,
+      9
+    ]
+  ],
+  "walls": [
+    "stone_block",
+    "mossy_stone",
+    "bamboo"
+  ],
+  "crates": [
+    "sandbags",
+    "wood_box",
+    "water_barrel"
+  ]
+}

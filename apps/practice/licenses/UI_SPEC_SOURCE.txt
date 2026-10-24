@@ -1,0 +1,47 @@
+User supplied Game_Boom_UI_Spec_Godot4.zip
+Google Drive file: 1l44rdo5tILvBtT3W0qeVskXa2Miw9F-x
+SHA-256: cf3d8eca2556253645182197441e05d233774184930e9840e1be4ebf7b5847bb
+Imported UI scenes, scripts and demo JSON only. Existing Step 3 artwork reused.
+Flattened reference images and bundled legacy gameplay were not imported.
+
+# ART SLICING GUIDE — từ mockup phẳng đến asset production
+
+## Nguyên tắc
+3 mockup trong `docs/references/` là raster ảnh phẳng (flattened), **không có Figma/PSD layer thực**. Nếu dùng crop trực tiếp, bóng, chữ, viền, tay nhân vật và background sẽ dính nhau. Bởi vậy package **không tuyên bố** đã cắt ra từng nút chính xác. Các control tương tác là Node Godot thật (`*.tscn`); ảnh đẹp cần export độc lập lại.
+
+## Phân lớp Shop
+1. `BG/Clouds`, không chữ;
+2. `TopBar` gồm avatar, name, xp, gold, gem, mail/settings (Godot controls);
+3. `ShopCategories`: icon riêng + Button state (không bake label);
+4. `Promo`: gradient/particle background riêng, mascot PNG transparent riêng; text and CTA runtime;
+5. `ProductCard`: background 9-slice, rarity badge, art PNG, title, price, CTA (6 đối tượng riêng);
+6. `RightMascot`: body/mouth/gesture PNG riêng; speech bubble 9-slice, text Label;
+7. `BottomNav`: icon PNG + Label + selected/notification states.
+
+## Phân lớp Equipment
+1. `BG` + `HeroPanel` + `Pedestal` 3 lớp riêng;
+2. `Hero`: portrait 1:1, outfit 4 hướng nếu muốn mặc vào gameplay (hiện chưa có layered outfit art);
+3. `Stats`: icon, label, stat bar background, fill, numeric value (Godot ProgressBar);
+4. `CategoryTabs`: 6 Button với icon;
+5. `EquipmentCard`: rarity, item icon, status, button independent;
+6. `LoadoutSlot`: từng slot frame 9-slice + icon + name + equipped outline/glow;
+7. `Power`: **Không dùng** lực chiến tăng từ cosmetic nếu không có design/gameplay system riêng.
+
+## Export checklist (alpha-correct)
+- RGBA transparency thật; không nền trắng nếu item/mascot yêu cầu tách lớp.
+- Icon art 128×128 PNG; transparent 8px safe margin; nhất quán phối cảnh và độ dày viền.
+- Panel 96×96 RGBA, nine-slice cap=24px bốn cạnh; texture không chứa chữ.
+- State normal, hover, pressed, disabled: button backgrounds độc lập hoặc StyleBox variants.
+- Mascot 512px+, không cắt tay/tóc, shadow lớp riêng nếu đặt trên nhiều backgrounds.
+- Banner không bake các text giảm giá / tiền / CTA, do Shop data/API cập nhật.
+- Hiệu ứng equip glow, star, purchase coin thành sprite sheet/frames, test nền tối và sáng.
+- Asset mới do team tạo riêng, tránh sao chép asset/logo/game UI của trò chơi khác.
+
+## Việc đã làm trong package
+- Giữ `assets/characters/portraits/`, `assets/bombs/`, `assets/items/` **là icon độc lập nguồn Step3**.
+- Thiết kế panel & button bằng StyleBoxFlat hoàn toàn tách khỏi text.
+- Thêm tất cả component scene/script reusable; dữ liệu text/nút do JSON và script.
+- Để folder `assets/ui/...` với `.gitkeep` là slot nhận art export.
+
+## Việc cần art production
+Xem **`docs/ASSET_HANDOFF.csv`** — các hàng `TODO_ART` là art còn thiếu, không phải file ảnh đã có.

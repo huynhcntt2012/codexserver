@@ -1,0 +1,66 @@
+# Game Boom — Starter 2D Art Pack
+
+Original, AI-generated 2D artwork inspired by the *genre* of tile-based cartoon bomber games. Not copied from the proprietary game Boom Online.
+
+## Contents
+
+- `characters/portraits/`: 5 character portraits at 160×160 pixels.
+- `characters/<name>/<state>/`: 5 heroes × 10 action/pose categories × 2 pose images at 64×64 pixels. State names: idle, walk_down, walk_up, walk_left, walk_right, place_bomb, throw_item, hit, win, lose.
+- `bombs/`: six bomb variants, each 96×96 pixels.
+- `effects/`: four effect sequences, each with eight 96×96 snippets.
+- `tiles/`: four floor themes, 8 tiles per theme at 64×64 pixels.
+- `obstacles/`: wood crates, stone walls, special walls, shrubs, barrels and metal barrels.
+- `items/`: 16 power-up icon crops (some contain pale UI-panel backgrounds).
+- `decorations/`: 8 illustrated environment props.
+- `ui/`: HUD and menu panel samples.
+- `SOURCE_*.png`: the two original whole-sheet concepts for artistic reference.
+
+## Godot 4 integration
+
+Copy this folder to `res://assets/boom/`. Use a 64×64 grid size; for character movement, you can create `AnimatedSprite2D` animations by importing images from individual state folders. Set texture filtering to Linear for painterly/smooth images, or choose Nearest if you pixelate your game consistently.
+
+## Limitations
+
+These are starter art assets, extracted from a generative concept sheet, **not final production sprites**. Pose pairs are not guaranteed to be frame-perfect and some frames need manual retouching, transparency cleanup or registration for polished animations. UI items may include pale panels and Vietnamese labels. Character states (especially up/back views) should be visually tested in engine. Confirm final consistency and branding before release.
+
+Counts by group: {"characters/portraits": 5, "characters/bombo/idle": 2, "characters/bombo/walk_down": 2, "characters/bombo/walk_up": 2, "characters/bombo/walk_left": 2, "characters/bombo/walk_right": 2, "characters/bombo/place_bomb": 2, "characters/bombo/throw_item": 2, "characters/bombo/hit": 2, "characters/bombo/win": 2, "characters/bombo/lose": 2, "characters/mimi/idle": 2, "characters/mimi/walk_down": 2, "characters/mimi/walk_up": 2, "characters/mimi/walk_left": 2, "characters/mimi/walk_right": 2, "characters/mimi/place_bomb": 2, "characters/mimi/throw_item": 2, "characters/mimi/hit": 2, "characters/mimi/win": 2, "characters/mimi/lose": 2, "characters/zin/idle": 2, "characters/zin/walk_down": 2, "characters/zin/walk_up": 2, "characters/zin/walk_left": 2, "characters/zin/walk_right": 2, "characters/zin/place_bomb": 2, "characters/zin/throw_item": 2, "characters/zin/hit": 2, "characters/zin/win": 2, "characters/zin/lose": 2, "characters/lala/idle": 2, "characters/lala/walk_down": 2, "characters/lala/walk_up": 2, "characters/lala/walk_left": 2, "characters/lala/walk_right": 2, "characters/lala/place_bomb": 2, "characters/lala/throw_item": 2, "characters/lala/hit": 2, "characters/lala/win": 2, "characters/lala/lose": 2, "characters/kai/idle": 2, "characters/kai/walk_down": 2, "characters/kai/walk_up": 2, "characters/kai/walk_left": 2, "characters/kai/walk_right": 2, "characters/kai/place_bomb": 2, "characters/kai/throw_item": 2, "characters/kai/hit": 2, "characters/kai/win": 2, "characters/kai/lose": 2, "bombs": 7, "effects/fire_horizontal": 8, "effects/fire_vertical": 8, "effects/ice": 8, "effects/heart": 8, "tiles/grass": 8, "tiles/snow": 8, "tiles/sand": 8, "tiles/lava": 8, "obstacles/wood_crate": 6, "obstacles/stone_wall": 4, "obstacles/special_wall": 4, "obstacles/shrub": 4, "obstacles/barrel": 6, "obstacles/metal_barrel": 4, "effects/water_splash": 6, "decorations": 8, "ui": 5, "items": 16}
+
+## Update 2026-10-16: isometric item icons
+
+`assets/items/*.png` (16 files, same names) were replaced with 512×512 RGBA
+isometric re-renders supplied by the project owner (`items-isometric-512.zip`).
+They are restyles of this pack's own item icons, made with an image-generation
+tool; they contain no captions or UI panels, so the client no longer crops them.
+The design concepts in `isometric-concepts.zip` (characters, tile, crate, bomb)
+are design references only and are not integrated.
+
+## Update 2026-10-16: repaired bomb sprites
+
+`assets/bombs/*.png` were cut from the concept sheet with clipped edges (ice,
+pink and star lost their left side, water_blue its bottom) and slivers of the
+neighbouring bomb. Each file now keeps only its own bomb, the missing part of the
+sphere is rebuilt by mirroring the visible half, and the bomb is recentred on the
+same 96×96 canvas. No new artwork was added.
+
+## Update 2026-10-17: grass tiles and effect frames cleaned
+
+`assets/tiles/grass/*.png` were sheet crops that included the pale gutter and a
+sliver of the next tile, so the floor showed stripes and gaps. Each tile now
+keeps only its grass interior, scaled to 64×64 with an even dark rim like the
+sand/snow tiles. `assets/effects/*/` frames had Vietnamese caption text and
+slivers of neighbouring frames; those pixels were removed, the effect itself is
+unchanged. No new artwork was added.
+
+## Update 2026-10-17: Boom World maps 004–015
+
+`levels/{pastry,forest,harbor,station,clock,crystal,market,sky,volcano,star,
+factory,moon}.json` come from the project owner's map pack
+(`Boom_World_12_Maps_Godot4.zip`, original names and story written for this
+project). Layouts are unchanged except crates within two steps of the four
+start corners, which are cleared like the arena server does. Hazards
+(`mechanic.hazards`) are not implemented: classic rules only, as the pack
+recommends for classic/ranked play. Floor tiles `assets/tiles/<map>/` are the
+sand (forest: grass) tiles recoloured to each map's ground colour; walls,
+crates, bombs and effects reuse existing art. `assets/level_previews/<map>.png`
+are rendered from the level data and that art. The pack's preview PNGs were not
+used.

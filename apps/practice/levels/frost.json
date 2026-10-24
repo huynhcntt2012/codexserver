@@ -1,0 +1,54 @@
+{
+  "id": "frost",
+  "name": "LÂU ĐÀI BĂNG",
+  "subtitle": "Trung bình • Lối đi hẹp",
+  "theme": "snow",
+  "crate": "cracked_ice",
+  "wall": "ice_block",
+  "bomb": "ice",
+  "fx": "ice",
+  "bot_step": 0.34,
+  "bot_bomb": 2.6,
+  "bg": "#74C9F0",
+  "columns": 15,
+  "rows": 11,
+  "layout": [
+    "###############",
+    "#.............#",
+    "#.#.#C#.#C#.#.#",
+    "#...CC.#CC....#",
+    "#.#C#C#C#.#.#.#",
+    "#.CC.#C.C#.CC.#",
+    "#.#.#.#.#C#C#.#",
+    "#...CC.#......#",
+    "#.#.#.#.#.#.#.#",
+    "#......CC.....#",
+    "###############"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      13,
+      1
+    ],
+    [
+      13,
+      9
+    ],
+    [
+      1,
+      9
+    ]
+  ],
+  "walls": [
+    "ice_block",
+    "stone_block"
+  ],
+  "crates": [
+    "cracked_ice",
+    "wood_box"
+  ]
+}

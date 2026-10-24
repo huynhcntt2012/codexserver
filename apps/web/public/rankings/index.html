@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bảng xếp hạng · BỤP BỤP!</title>
+    <meta
+      name="description"
+      content="Top người chơi online theo trận thắng và số lần hạ gục."
+    />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#13306b" />
+    <link rel="canonical" href="https://boom.sunifactory.com/rankings/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BỤP BỤP!" />
+    <meta property="og:title" content="Bảng xếp hạng · BỤP BỤP!" />
+    <meta
+      property="og:description"
+      content="Top người chơi online theo trận thắng và số lần hạ gục."
+    />
+    <meta property="og:url" content="https://boom.sunifactory.com/rankings/" />
+    <meta
+      property="og:image"
+      content="https://boom.sunifactory.com/img/gameplay-online.webp"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/assets/characters/portraits/bombo.png" />
+    <link rel="preload" as="image" href="/assets/ui/launch/logo_bupbup.png" />
+    <link rel="stylesheet" href="/portal.css?v=8563786c09" />
+    <script type="module" src="/portal.js?v=8563786c09"></script>
+  </head>
+  <body data-page="rankings">
+    <a class="skip" href="#main">Bỏ qua tới nội dung</a>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="logo" href="/"
+          ><img
+            src="/assets/ui/launch/logo_bupbup.png"
+            alt="BỤP BỤP!"
+            width="165"
+            height="56"
+        /></a>
+      </div>
+    </header>
+    <main id="main">
+      <section class="page-hero">
+        <div class="wrap">
+          <h1>Bảng xếp hạng</h1>
+          <p>
+            Những người chơi online xuất sắc nhất. Thắng trận và hạ gục đối thủ
+            để leo hạng!
+          </p>
+        </div>
+      </section>
+      <div class="wrap section">
+        <div
+          class="tabs"
+          id="ranking-tabs"
+          role="tablist"
+          aria-label="Thời gian"
+        ></div>
+        <div class="podium" id="podium"></div>
+        <div class="table-wrap">
+          <table>
+            <caption class="skip">
+              Bảng xếp hạng
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Hạng</th>
+                <th scope="col">Người chơi</th>
+                <th scope="col" class="num">Điểm</th>
+                <th scope="col" class="num">Thắng</th>
+                <th scope="col" class="num">Hạ gục</th>
+                <th scope="col" class="num">Trận</th>
+              </tr>
+            </thead>
+            <tbody id="ranking-body"></tbody>
+          </table>
+        </div>
+        <p class="meta" id="ranking-updated"></p>
+      </div>
+    </main>
+    <footer class="site-footer"></footer>
+  </body>
+</html>

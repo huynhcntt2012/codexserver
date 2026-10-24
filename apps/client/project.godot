@@ -1,0 +1,18 @@
+; Original Suni Bomb Arena prototype, Godot 4.4+.
+config_version=5
+
+[application]
+config/name="Bụp Bụp!"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.4", "GL Compatibility")
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=820
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+textures/canvas_textures/default_texture_filter=1
+environment/defaults/default_clear_color=Color(0.91, 0.98, 0.96, 1)
