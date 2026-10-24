@@ -55,7 +55,7 @@ func _ready() -> void:
 	UIState.loadout_changed.connect(refresh)
 	UIState.inventory_changed.connect(refresh)
 	UIState.profile_changed.connect(_on_hero_changed)
-	visibility_changed.connect(func(): if is_visible_in_tree(): refresh())
+	when_shown(refresh)
 	saved = UIState.profile.get("loadout", {}).duplicate(true)
 	refresh()
 

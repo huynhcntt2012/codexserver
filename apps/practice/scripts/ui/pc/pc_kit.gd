@@ -125,6 +125,14 @@ func setup() -> void:
 	if fill_screen:
 		visibility_changed.connect(func(): if is_visible_in_tree(): ScreenFill.set_fill(get_tree(), true))
 
+## Runs `action` each time the page becomes visible, and once now if it was
+## created inside a window that is already open (opening one popup page from
+## another): adding a visible node there emits no visibility_changed.
+func when_shown(action: Callable) -> void:
+	visibility_changed.connect(func(): if is_visible_in_tree(): action.call())
+	if is_inside_tree() and is_visible_in_tree():
+		action.call_deferred()
+
 ## Builds the in-canvas modal last so it sits above the page.
 func build_modal() -> void:
 	modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

@@ -69,7 +69,7 @@ func _ready() -> void:
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(list)
 	build_modal()
-	visibility_changed.connect(func(): if is_visible_in_tree(): load_quests())
+	when_shown(load_quests)
 	render()
 
 func set_tab(key: String) -> void:

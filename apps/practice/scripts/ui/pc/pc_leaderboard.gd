@@ -102,7 +102,7 @@ func _ready() -> void:
 	status_label = stretch(text("", 14, MUTED, foot))
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	build_modal()
-	visibility_changed.connect(func(): if is_visible_in_tree(): load_boards())
+	when_shown(load_boards)
 	tint_tabs()
 	render()
 

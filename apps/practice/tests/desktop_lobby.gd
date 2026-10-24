@@ -163,6 +163,14 @@ func run() -> void:
 	lobby.open_shop("equipment")
 	await process_frame
 	check(current_scene == game and lobby.store.visible and lobby.store_pages.equipment.visible and lobby.nav_index == lobby.NAV_EQUIPMENT, "PC equipment opens as a popup")
+	# Opening a page for the first time from another open popup still loads it.
+	if lobby.store_pages.has("missions"):
+		lobby.store_pages.missions.free()
+		lobby.store_pages.erase("missions")
+	lobby.open_shop("missions")
+	await process_frame
+	await process_frame
+	check(lobby.store_pages.missions.state != "idle", "Missions load when opened from another popup")
 	lobby.close_store()
 	check(not lobby.store.visible and lobby.nav_index == lobby.NAV_HOME, "Closing the popup returns to the lobby")
 	lobby.leave()

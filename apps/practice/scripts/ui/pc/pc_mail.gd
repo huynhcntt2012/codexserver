@@ -86,7 +86,7 @@ func _ready() -> void:
 	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_scroll.add_child(detail)
 	build_modal()
-	visibility_changed.connect(func(): if is_visible_in_tree(): load_mail())
+	when_shown(load_mail)
 	render()
 
 func set_tab(key: String) -> void:

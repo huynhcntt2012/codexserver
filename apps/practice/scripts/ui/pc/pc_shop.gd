@@ -77,7 +77,7 @@ func _ready() -> void:
 	UIState.wallet_changed.connect(refresh)
 	UIState.profile_changed.connect(refresh)
 	UIState.loadout_changed.connect(refresh)
-	visibility_changed.connect(func(): if is_visible_in_tree(): render_grid())
+	when_shown(render_grid)
 	render_grid()
 
 func category_icon(key: String) -> Texture2D:
