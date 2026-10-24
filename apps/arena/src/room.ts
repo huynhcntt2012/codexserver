@@ -102,6 +102,12 @@ export class ArenaRoom extends Room {
               map: this.game.map!.id,
               number: this.number,
               roomKey: `arena:${ingestProcess}:${this.roomId}`,
+              // The round's id for GET /v1/matches/{id}/exp once it is over.
+              ...(snapshot.phase === 'finished'
+                ? {
+                    matchId: `${ingestProcess}.${this.roomId}.${snapshot.round}`,
+                  }
+                : {}),
               ...(this.practice
                 ? { practice: true, seats: PRACTICE_SEATS }
                 : {}),
@@ -242,6 +248,7 @@ export class ArenaRoom extends Room {
       map_name: this.mapName(),
       map_id: this.game.map?.id ?? '',
       round: result.round,
+      match_id: `${ingestProcess}.${this.roomId}.${result.round}`,
       duration_ms: result.durationMs,
       practice: this.practice,
       results: result.players.map((p) => ({
@@ -253,6 +260,10 @@ export class ArenaRoom extends Room {
         bombs: p.bombs,
         survived_ms: p.survivedMs,
         winner: p.winner,
+        assists: p.assists,
+        hits: p.hits,
+        active_ms: p.activeMs,
+        groups: p.groups,
       })),
     });
   }

@@ -374,6 +374,12 @@ test(
       );
       await waitUntil(() => guest.state.snapshot?.phase === 'finished');
       assert.equal(guest.state.snapshot?.winner, guest.id);
+      // The finished round names its match EXP id: "<process>.<room>.<round>".
+      const over = guest.state.snapshot as unknown as Record<string, unknown>;
+      assert.equal(
+        over.matchId,
+        `${String(snap.roomKey).split(':')[1]}.${rooms[0]!.roomId}.1`,
+      );
       // The v1 list never shows v2 rooms, so older clients are unaffected.
       const v1 = await fetch(`${base}/rooms`, {
         headers: { Authorization: `Bearer ${await token('browser')}` },
@@ -865,6 +871,7 @@ test(
       assert.equal(raid.raiders[0]!.account_id, 'ana');
       assert.equal(raid.raiders[0]!.damage, 50);
       assert.ok(raid.raiders[0]!.actions >= 10);
+      assert.equal((raid as { team_size?: number }).team_size, 1);
       await delay(300);
       assert.equal(raids.length, 1, 'reported once');
     } finally {

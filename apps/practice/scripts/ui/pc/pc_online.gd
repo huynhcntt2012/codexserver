@@ -101,6 +101,16 @@ var raid_match := ""  # match id whose result is shown / being fetched
 var raid_info: Dictionary = {}
 var claim_button: Button
 var claiming := false
+# Match EXP (docs/PROGRESSION.md): the award the API settled for the last round.
+const EXP_COUNTED := ["ko", "assist", "hit", "rescue", "objective", "interrupt", "minion", "phase", "boss_objective"]
+var exp_box: VBoxContainer
+var exp_rows: VBoxContainer
+var exp_total: Label
+var exp_level: Label
+var exp_bar: ProgressBar
+var exp_match := ""  # match id whose EXP is shown / being fetched
+var exp_info: Dictionary = {}
+var exp_drawn := ""  # "<match id>:<award hash>" the rows were drawn for
 
 func _init() -> void:
 	super("sky")
@@ -417,6 +427,7 @@ func build_battle(root: VBoxContainer) -> void:
 	result_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	result_detail.custom_minimum_size = Vector2(460, 0)
+	build_exp_panel(result_stack)
 	claim_button = candy("NHẬN THƯỞNG", claim_raid, "sun", 22)
 	claim_button.name = "ClaimRaid"
 	claim_button.focus_mode = Control.FOCUS_NONE
@@ -856,6 +867,10 @@ func render_side(snap: Dictionary) -> void:
 	else:
 		stat_status.text = "Phá thùng và hạ %d đối thủ!" % maxi(0, alive - 1)
 	claim_button.visible = false
+	if phase == "finished":
+		var raid_id := str(snap.get("raid", {}).get("matchId", "")) if boss_mode else ""
+		fetch_exp(str(snap.get("matchId", raid_id)))
+		render_exp()
 	if phase == "finished" and boss_mode:
 		var raid: Dictionary = snap.get("raid", {})
 		var result := str(raid.get("result", "")) if raid.get("result") != null else ""
@@ -996,6 +1011,100 @@ func pending_grant() -> Dictionary:
 		if str(g.status) == "ELIGIBLE":
 			return g
 	return {}
+
+# ------------------------------------------------------------------ match EXP
+
+## EXP breakdown, total and level bar under the result (ExpSummaryPanel).
+func build_exp_panel(parent: Control) -> void:
+	exp_box = column(4, parent)
+	exp_box.name = "ExpSummary"
+	exp_box.hide()
+	exp_rows = column(2, exp_box)
+	exp_total = text("", 22, Color("2b88cf"), exp_box)
+	exp_total.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	exp_total.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var line := row(10, exp_box)
+	exp_level = text("", 16, INK, line)
+	exp_bar = ProgressBar.new()
+	exp_bar.name = "LevelProgress"
+	exp_bar.show_percentage = false
+	exp_bar.custom_minimum_size = Vector2(260, 12)
+	exp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	exp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	exp_bar.add_theme_stylebox_override("background", box(Color("1d3359"), Color.TRANSPARENT, 6))
+	exp_bar.add_theme_stylebox_override("fill", box(SUN, Color.TRANSPARENT, 6))
+	line.add_child(exp_bar)
+
+func exp_row(label: String, value: String, color := INK) -> void:
+	var line := row(12, exp_rows)
+	var title := text(label, 16, color, line)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text(value, 16, color, line)
+
+static func factor_text(value: float) -> String:
+	return ("×%.2f" % value).trim_suffix("0").trim_suffix(".0").replace(".", ",")
+
+## Draws the settled award once per match (render_side runs every snapshot).
+func render_exp() -> void:
+	exp_box.visible = exp_match != ""
+	var state := "%s:%d" % [exp_match, exp_info.hash()] if exp_match != "" else ""
+	if state == exp_drawn:
+		return
+	exp_drawn = state
+	for child in exp_rows.get_children():
+		child.queue_free()
+	exp_level.text = ""
+	exp_bar.hide()
+	if exp_info.is_empty():
+		exp_total.text = "Đang tính EXP…" if exp_match != "" else ""
+		return
+	if not bool(exp_info.get("eligible", false)):
+		exp_total.text = "Không nhận EXP - %s" % str(exp_info.get("reason_text", exp_info.get("reason", "")))
+		exp_level.text = "Mã hỗ trợ: %s" % str(exp_info.get("support_code", ""))
+		return
+	for line in exp_info.get("lines", []):
+		var label := str(line.get("label", line.get("key", "")))
+		if str(line.get("key", "")) in EXP_COUNTED:
+			label += " (%d)" % int(line.get("count", 0))
+		exp_row(label, "+%d" % int(line.get("xp", 0)))
+	if bool(exp_info.get("capped", false)):
+		exp_row("Giới hạn EXP trận", "tối đa %d" % int(exp_info.get("cap", 0)), MUTED)
+	if float(exp_info.get("event_multiplier", 1.0)) != 1.0:
+		exp_row("Sự kiện nhân EXP", factor_text(float(exp_info.event_multiplier)), MUTED)
+	if float(exp_info.get("daily_factor", 1.0)) != 1.0:
+		exp_row("Lượt Boss trong ngày", factor_text(float(exp_info.daily_factor)), MUTED)
+	exp_total.text = "TỔNG EXP NHẬN +%d" % int(exp_info.get("awarded_exp", 0))
+	var need := int(exp_info.get("next_level_required_exp", 0))
+	exp_level.text = "Lv.%d" % int(exp_info.get("level_after", 1))
+	exp_bar.show()
+	exp_bar.max_value = maxf(1.0, float(need))
+	exp_bar.value = exp_bar.max_value if need == 0 else float(exp_info.get("progress_after", 0))
+	exp_bar.tooltip_text = "Cấp tối đa" if need == 0 else "%d / %d EXP" % [int(exp_bar.value), need]
+	exp_level.text += "  ·  " + exp_bar.tooltip_text
+
+## The API settles EXP a moment after the arena reports the round.
+func fetch_exp(match_id: String) -> void:
+	if match_id == "" or match_id == exp_match or not AuthSession.has_session():
+		return
+	exp_match = match_id
+	exp_info = {}
+	for attempt in 8:
+		if exp_match != match_id or not AuthSession.has_session():
+			return
+		var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/matches/%s/exp" % match_id.uri_encode())
+		if exp_match != match_id:
+			return
+		if reply.status == 200 and reply.data is Dictionary:
+			exp_info = reply.data
+			if int(exp_info.get("level_after", 1)) > int(exp_info.get("level_before", 1)):
+				UIState.toast_requested.emit("LÊN CẤP! Lv.%d" % int(exp_info.level_after))
+			UIState.sync_progression()
+			if not OnlineArena.snapshot.is_empty():
+				render_side(OnlineArena.snapshot)
+			return
+		await get_tree().create_timer(1.5).timeout
+	if exp_match == match_id:
+		exp_total.text = "Chưa lấy được EXP từ máy chủ, xem lại cấp ở sảnh."
 
 ## The result is recorded by the API a moment after the arena ends the raid.
 func fetch_raid(match_id: String) -> void:

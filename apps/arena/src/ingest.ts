@@ -22,7 +22,7 @@ export type IngestEvent = {
   account_id?: string;
   item_id?: string;
   use_id?: string;
-  /** boss_raid: one settled raid (docs/BOSS.md); match_id is unique per round. */
+  /** boss_raid and match: "<process>.<room>.<round>", unique per round (EXP lookups). */
   event_id?: string;
   match_id?: string;
   result?: string;
@@ -38,7 +38,11 @@ export type IngestEvent = {
     actions: number;
     active_ms: number;
     alive: boolean;
+    rescues?: number;
+    phases?: number;
   }[];
+  /** boss_raid: raiders when the raid started (EXP damage share). */
+  team_size?: number;
   results?: {
     account_id: string | null;
     is_bot?: boolean;
@@ -48,6 +52,11 @@ export type IngestEvent = {
     bombs: number;
     survived_ms: number;
     winner: boolean;
+    /** Match EXP inputs (API app/progression.py), counted by the simulation. */
+    assists?: number;
+    hits?: number;
+    active_ms?: number;
+    groups?: number;
   }[];
 };
 

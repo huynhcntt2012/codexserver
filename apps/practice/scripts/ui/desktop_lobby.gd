@@ -581,6 +581,7 @@ func _ready() -> void:
 	UIState.toast_requested.connect(show_toast)
 	UIState.wallet_changed.connect(refresh)
 	UIState.loadout_changed.connect(refresh)
+	UIState.profile_changed.connect(refresh)
 	# Menus fill the monitor; the arena keeps its fixed 1280×920 frame while playing.
 	visibility_changed.connect(func(): ScreenFill.set_fill(get_tree(), is_visible_in_tree()))
 	ScreenFill.set_fill(get_tree(), is_visible_in_tree())

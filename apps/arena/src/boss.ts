@@ -279,6 +279,9 @@ export interface RaidStats {
   damage: number;
   support: number;
   actions: number;
+  /** Match EXP: bubbles popped, and boss phases the raider was active in. */
+  rescues: number;
+  phases: Set<number>;
   joinedAt: number;
   leftAt: number | null;
 }
@@ -297,6 +300,8 @@ export interface RaidSummary {
     actions: number;
     activeMs: number;
     alive: boolean;
+    rescues: number;
+    phases: number;
   }[];
 }
 
@@ -433,8 +438,10 @@ export class BossArena extends Arena {
       return false;
     const accepted = super.input(id, value);
     const stats = this.raid.get(id);
-    if (accepted && stats && this.phase === 'playing' && value !== 'ready')
+    if (accepted && stats && this.phase === 'playing' && value !== 'ready') {
       stats.actions++;
+      stats.phases.add(this.bossPhase);
+    }
     return accepted;
   }
 
@@ -470,6 +477,8 @@ export class BossArena extends Arena {
           damage: 0,
           support: 0,
           actions: 0,
+          rescues: 0,
+          phases: new Set<number>(),
           joinedAt: this.now,
           leftAt: null,
         },
@@ -502,7 +511,10 @@ export class BossArena extends Arena {
       const dealt = Math.min(this.hp, damage);
       this.hp -= dealt;
       const stats = this.raid.get(bomb.owner);
-      if (stats) stats.damage += dealt;
+      if (stats) {
+        stats.damage += dealt;
+        stats.phases.add(this.bossPhase);
+      }
       this.updatePhase();
     }
     return true;
@@ -585,6 +597,8 @@ export class BossArena extends Arena {
         actions: s.actions,
         activeMs: (s.leftAt ?? end) - s.joinedAt,
         alive: !!this.players.get(id)?.alive && s.leftAt === null,
+        rescues: s.rescues,
+        phases: s.phases.size,
       })),
     };
   }
@@ -1856,7 +1870,10 @@ export class BossArena extends Arena {
     const gear = this.gear.get(other.id);
     if (gear) gear.graceUntil = this.now + RESCUE_GRACE_MS;
     const stats = this.raid.get(p.id);
-    if (stats) stats.support++;
+    if (stats) {
+      stats.support++;
+      stats.rescues++;
+    }
   }
 
   override snapshot() {

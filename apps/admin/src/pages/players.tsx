@@ -78,6 +78,29 @@ type Detail = Row & {
   giftcodes: { code: string; created_at: string }[];
 };
 type Catalog = { items: { id: string; name: string; status: string }[] };
+// GET /admin/v1/exp/players/{id} (apps/api/app/progression.py).
+type Progress = {
+  progression: {
+    level: number;
+    xp_in_level: number;
+    total_xp: number;
+    next_level_required_exp: number;
+    max_level: boolean;
+    level_cap: number;
+  };
+  awards: {
+    match_id: string;
+    mode: 'PVP' | 'PVE_BOSS';
+    result: string;
+    eligible: boolean;
+    reason_text: string;
+    support_code: string;
+    awarded_exp: number;
+    level_before: number;
+    level_after: number;
+    created_at: string;
+  }[];
+};
 type Audit = {
   entries: {
     id: number;
@@ -397,6 +420,123 @@ function BanModal({
   );
 }
 
+const RESULT: Record<string, string> = {
+  WIN: 'Thắng',
+  LOSE: 'Thua',
+  DRAW: 'Hòa',
+  TIMEOUT: 'Hết giờ',
+  ABORT: 'Hủy',
+};
+
+/** Level, EXP bar and the last matches that settled EXP (server data only). */
+function LevelTab({ data }: { data: Progress }) {
+  const p = data.progression;
+  const share = p.max_level
+    ? 100
+    : Math.min(
+        100,
+        (100 * p.xp_in_level) / Math.max(1, p.next_level_required_exp),
+      );
+  return (
+    <>
+      <div className="grid stats">
+        <Stat
+          icon="⭐"
+          tone="sun"
+          value={`Lv.${p.level}`}
+          label={`Cấp độ (tối đa ${p.level_cap})`}
+        />
+        <Stat
+          icon="📈"
+          tone="sky"
+          value={
+            p.max_level
+              ? 'Tối đa'
+              : `${number(p.xp_in_level)} / ${number(p.next_level_required_exp)}`
+          }
+          label="EXP cấp hiện tại"
+        />
+        <Stat
+          icon="🏅"
+          tone="violet"
+          value={number(p.total_xp)}
+          label="Tổng EXP"
+        />
+        <Stat
+          icon="⚔️"
+          tone="mint"
+          value={number(data.awards.filter((a) => a.awarded_exp > 0).length)}
+          label="Trận nhận EXP (30 gần nhất)"
+        />
+      </div>
+      <div
+        role="progressbar"
+        aria-label="Tiến độ lên cấp"
+        aria-valuenow={Math.round(share)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        style={{
+          height: 10,
+          borderRadius: 5,
+          background: 'var(--line)',
+          margin: '12px 0 16px',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            width: `${share}%`,
+            height: '100%',
+            background: 'var(--sun)',
+          }}
+        />
+      </div>
+      {data.awards.length === 0 ? (
+        <Empty title="Chưa có trận nào được tính EXP" />
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Chế độ</th>
+                <th>Kết quả</th>
+                <th>EXP</th>
+                <th>Cấp</th>
+                <th>Mã hỗ trợ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.awards.map((a) => (
+                <tr key={a.match_id}>
+                  <td>{dateTime(a.created_at)}</td>
+                  <td>{a.mode === 'PVP' ? 'PvP' : 'Boss'}</td>
+                  <td>{RESULT[a.result] ?? a.result}</td>
+                  <td>
+                    {a.eligible ? (
+                      `+${number(a.awarded_exp)}`
+                    ) : (
+                      <span className="muted">0 · {a.reason_text}</span>
+                    )}
+                  </td>
+                  <td>
+                    {a.level_after > a.level_before
+                      ? `Lv.${a.level_before} → Lv.${a.level_after}`
+                      : `Lv.${a.level_after}`}
+                  </td>
+                  <td>
+                    <code>{a.support_code}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
 function PlayerDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const { can, toast } = useSession();
   const [tab, setTab] = useState('overview');
@@ -419,7 +559,9 @@ function PlayerDetail({ id, onClose }: { id: string; onClose: () => void }) {
     () => api<{ items: MatchRow[] }>(`/matches?account_id=${id}&size=30`),
     [id],
   );
+  const exp = useLoad(() => api<Progress>(`/exp/players/${id}`), [id]);
   const d = detail.data;
+  const level = exp.data?.progression;
 
   async function run(action: () => Promise<unknown>, done: string) {
     try {
@@ -482,6 +624,7 @@ function PlayerDetail({ id, onClose }: { id: string; onClose: () => void }) {
           <div className="tabs" role="tablist">
             {[
               ['overview', 'Thông tin'],
+              ['level', level ? `Cấp độ (Lv.${level.level})` : 'Cấp độ'],
               ['assets', 'Tài sản'],
               ['ledger', `Giao dịch (${d.ledger.length})`],
               ['matches', `Trận đấu (${d.stats.matches})`],
@@ -575,6 +718,20 @@ function PlayerDetail({ id, onClose }: { id: string; onClose: () => void }) {
                   <dd>{d.username ?? '— (khách)'}</dd>
                   <dt>Tên hiển thị</dt>
                   <dd>{d.name}</dd>
+                  <dt>Cấp độ</dt>
+                  <dd>
+                    {level ? (
+                      <>
+                        Lv.{level.level}
+                        {level.max_level
+                          ? ' (tối đa)'
+                          : ` · ${number(level.xp_in_level)} / ${number(level.next_level_required_exp)} EXP`}{' '}
+                        · tổng {number(level.total_xp)} EXP
+                      </>
+                    ) : (
+                      '—'
+                    )}
+                  </dd>
                   <dt>Email</dt>
                   <dd>{d.email ?? 'Chưa có (không lấy lại mật khẩu được)'}</dd>
                   <dt>Tạo lúc</dt>
@@ -614,6 +771,12 @@ function PlayerDetail({ id, onClose }: { id: string; onClose: () => void }) {
                   </div>
                 )}
               </>
+            ))}
+          {tab === 'level' &&
+            (!exp.data ? (
+              <Loading error={exp.error} />
+            ) : (
+              <LevelTab data={exp.data} />
             ))}
           {tab === 'assets' && (
             <>

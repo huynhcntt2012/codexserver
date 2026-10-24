@@ -47,6 +47,10 @@ export const SHIELD_MS = 8000;
 export const SPEED_MS = 5000;
 export const SLOW_MS = 3000;
 export const HIT_GRACE_MS = 600;
+/** Match EXP: a hit counts as an assist this long before the knockout. */
+export const ASSIST_MS = 10_000;
+/** Match EXP: at most this much active time is credited between two actions. */
+export const ACTIVE_GAP_MS = 5000;
 /** Per-player item state for v2 rooms: stock carried in, effects and cooldowns. */
 export interface Gear {
   items: Record<ItemId, number>;
@@ -82,6 +86,31 @@ export interface RoundStats {
   bombs: number;
   kills: number;
   diedAt: number | null;
+  /** Match EXP (API app/progression.py): knockouts helped, opponents hit. */
+  assists: number;
+  hits: number;
+  /** Time credited by actions (at most ACTIVE_GAP_MS each), so AFK players earn none. */
+  activeMs: number;
+  lastActive: number;
+  /** Kinds of real play: walking 3+ cells, a bomb that did something, a hit, an item. */
+  groups: Set<'move' | 'bomb' | 'hit' | 'item'>;
+  cells: Set<string>;
+  /** Attacker id -> last time they hit this player (assists). */
+  hitBy: Map<string, number>;
+}
+export function newStats(at: number, cell = ''): RoundStats {
+  return {
+    bombs: 0,
+    kills: 0,
+    diedAt: null,
+    assists: 0,
+    hits: 0,
+    activeMs: 0,
+    lastActive: at,
+    groups: new Set(),
+    cells: new Set(cell ? [cell] : []),
+    hitBy: new Map(),
+  };
 }
 export interface RoundResult {
   round: number;
@@ -95,6 +124,10 @@ export interface RoundResult {
     kills: number;
     survivedMs: number;
     winner: boolean;
+    assists: number;
+    hits: number;
+    activeMs: number;
+    groups: number;
   }[];
 }
 export interface Bomb {
@@ -202,6 +235,9 @@ export class Arena {
   /** Called after a round becomes finished; must not block the tick. */
   onRoundEnd: ((result: RoundResult) => void) | null = null;
   protected flameOwners = new Map<string, string>();
+  /** Bomb behind each flame cell; one hit per (bomb, victim) for match EXP. */
+  protected flameBombs = new Map<string, number>();
+  private hitKeys = new Set<string>();
   /** Players needed before an all-ready lobby counts down (boss raids allow 1). */
   protected minPlayers = 2;
   protected roundMs = ROUND_MS;
@@ -305,11 +341,12 @@ export class Arena {
       // Players with a pet start the round riding it.
       for (const gear of this.gear.values()) gear.mounted = !!gear.pet;
       this.stats = new Map(
-        [...this.players.keys()].map((id) => [
-          id,
-          { bombs: 0, kills: 0, diedAt: null },
+        [...this.players.values()].map((p) => [
+          p.id,
+          newStats(this.now, key(p.x, p.y)),
         ]),
       );
+      this.hitKeys.clear();
       this.onStart();
     }
     if (this.phase === 'finished' && this.now >= this.deadline) this.reset();
@@ -323,6 +360,7 @@ export class Arena {
       if (flame.expiresAt <= this.now) {
         this.flames.delete(k);
         this.flameOwners.delete(k);
+        this.flameBombs.delete(k);
       }
     // Flames and all due bombs resolve before movement and before winner selection.
     for (const bomb of [...this.bombs.values()]) {
@@ -354,9 +392,15 @@ export class Arena {
           (other) =>
             other.id !== p.id && other.alive && other.x === x && other.y === y,
         );
+        this.touch(p.id);
         if (this.isWalkable(x, y) && !blocker) {
           p.x = x;
           p.y = y;
+          const stats = this.stats.get(p.id);
+          if (stats && stats.cells.size < 3) {
+            stats.cells.add(key(x, y));
+            if (stats.cells.size >= 3) stats.groups.add('move');
+          }
         } else if (blocker) this.onBump(p, blocker);
       }
     }
@@ -412,6 +456,7 @@ export class Arena {
     const id = this.nextBomb++;
     const stats = this.stats.get(p.id);
     if (stats) stats.bombs++;
+    this.touch(p.id);
     this.bombs.set(id, {
       id,
       owner: p.id,
@@ -425,7 +470,7 @@ export class Arena {
     const bomb = this.bombs.get(id);
     if (!bomb) return;
     this.bombs.delete(id); // Remove before chaining to prevent cycles.
-    this.ignite(bomb.x, bomb.y, bomb.owner);
+    this.ignite(bomb.x, bomb.y, bomb.owner, bomb.id);
     this.onFlame(bomb.x, bomb.y, bomb);
     for (const [dx, dy] of Object.values(directions)) {
       for (let distance = 1; distance <= 2; distance++) {
@@ -433,10 +478,11 @@ export class Arena {
           y = bomb.y + dy * distance;
         const tile = this.grid[y]?.[x];
         if (tile === undefined || tile === Tile.Wall) break;
-        this.ignite(x, y, bomb.owner);
+        this.ignite(x, y, bomb.owner, bomb.id);
         if (this.onFlame(x, y, bomb)) break;
         if (tile === Tile.Crate) {
           this.grid[y]![x] = Tile.Floor;
+          this.stats.get(bomb.owner)?.groups.add('bomb');
           break;
         }
         const chained = [...this.bombs.values()].find(
@@ -450,22 +496,54 @@ export class Arena {
     }
   }
 
-  protected ignite(x: number, y: number, owner: string): void {
+  protected ignite(x: number, y: number, owner: string, bomb?: number): void {
     this.flames.set(key(x, y), { x, y, expiresAt: this.now + FLAME_MS });
     this.flameOwners.set(key(x, y), owner);
+    if (bomb === undefined) this.flameBombs.delete(key(x, y));
+    else this.flameBombs.set(key(x, y), bomb);
+  }
+  /** Credits active time since the player's last action (capped per gap). */
+  protected touch(id: string): void {
+    const stats = this.stats.get(id);
+    if (!stats || this.phase !== 'playing') return;
+    stats.activeMs += Math.min(this.now - stats.lastActive, ACTIVE_GAP_MS);
+    stats.lastActive = this.now;
+  }
+  /** A player's bomb reached an opponent: one valid hit per (bomb, victim). */
+  private creditHit(victim: Player, cell: string): void {
+    const owner = this.flameOwners.get(cell);
+    const bomb = this.flameBombs.get(cell);
+    const attacker = owner !== undefined ? this.stats.get(owner) : undefined;
+    if (!attacker || owner === victim.id || bomb === undefined) return;
+    const hit = `${bomb}:${victim.id}`;
+    if (this.hitKeys.has(hit)) return;
+    this.hitKeys.add(hit);
+    attacker.hits++;
+    attacker.groups.add('hit');
+    attacker.groups.add('bomb');
+    this.stats.get(victim.id)?.hitBy.set(owner!, this.now);
   }
   protected killInFlames(): void {
     for (const p of this.players.values()) {
       if (!p.alive || !this.flames.has(key(p.x, p.y))) continue;
       if (!this.flameHits(p, this.flameOwners.get(key(p.x, p.y)))) continue;
+      this.creditHit(p, key(p.x, p.y));
       if (this.guarded(p)) continue;
+      this.touch(p.id);
       p.alive = false;
       const stats = this.stats.get(p.id);
       if (stats) stats.diedAt = this.now - this.startedAt;
       // Knockouts are credited to the bomb owner; self-knockouts do not count.
       const owner = this.flameOwners.get(key(p.x, p.y));
       const credit = owner && owner !== p.id ? this.stats.get(owner) : null;
-      if (credit) credit.kills++;
+      if (!credit) continue;
+      credit.kills++;
+      // Others who hit the victim in the last ASSIST_MS: one assist each.
+      for (const [by, at] of stats?.hitBy ?? [])
+        if (by !== owner && by !== p.id && this.now - at <= ASSIST_MS) {
+          const helper = this.stats.get(by);
+          if (helper) helper.assists++;
+        }
     }
   }
   protected resolveWinner(): void {
@@ -473,6 +551,7 @@ export class Arena {
     if (alive.length <= 1) this.finish(alive[0]?.id ?? null);
   }
   protected finish(winner: string | null): void {
+    for (const p of this.players.values()) if (p.alive) this.touch(p.id);
     this.phase = 'finished';
     this.winner = winner;
     this.deadline = this.now + 8000;
@@ -484,11 +563,7 @@ export class Arena {
     const durationMs = this.now - this.startedAt;
     const ranked = [...this.players.values()]
       .map((p) => {
-        const stats = this.stats.get(p.id) ?? {
-          bombs: 0,
-          kills: 0,
-          diedAt: null,
-        };
+        const stats = this.stats.get(p.id) ?? newStats(this.startedAt);
         return { p, stats, survived: stats.diedAt ?? durationMs };
       })
       .sort(
@@ -508,6 +583,10 @@ export class Arena {
         kills: stats.kills,
         survivedMs: survived,
         winner: p.id === this.winner,
+        assists: stats.assists,
+        hits: stats.hits,
+        activeMs: stats.activeMs,
+        groups: stats.groups.size,
       })),
     };
   }
@@ -516,6 +595,7 @@ export class Arena {
     this.bombs.clear();
     this.flames.clear();
     this.flameOwners.clear();
+    this.flameBombs.clear();
     this.stats.clear();
     this.winner = null;
     this.phase = 'waiting';
@@ -718,6 +798,8 @@ export class Arena {
       to,
       at: this.now,
     });
+    this.touch(p.id);
+    this.stats.get(p.id)?.groups.add('item');
     this.onItemAccepted(p.id, item);
     this.onItemUsed?.(p.id, item);
   }

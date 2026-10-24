@@ -125,6 +125,8 @@ test('a boss hit traps the raider; a teammate stepping in frees them (1.2 s safe
   g.tick(200);
   assert.ok(!g.trapped.has('a'), 'b popped the bubble');
   assert.equal(g.raid.get('b')!.support, 1, 'a rescue counts as support');
+  assert.equal(g.raid.get('b')!.rescues, 1, 'and as a rescue (match EXP)');
+  assert.equal(g.summary().players.find((p) => p.id === 'b')!.phases, 1);
   assert.ok(g.gear.get('a')!.graceUntil >= g.now + RESCUE_GRACE_MS - 400);
 });
 

@@ -275,6 +275,8 @@ test('support actions and active time are tracked for reward eligibility', () =>
   const [a, b] = ended[0]!.players;
   assert.equal(a!.activeMs, 2050);
   assert.equal(b!.activeMs, 1050);
+  // Match EXP: a acted in phase 1; b never acted; nobody rescued anyone.
+  assert.deepEqual([a!.phases, b!.phases, a!.rescues], [1, 0, 0]);
 });
 
 test('event rules from the API are clamped and checked', () => {

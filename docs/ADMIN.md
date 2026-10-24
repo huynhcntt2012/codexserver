@@ -103,3 +103,4 @@ Bản đồ do admin thêm: xem [MAPS.md](MAPS.md) (template, kiểm tra, phát 
 Nhiệm vụ và sự kiện LiveOps: xem [LIVEOPS.md](LIVEOPS.md).
 Bảng xếp hạng (xem, ẩn người chơi, chỉnh cách tính điểm): xem [LEADERBOARD.md](LEADERBOARD.md).
 Hộp thư (gửi thông báo, quà tới người chơi hoặc toàn server): xem [MAIL.md](MAIL.md).
+Match EXP (rule EXP PvP/Boss, nhân EXP, chống farm, level curve, thống kê): xem [PROGRESSION.md](PROGRESSION.md).

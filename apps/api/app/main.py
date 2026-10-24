@@ -373,6 +373,7 @@ from app.mail import router as mail_router  # noqa: E402
 from app.maps import router as maps_router  # noqa: E402
 from app.matches import router as matches_router  # noqa: E402
 from app.portal import router as portal_router  # noqa: E402
+from app.progression import router as progression_router  # noqa: E402
 from app.recovery import router as recovery_router  # noqa: E402
 from app.social import router as social_router  # noqa: E402
 from app.website import router as website_router  # noqa: E402
@@ -393,3 +394,4 @@ app.include_router(website_router)
 app.include_router(boss_router)
 app.include_router(leaderboard_router)
 app.include_router(mail_router)
+app.include_router(progression_router)

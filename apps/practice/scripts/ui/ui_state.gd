@@ -76,6 +76,7 @@ func _process(_delta: float) -> void:
 	_signed_in = signed_in
 	if signed_in:
 		sync_wallet()
+		sync_progression()
 		var catalog := get_node_or_null("/root/CatalogSync")
 		if catalog:
 			catalog.sync()
@@ -87,6 +88,24 @@ func sync_wallet() -> void:
 	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/wallet")
 	if reply.status == 200 and reply.data is Dictionary:
 		apply_wallet(reply.data)
+
+## Level and EXP from the server (docs/PROGRESSION.md); guests keep the demo values.
+## The client never adds EXP itself: it only shows what the API settled.
+func sync_progression() -> void:
+	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_GET, "/v1/progression/me")
+	if reply.status == 200 and reply.data is Dictionary and AuthSession.has_session():
+		apply_progression(reply.data)
+
+func apply_progression(data: Dictionary) -> void:
+	profile["level"] = int(data.get("level", 1))
+	profile["total_xp"] = int(data.get("total_xp", 0))
+	if bool(data.get("max_level", false)):
+		profile["xp"] = 1
+		profile["xp_max"] = 1
+	else:
+		profile["xp"] = int(data.get("xp_in_level", 0))
+		profile["xp_max"] = maxi(1, int(data.get("next_level_required_exp", 1)))
+	profile_changed.emit()
 
 func apply_wallet(data: Dictionary) -> void:
 	online_wallet = true

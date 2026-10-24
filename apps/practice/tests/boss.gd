@@ -126,6 +126,29 @@ func run() -> void:
 	online.raid_info = {"me": {"damage": 0, "support": 0, "reward": "none", "reason": "AFK", "reason_text": "Không hoạt động (AFK)"}, "grants": []}
 	online.render_side(fixtures.finished)
 	check(not online.claim_button.visible and online.result_detail.text.contains("AFK"), "Ineligible shows the reason")
+	# Match EXP: only the server's settled award is drawn (spec sample: 400 EXP).
+	check(not online.exp_box.visible, "Signed out: no EXP request, no EXP panel")
+	online.exp_match = "p1.fixture.1"
+	online.render_side(fixtures.finished)
+	check(online.exp_box.visible and online.exp_total.text.contains("Đang tính"), "EXP waits for the server")
+	online.exp_info = {"eligible": true, "awarded_exp": 400, "raw_exp": 400, "cap": 500, "capped": false, "event_multiplier": 1.0, "daily_factor": 1.0, "level_before": 12, "level_after": 12, "progress_after": 730, "next_level_required_exp": 1750, "lines": [
+		{"key": "completion", "count": 1, "xp": 50, "label": "Hoàn thành trận"},
+		{"key": "boss_win", "count": 1, "xp": 150, "label": "Thưởng tiêu diệt Boss"},
+		{"key": "boss_damage", "count": 1, "xp": 120, "label": "EXP sát thương Boss"},
+		{"key": "interrupt", "count": 2, "xp": 30, "label": "Ngắt chiêu Boss"},
+		{"key": "rescue", "count": 1, "xp": 20, "label": "Cứu đồng đội"},
+		{"key": "phase", "count": 3, "xp": 30, "label": "Tham gia phase"}]}
+	online.render_side(fixtures.finished)
+	await frames()
+	check(online.exp_total.text == "TỔNG EXP NHẬN +400", "EXP total: " + online.exp_total.text)
+	check(online.exp_rows.get_child_count() == 6, "One row per EXP line")
+	check(online.exp_bar.visible and int(online.exp_bar.value) == 730 and int(online.exp_bar.max_value) == 1750, "Level bar uses xp_in_level / required")
+	check(online.exp_level.text.begins_with("Lv.12") and online.exp_level.text.contains("730 / 1750"), "Level line: " + online.exp_level.text)
+	online.exp_info = {"eligible": false, "reason": "AFK", "reason_text": "Không hoạt động (AFK)", "support_code": "AB12CD34"}
+	online.render_side(fixtures.finished)
+	await frames()
+	check(online.exp_total.text == "Không nhận EXP - Không hoạt động (AFK)" and online.exp_level.text.contains("AB12CD34"), "No EXP shows the reason and a support code")
+	check(online.exp_rows.get_child_count() == 0 and not online.exp_bar.visible, "No rows or bar without EXP")
 	online.result_box.hide()
 	for spec in [[0.3, "boss-defeat-1.png"], [0.75, "boss-defeat-2.png"], [1.3, "boss-defeat-3.png"]]:
 		online.boss_view.set_process(false)

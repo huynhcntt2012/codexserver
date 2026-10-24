@@ -153,6 +153,8 @@ export class BossRoom extends ArenaRoomV2 {
               actions: p.actions,
               active_ms: p.activeMs,
               alive: p.alive,
+              rescues: p.rescues,
+              phases: p.phases,
             },
           ]
         : [];
@@ -170,6 +172,7 @@ export class BossRoom extends ArenaRoomV2 {
       map_id: this.rules.mapId,
       private: this.privateRaid,
       raiders,
+      team_size: summary.players.length,
     });
   }
 

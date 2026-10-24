@@ -8,6 +8,7 @@ import {
   FUSE_MS,
   FLAME_MS,
   ROUND_MS,
+  ASSIST_MS,
   createLayoutMap,
   type RoundResult,
 } from '../src/game.js';
@@ -238,6 +239,75 @@ test('round stats credit bombs and knockouts outside the snapshot', () => {
   const snapshot = g.snapshot();
   assert.ok(snapshot.players.every((p) => !('kills' in p)));
   assert.ok(snapshot.flames.every((f) => !('owner' in f)));
+});
+
+test('match EXP stats: one hit per bomb and victim, assists within 10 s', () => {
+  const map = {
+    ...MAPS.park!,
+    id: 'test',
+    layout: MAPS.park!.layout.map((row) => row.replace(/C/g, '.')),
+  };
+  const run = (gapMs: number) => {
+    const g = new Arena(map);
+    for (const id of ['a', 'b', 'c']) g.addPlayer(id, id.toUpperCase());
+    g.setLoadout('c', { blue_shield: 1 }, null);
+    for (const id of ['a', 'b', 'c']) g.input(id, 'ready');
+    g.tick(3000);
+    let result: RoundResult | null = null;
+    g.onRoundEnd = (value) => (result = value);
+    act(g, 'c', 'use_blue_shield', 50);
+    const c = g.players.get('c')!;
+    const boom = (id: number, owner: string) => {
+      g.bombs.set(id, {
+        id,
+        owner,
+        x: c.x,
+        y: c.y,
+        explodeAt: g.now + 50,
+      });
+      g.tick(50);
+    };
+    boom(900, 'b'); // the shield takes it: a hit for B, C is still in
+    assert.equal(c.alive, true);
+    g.tick(FLAME_MS); // standing in B's flame again is not a second hit
+    g.tick(gapMs);
+    boom(901, 'a');
+    assert.equal(c.alive, false);
+    g.tick(ROUND_MS);
+    const done = result as RoundResult | null;
+    assert.ok(done);
+    return Object.fromEntries(
+      done.players.map((p) => [p.id, [p.kills, p.assists, p.hits]]),
+    );
+  };
+  assert.deepEqual(run(1000), { a: [1, 0, 1], b: [0, 1, 1], c: [0, 0, 0] });
+  // B's hit was too long ago to count as an assist.
+  assert.deepEqual(run(ASSIST_MS), {
+    a: [1, 0, 1],
+    b: [0, 0, 1],
+    c: [0, 0, 0],
+  });
+});
+
+test('match EXP stats: AFK players earn no active time or activity groups', () => {
+  const g = playing();
+  let result: RoundResult | null = null;
+  g.onRoundEnd = (value) => (result = value);
+  const b = g.players.get('b')!;
+  act(g, 'b', 'left');
+  act(g, 'b', 'left');
+  act(g, 'b', 'bomb', 50);
+  [b.x, b.y] = SPAWNS[2];
+  g.tick(FUSE_MS); // the blast breaks the crate at (10, 11)
+  assert.equal(g.grid[11]![10], Tile.Floor);
+  g.tick(ROUND_MS);
+  const done = result as RoundResult | null;
+  assert.ok(done);
+  const stats = Object.fromEntries(done.players.map((p) => [p.id, p]));
+  assert.equal(stats.a!.groups, 0);
+  assert.equal(stats.a!.activeMs, 5000);
+  assert.equal(stats.b!.groups, 2);
+  assert.ok(stats.b!.activeMs >= 5300 && stats.b!.activeMs <= 10_400);
 });
 
 test('v2 maps match the PC level files and keep every spawn safe', async () => {

@@ -1,9 +1,9 @@
 {
   "player_id": "demo_player",
   "name": "Bụp Bụp! · DEMO",
-  "level": 12,
-  "xp": 320,
-  "xp_max": 800,
+  "level": 1,
+  "xp": 0,
+  "xp_max": 100,
   "gold": 12560,
   "gem": 320,
   "selected_character": "mimi",

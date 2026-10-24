@@ -363,6 +363,9 @@ def record_raid(db: Session, event_in) -> BossRaidMatch | None:
                     },
                     at,
                 )
+    from app.progression import settle_boss
+
+    settle_boss(db, match, event_in.raiders, rules, event_in.team_size)
     return match
 
 

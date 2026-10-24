@@ -131,6 +131,13 @@ class ParticipantIn(BaseModel):
     score: int = Field(default=0, ge=0, le=1_000_000)
     survived_ms: int = Field(default=0, ge=0, le=3_600_000)
     winner: bool = False
+    # Arena only, for match EXP (app/progression.py): counted by the server simulation.
+    assists: int = Field(default=0, ge=0, le=99)
+    hits: int = Field(default=0, ge=0, le=999)
+    rescues: int = Field(default=0, ge=0, le=99)
+    objectives: int = Field(default=0, ge=0, le=99)
+    active_ms: int = Field(default=0, ge=0, le=3_600_000)
+    groups: int = Field(default=0, ge=0, le=8)
 
 
 def record_match(
@@ -141,6 +148,7 @@ def record_match(
     duration_ms: int,
     participants: list[ParticipantIn],
     practice: bool = False,
+    match_key: str | None = None,
 ) -> Match | None:
     """Idempotent on (room, round): a retried event returns the stored match."""
     existing = db.scalar(select(Match).where(Match.room_key == room.id, Match.round == round_no))
@@ -189,6 +197,10 @@ def record_match(
     from app.liveops import on_match
 
     on_match(db, match, participants, room.source, practice)
+    if verified and room.source == "arena":
+        from app.progression import settle_pvp
+
+        settle_pvp(db, match_key or match.id, match, participants, practice)
     return match
 
 
@@ -228,6 +240,12 @@ class Raider(BaseModel):
     actions: int = Field(default=0, ge=0, le=1_000_000)
     active_ms: int = Field(default=0, ge=0, le=7_200_000)
     alive: bool = False
+    # Match EXP (app/progression.py); modes without the mechanic send 0.
+    rescues: int = Field(default=0, ge=0, le=1000)
+    interrupts: int = Field(default=0, ge=0, le=1000)
+    minions: int = Field(default=0, ge=0, le=1000)
+    phases: int = Field(default=0, ge=0, le=10)
+    objectives: int = Field(default=0, ge=0, le=1000)
 
 
 class ArenaEvent(BaseModel):
@@ -258,6 +276,8 @@ class ArenaEvent(BaseModel):
     boss_hp_left: int = Field(default=0, ge=0, le=100_000_000)
     private: bool = False
     raiders: list[Raider] = Field(default_factory=list, max_length=8)
+    # Raiders locked in when the raid started (the boss HP scale; EXP damage share).
+    team_size: int = Field(default=0, ge=0, le=8)
 
 
 def arena_room(db: Session, event: ArenaEvent) -> GameRoom:
@@ -325,7 +345,16 @@ def arena_event(event: ArenaEvent, db: Db):
         room.status = "playing" if event.players else room.status
         if event.map_id:
             room.map_name, room.map_id = event.map_name, event.map_id
-        record_match(db, room, event.round, True, event.duration_ms, event.results, event.practice)
+        record_match(
+            db,
+            room,
+            event.round,
+            True,
+            event.duration_ms,
+            event.results,
+            event.practice,
+            event.match_id,
+        )
     db.commit()
 
 

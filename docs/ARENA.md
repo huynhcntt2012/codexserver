@@ -168,6 +168,8 @@ dùng room riêng `arena2`; client cũ không thấy phòng này trong `/rooms`.
 - Snapshot v2 = v1 cộng `version: 2`, `map`, `number` (001–999, duy nhất
   trong process), `roomKey` (khóa chat phòng của API
   `arena:<process>:<roomId>`), `players[].hero`. `width`/`height` là 15/11.
+  Khi `phase` là `finished` có thêm `matchId` (`<process>.<roomId>.<round>`), là id
+  để client hỏi EXP đã chốt (`GET /v1/matches/{matchId}/exp`, [PROGRESSION.md](PROGRESSION.md)).
 - `GET /rooms/v2` cần Bearer JWT (cùng limit 120/IP/phút với `/rooms`), trả
   `{ version: 2, rooms: [{ roomId, number, map, phase, players, maxPlayers,
 ready, joinable, accountIds }] }` cho phòng đang chờ **và** đang chơi.

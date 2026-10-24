@@ -136,6 +136,11 @@ export const ACTION: Record<string, string> = {
   'leaderboard.settings': 'Sửa cách tính xếp hạng',
   'leaderboard.hide': 'Ẩn khỏi bảng xếp hạng',
   'leaderboard.show': 'Hiện lại trên bảng xếp hạng',
+  'exp.rule.create': 'Tạo nháp rule EXP',
+  'exp.rule.update': 'Sửa nháp rule EXP',
+  'exp.rule.delete': 'Xóa nháp rule EXP',
+  'exp.rule.publish': 'Phát hành rule EXP',
+  'exp.adjust': 'Điều chỉnh EXP (thủ công)',
   'mail.send': 'Gửi thư',
   'mail.recall': 'Thu hồi thư',
 };

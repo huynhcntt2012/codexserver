@@ -13,6 +13,7 @@ const NAV = [
   ['/items', '🎒', 'Vật phẩm'],
   ['/maps', '🗺️', 'Bản đồ'],
   ['/leaderboard', '🏆', 'Xếp hạng'],
+  ['/exp', '⭐', 'Match EXP'],
   ['/giftcodes', '🎁', 'Giftcode'],
   ['/mail', '✉️', 'Hộp thư'],
   ['/shop', '🛒', 'Shop'],
