@@ -43,6 +43,8 @@ services:
       - ./infra/postgres/012_wings.sql:/docker-entrypoint-initdb.d/012_wings.sql:ro
       - ./infra/postgres/013_pets.sql:/docker-entrypoint-initdb.d/013_pets.sql:ro
       - ./infra/postgres/014_boss.sql:/docker-entrypoint-initdb.d/014_boss.sql:ro
+      - ./infra/postgres/015_mail.sql:/docker-entrypoint-initdb.d/015_mail.sql:ro
+      - ./infra/postgres/016_progression.sql:/docker-entrypoint-initdb.d/016_progression.sql:ro
     healthcheck:
       test: [CMD-SHELL, 'pg_isready -U suni -d suni']
       interval: 5s

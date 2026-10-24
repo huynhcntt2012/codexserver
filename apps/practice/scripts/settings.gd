@@ -20,6 +20,13 @@ const DEFAULTS := {
 		"auto_ready": false, "screen_shake": true, "vibration": true,
 		"confirm_leave": true, "chat_filter": true,
 	},
+	## Team voice (docs/VOICE.md): "all" = everyone in the room, "team" = teammates
+	## only (boss raids; free-for-all has none). "ptt" opens the mic only while
+	## the key is held, "open" sends whenever you speak above the sensitivity.
+	"voice": {
+		"enabled": true, "channel": "all", "mode": "ptt", "key": "V",
+		"mic_volume": 80, "voice_volume": 90, "sensitivity": 70, "noise_gate": true,
+	},
 	"language": {"ui": "vi"},
 	"controls": {"device": "keyboard", "show_hints": true, "auto_detect": true, "deadzone": 50},
 }

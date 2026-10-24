@@ -14,6 +14,8 @@ const ItemUi := preload("res://scripts/ui/pc/battle_item_ui.gd")
 const PetSprite := preload("res://scripts/pet_sprite.gd")
 const MapBlocks := preload("res://scripts/map_blocks.gd")
 const BossView := preload("res://scripts/ui/pc/boss_view.gd")
+const MatchChat := preload("res://scripts/ui/pc/match_chat.gd")
+const VoicePanel := preload("res://scripts/ui/pc/voice_panel.gd")
 const BossHpBar := preload("res://scripts/ui/pc/boss_hp_bar.gd")
 const SKILL_NAMES := {
 	"boss_basic_hit": "Đánh thường", "boss_aoe_mark": "Đánh dấu vùng", "boss_block_lane": "Chặn ô",
@@ -86,6 +88,10 @@ var resend := 0.0
 var held_time := 0.0
 var sent_from := Vector2i(-1, -1)  # our server cell when the last step was sent
 var last_phase := ""
+var match_chat: Control
+var voice_panel: Control
+var alive_seen: Dictionary = {}
+var voice_on := false
 var item_ui: RefCounted
 var selected_slot := 0
 var seen_effects: Dictionary = {}  # "<by>:<at>:<kind>" -> true
@@ -250,15 +256,51 @@ func add_chat(line_text: String, color := INK) -> void:
 
 func send_chat() -> void:
 	var message := chat_input.text.strip_edges()
+	chat_input.clear()
+	post_chat(message)
+
+## Room chat from the waiting room or the in-match panel (same room channel).
+func post_chat(message: String) -> void:
 	if message.is_empty() or chat_key.is_empty():
 		return
-	chat_input.clear()
 	add_chat("%s: %s" % [AuthSession.account_name, message], Color("d9890b"))
+	match_chat.add_message("player", AuthSession.account_name, message, hero_of(OnlineArena.me()), is_boss(OnlineArena.snapshot), true)
 	var reply: Dictionary = await AuthSession.api(HTTPClient.METHOD_POST, "/v1/chat", {"channel": "room", "room": chat_key, "body": message})
 	if reply.status == 201 and reply.data is Dictionary:
 		chat_after = maxi(chat_after, int(reply.data.get("id", 0)))
 	else:
 		add_chat("Hệ thống: chưa gửi được tin nhắn (%s)" % str(reply.error), Color("2b88cf"))
+		match_chat.add_message("system", "", "Chưa gửi được tin nhắn (%s)." % str(reply.error))
+
+## Portrait for a chat sender: the hero of the seated player with that name.
+func hero_named(player_name: String) -> String:
+	for p in OnlineArena.snapshot.get("players", []):
+		if str(p.get("name", "")) == player_name:
+			return hero_of(p)
+	return ""
+
+func open_voice_settings() -> void:
+	open_settings()
+	settings_page.audio_tab = "voice"
+	settings_page.show_section("audio")
+
+## System lines for the in-match chat and the voice member list.
+func follow_match(snap: Dictionary, phase: String) -> void:
+	var players: Array = snap.get("players", [])
+	var me_id := str(OnlineArena.me().get("id", ""))
+	voice_panel.set_members(players.map(func(p): return {"id": str(p.get("id", "")), "name": str(p.get("name", "")), "hero": hero_of(p), "me": str(p.get("id", "")) == me_id}))
+	if phase == "playing" and last_phase != "playing":
+		match_chat.has_team = is_boss(snap)
+		match_chat.team_note = "Đấu tự do không chia đội." if not is_boss(snap) else ""
+		alive_seen.clear()
+		match_chat.add_message("system", "", "Đánh Boss cùng cả đội!" if is_boss(snap) else "Trận đấu bắt đầu!")
+	if phase == "finished" and last_phase == "playing":
+		match_chat.add_message("system", "", "Trận đấu kết thúc.")
+	for p in players:
+		var id := str(p.get("id", ""))
+		if phase == "playing" and alive_seen.get(id, true) and not bool(p.get("alive", true)):
+			match_chat.add_message("system", "", "%s đã bị loại." % str(p.get("name", "")))
+		alive_seen[id] = bool(p.get("alive", true))
 
 func poll_chat() -> void:
 	if chat_polling or chat_key.is_empty() or not AuthSession.has_session():
@@ -272,7 +314,10 @@ func poll_chat() -> void:
 	for message in reply.data.get("messages", []):
 		chat_after = maxi(chat_after, int(message.id))
 		if not bool(message.get("mine", false)):
-			add_chat("%s: %s" % [str(message.sender.name), Settings.clean_chat(str(message.body))])
+			var who := str(message.sender.name)
+			var body := Settings.clean_chat(str(message.body))
+			add_chat("%s: %s" % [who, body])
+			match_chat.add_message("player", who, body, hero_named(who), is_boss(OnlineArena.snapshot))
 
 func press_ready() -> void:
 	OnlineArena.send_action("ready")
@@ -433,6 +478,12 @@ func build_battle(root: VBoxContainer) -> void:
 	claim_button.focus_mode = Control.FOCUS_NONE
 	claim_button.hide()
 	result_stack.add_child(claim_button)
+	# In-match chat (room chat API) and team voice over the board's corner.
+	match_chat = MatchChat.new(self, post_chat)
+	board_area.add_child(match_chat)
+	voice_panel = VoicePanel.new(self, open_voice_settings)
+	voice_panel.online = true
+	board_area.add_child(voice_panel)
 	build_stats_bar(left)
 	build_sidebar(battle_view)
 
@@ -520,6 +571,8 @@ func build_sidebar(parent: Control) -> void:
 func fit_board() -> void:
 	if board == null or result_box == null:
 		return
+	if match_chat:
+		match_chat.place(Vector2(12, board_area.size.y - 12))
 	var columns: int = grid[0].size() if not grid.is_empty() else 15
 	var rows: int = grid.size() if not grid.is_empty() else 11
 	var art := Vector2(columns * TILE, rows * TILE)
@@ -1165,6 +1218,7 @@ func _on_snapshot(snap: Dictionary) -> void:
 	# The match uses the bot battle's dark backdrop; the waiting room keeps the sky.
 	sky.visible = not in_battle
 	backdrop.visible = in_battle
+	follow_match(snap, phase)
 	if in_battle:
 		render_battle(snap)
 		if phase == "playing" and last_phase != "playing":
@@ -1289,6 +1343,12 @@ func leave() -> void:
 func _on_visibility() -> void:
 	if not is_visible_in_tree() and invite_panel:
 		invite_panel.hide()
+	if not is_visible_in_tree() and voice_on:
+		voice_on = false
+		VoiceChat.stop()
+	if is_visible_in_tree() and match_chat:
+		match_chat.clear_messages()
+		match_chat.set_open(false)
 	if is_visible_in_tree() and invite_on_open:
 		invite_on_open = false
 		# The arena reports the seat to the API asynchronously; give it a moment.
@@ -1336,7 +1396,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		else:
 			ask_leave()
 		get_viewport().set_input_as_handled()
-	elif not battle_view.visible or chat_input.has_focus() or not Settings.keyboard():
+	elif not battle_view.visible or chat_input.has_focus() or match_chat.typing() or not Settings.keyboard():
 		return
 	elif event.keycode == KEY_SPACE:
 		OnlineArena.send_action("bomb")
@@ -1352,7 +1412,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func held_direction() -> String:
-	if chat_input.has_focus():
+	if chat_input.has_focus() or match_chat.typing():
 		return ""
 	if not Settings.keyboard():
 		return {Vector2i.LEFT: "left", Vector2i.RIGHT: "right", Vector2i.UP: "up", Vector2i.DOWN: "down"}.get(Settings.pad_direction(), "")
@@ -1372,12 +1432,21 @@ func _process(delta: float) -> void:
 	backdrop.size = sky.size
 	if not is_visible_in_tree():
 		return
-	if room_view.visible:
+	# Voice runs while seated in an online room (waiting room and match).
+	var want_voice := OnlineArena.connected
+	if want_voice != voice_on:
+		voice_on = want_voice
+		if want_voice:
+			VoiceChat.start()
+		else:
+			VoiceChat.stop()
+	if room_view.visible or battle_view.visible:
 		chat_clock -= delta
 		if chat_clock <= 0.0:
 			chat_clock = CHAT_POLL
 			poll_chat()
 	if battle_view.visible:
+		voice_panel.place(match_chat.position + Vector2(match_chat.WIDTH + 12 if match_chat.is_open() else 182, 0))
 		# Intent only, one step per press: a new key sends at once; while it is held
 		# the next step goes out after REPEAT_DELAY, and only once the server moved
 		# us (else a fast tap would queue a second step on the server).

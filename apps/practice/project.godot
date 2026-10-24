@@ -21,6 +21,10 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/default_filters/use_nearest_mipmap_filter=false
 
+[audio]
+
+driver/enable_input=true
+
 [autoload]
 Settings="*res://scripts/settings.gd"
 AuthSession="*res://scripts/auth_session.gd"
@@ -30,3 +34,4 @@ CatalogSync="*res://scripts/catalog_sync.gd"
 OnlineArena="*res://scripts/online_arena.gd"
 MapCatalog="*res://scripts/map_catalog.gd"
 InviteInbox="*res://scripts/invite_inbox.gd"
+VoiceChat="*res://scripts/voice_chat.gd"

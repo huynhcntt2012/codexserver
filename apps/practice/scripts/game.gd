@@ -486,7 +486,14 @@ func _process(delta: float) -> void:
 		_finish(false)
 
 
+## True while a chat box has the keyboard: match keys must not move or bomb.
+func typing() -> bool:
+	var focus := get_viewport().gui_get_focus_owner()
+	return focus is LineEdit or focus is TextEdit
+
 func _input(event: InputEvent) -> void:
+	if typing():
+		return
 	var pad := Settings.pad_action(event)
 	if pad != "":
 		_pad_action(pad)
@@ -564,7 +571,9 @@ func _update_player_input() -> void:
 	if player.is_empty() or not player["alive"]:
 		return
 	var direction = Settings.pad_direction()
-	if not Settings.keyboard():
+	if typing():
+		direction = Vector2i.ZERO
+	elif not Settings.keyboard():
 		pass
 	elif Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
 		direction = Vector2i.LEFT

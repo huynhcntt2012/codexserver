@@ -7,7 +7,12 @@ const BANNER_TIME := 1.3
 const SIDEBAR := 260.0
 const BAR := 78.0
 const ItemUi := preload("res://scripts/ui/pc/battle_item_ui.gd")
+const MatchChat := preload("res://scripts/ui/pc/match_chat.gd")
+const VoicePanel := preload("res://scripts/ui/pc/voice_panel.gd")
+const BOT_LINES: Array = preload("res://scripts/ui/pc/pc_room.gd").BOT_LINES
 const GAP := 12.0
+## Offline bots say something every BOT_CHAT seconds or so (local only).
+const BOT_CHAT := Vector2(25.0, 45.0)
 
 var game: Node
 var map_label: Label
@@ -23,6 +28,12 @@ var frame: Panel
 var item_ui: RefCounted
 var arena_rect := Rect2()
 var laid_out_for := Rect2()
+var chat: Control
+var voice: Control
+var bot_clock := 0.0
+var seen_round := -1.0
+var alive_before: Dictionary = {}
+var rng := RandomNumberGenerator.new()
 
 func _init() -> void:
 	super("sky")
@@ -46,6 +57,12 @@ func _ready() -> void:
 	item_ui = ItemUi.new(self, func(i): game.battle_items.select(i), func(): game.battle_items.use_selected(), func(): game.battle_items.toggle_mount())
 	build_sidebar()
 	build_bar()
+	# Offline chat: your lines, the bots' and match events stay on this PC.
+	chat = MatchChat.new(self, send_chat)
+	chat.team_note = "Luyện tập offline: mỗi người một đội."
+	canvas.add_child(chat)
+	voice = VoicePanel.new(self, open_voice_settings)
+	canvas.add_child(voice)
 	banner = title_text("BẮT ĐẦU!", 96, Color.WHITE, canvas)
 	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -156,6 +173,7 @@ func layout() -> void:
 	frame.size = arena_rect.size + Vector2(16, 16)
 	banner.position = arena_rect.position
 	banner.size = arena_rect.size
+	chat.place(Vector2(GAP + 8, bar.position.y - GAP))
 	status_label.position = arena_rect.position + Vector2(0, 6)
 	status_label.size = Vector2(arena_rect.size.x, 26)
 	# Canvas units -> viewport units for the 2D world under the HUD.
@@ -201,3 +219,57 @@ func _process(delta: float) -> void:
 	ScreenFill.set_fill(get_tree(), true)
 	layout()
 	refresh()
+	follow_match(delta)
+	# The voice pill sits right of the chat pill, or of the open chat panel.
+	voice.place(chat.position + Vector2(chat.WIDTH + 12 if chat.is_open() else 182, 0))
+
+func fighter_name(actor: Dictionary) -> String:
+	var hero_index: int = game.HEROES.find(actor.hero)
+	return ("Bot " if actor.bot else "") + game.HERO_NAMES[hero_index].capitalize()
+
+## System lines (start, knock-outs) and the bots' chatter for the chat panel.
+func follow_match(delta: float) -> void:
+	if game.player.is_empty():
+		return
+	if game.game_state == "playing" and game.elapsed < seen_round:
+		seen_round = -1.0  # a new round restarted the clock
+	if seen_round < 0.0 and game.game_state == "playing":
+		seen_round = 0.0
+		alive_before.clear()
+		chat.add_message("system", "", "Trận đấu bắt đầu! Hạ %d bot để thắng." % int(game.remaining_bots))
+		bot_clock = rng.randf_range(4.0, 8.0)
+	seen_round = maxf(seen_round, float(game.elapsed))
+	for actor in game.fighters:
+		var key := fighter_name(actor)
+		if alive_before.get(key, true) and not actor.alive:
+			chat.add_message("system", "", "%s đã bị loại." % key)
+		alive_before[key] = actor.alive
+	if game.game_state != "playing":
+		return
+	bot_clock -= delta
+	if bot_clock <= 0.0:
+		bot_clock = rng.randf_range(BOT_CHAT.x, BOT_CHAT.y)
+		bot_says()
+
+func bot_says() -> void:
+	var bots: Array = game.fighters.filter(func(a): return a.bot and a.alive)
+	if bots.is_empty():
+		return
+	var actor: Dictionary = bots[rng.randi() % bots.size()]
+	chat.add_message("player", fighter_name(actor), BOT_LINES[rng.randi() % BOT_LINES.size()], str(actor.hero))
+
+func send_chat(message: String) -> void:
+	chat.add_message("player", fighter_name(game.player), Settings.clean_chat(message), str(game.player.hero), false, true)
+	if rng.randf() < 0.6:
+		get_tree().create_timer(rng.randf_range(1.0, 2.5)).timeout.connect(bot_says)
+
+## Pauses and opens the voice settings on the pause screen (it draws above
+## this HUD). Returns the settings page.
+func open_voice_settings() -> Control:
+	if game.game_state == "playing":
+		game._pause_game()
+	var pause: Control = game.result.get_node("PcResult")
+	pause.open_settings()
+	pause.settings_page.audio_tab = "voice"
+	pause.settings_page.show_section("audio")
+	return pause.settings_page

@@ -126,6 +126,9 @@ export class BossRoom extends ArenaRoomV2 {
     return new BossArena(map, this.rules, this.seed);
   }
 
+  /** Every raider fights the boss together: one team. */
+  protected override voiceTeam = true;
+
   /** Boss rounds are not PvP matches: they are reported as boss_raid instead. */
   protected override reportRound(): void {}
 

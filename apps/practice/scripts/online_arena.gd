@@ -6,6 +6,8 @@ extends Node
 ## winners always come from the server snapshot.
 
 signal snapshot_received(snapshot: Dictionary)
+## A teammate's voice frame relayed by the arena (VoiceChat plays it).
+signal voice_received(speaker: String, channel: int, audio: PackedByteArray)
 ## Emitted once when the room connection ends (left, kicked, or network lost).
 signal closed(reason: String)
 ## Boss raids: the connection dropped mid-raid and the adapter is getting the seat back.
@@ -197,6 +199,14 @@ func _seat_error(reply: Dictionary) -> String:
 		return "Phòng đã đầy hoặc đã bắt đầu."
 	return "Không vào được phòng (HTTP %d)." % int(reply.status)
 
+## One voice frame: ROOM_DATA_BYTES (17), type 2, [channel, ...mu-law audio].
+func send_voice(channel: int, audio: PackedByteArray) -> void:
+	if not connected or audio.is_empty():
+		return
+	var packet := PackedByteArray([17, 2, channel])
+	packet.append_array(audio)
+	socket.send(packet)
+
 func send_action(action: String) -> void:
 	if not connected or action not in ACTIONS:
 		return
@@ -261,7 +271,12 @@ func _handle(packet: PackedByteArray) -> void:
 				_reconnect_token = packet.slice(2, 2 + packet[1]).get_string_from_utf8()
 			socket.send(PackedByteArray([10]))
 			connected = true
-		17:  # ROOM_DATA_BYTES, type 1, UTF-8 JSON snapshot (version 2 only).
+		17:  # ROOM_DATA_BYTES: type 1 snapshot JSON, type 2 voice frame.
+			if packet.size() >= 5 and packet[1] == 2:
+				var id_end := 4 + packet[3]
+				if packet.size() > id_end:
+					voice_received.emit(packet.slice(4, id_end).get_string_from_utf8(), packet[2], packet.slice(id_end))
+				return
 			if packet.size() < 3 or packet[1] != 1:
 				return
 			var parsed: Variant = JSON.parse_string(packet.slice(2).get_string_from_utf8())

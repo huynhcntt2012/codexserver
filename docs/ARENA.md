@@ -118,11 +118,13 @@ protocol hiện tại, không phải SDK Colyseus tổng quát.
 WebSocket dùng binary frame. Serializer là `none`, đã tắt Schema patches;
 không gửi action dưới dạng JSON text thuần.
 
-| Chiều           | Định dạng                          | Nội dung                                                           |
-| --------------- | ---------------------------------- | ------------------------------------------------------------------ |
-| Client → server | `[13, 0, 0xa0 + length, ...ASCII]` | `ROOM_DATA` (13), message type số `0`, MsgPack fixstr chứa action  |
-| Server → client | `[17, 1, ...UTF8_JSON]`            | `ROOM_DATA_BYTES` (17), message type số `1`, toàn bộ snapshot JSON |
-| Client → server | `[12]`                             | `LEAVE_ROOM`                                                       |
+| Chiều           | Định dạng                              | Nội dung                                                              |
+| --------------- | -------------------------------------- | --------------------------------------------------------------------- |
+| Client → server | `[13, 0, 0xa0 + length, ...ASCII]`     | `ROOM_DATA` (13), message type số `0`, MsgPack fixstr chứa action     |
+| Server → client | `[17, 1, ...UTF8_JSON]`                | `ROOM_DATA_BYTES` (17), message type số `1`, toàn bộ snapshot JSON    |
+| Client → server | `[17, 2, channel, ...audio]`           | Voice (app PC, [VOICE.md](VOICE.md)): 60 ms mu-law 16 kHz, ≤ 960 byte |
+| Server → client | `[17, 2, channel, n, ...id, ...audio]` | Voice chuyển tiếp; `id` (session) do server gắn                       |
+| Client → server | `[12]`                                 | `LEAVE_ROOM`                                                          |
 
 Action hợp lệ: `up`, `down`, `left`, `right`, `bomb`, `ready`.
 Ví dụ `bomb` là `[13, 0, 164, 98, 111, 109, 98]`. Server lấy danh tính từ

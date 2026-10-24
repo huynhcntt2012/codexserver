@@ -81,6 +81,13 @@ var standing: Dictionary = {}  # /v1/leaderboards "me"
 var account_state := "idle"
 var name_field: LineEdit
 var preview_player: AudioStreamPlayer
+## Voice section: the push-to-talk key button while it waits for a key, and
+## the mic test meter.
+var voice_key_button: Button
+var audio_tab := "general"  # general | voice
+var mic_meter: ProgressBar
+## Keys the match already uses; push-to-talk cannot take them.
+const MATCH_KEYS := [KEY_SPACE, KEY_CTRL, KEY_Q, KEY_ESCAPE, KEY_ENTER, KEY_KP_ENTER, KEY_M, KEY_R, KEY_W, KEY_A, KEY_S, KEY_D, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6]
 var hero_id := "bombo"
 var row_parent: Control  # where option_row() puts rows (body, or a two-column grid)  # portrait on the account card; set by whoever opens the window
 
@@ -153,6 +160,7 @@ func _on_visibility() -> void:
 		# Closed without LƯU: the saved values come back (previewed volumes too).
 		Settings.apply(Settings.values)
 		preview_player.stop()
+		VoiceChat.stop_test()
 
 func nav_button(spec: Array) -> Button:
 	var button := Button.new()
@@ -194,6 +202,8 @@ func nav_button(spec: Array) -> Button:
 
 func show_section(key: String) -> void:
 	current = key
+	if VoiceChat.testing:
+		VoiceChat.stop_test()
 	for k in nav_buttons:
 		var button: Button = nav_buttons[k]
 		var on: bool = k == key
@@ -534,6 +544,26 @@ func build_display() -> void:
 
 func build_audio() -> void:
 	var a: Dictionary = draft.audio
+	var tabs := HBoxContainer.new()
+	tabs.name = "AudioTabs"
+	tabs.add_theme_constant_override("separation", 10)
+	body.add_child(tabs)
+	var group := ButtonGroup.new()
+	for spec in [["general", "Âm thanh chung"], ["voice", "Cài đặt giọng nói"]]:
+		var key: String = spec[0]
+		var button := tab(str(spec[1]), func(): audio_tab = key; show_section("audio"), group)
+		button.name = "AudioTab_" + key
+		button.custom_minimum_size = Vector2(240, 46)
+		button.add_theme_font_size_override("font_size", 17)
+		button.button_pressed = key == audio_tab
+		tabs.add_child(button)
+	var inputs := AudioServer.get_input_device_list()
+	var mic := choice_list(Array(inputs).map(func(n): return "Micro mặc định" if n == "Default" else n), maxi(0, inputs.find(str(a.input_device))), func(i): a.input_device = inputs[i], 340)
+	mic.name = "Input"
+	if audio_tab == "voice":
+		option_row("mic", "Thiết bị micro", "Micro dùng cho voice chat.", mic)
+		build_voice()
+		return
 	for spec in [["speaker", "Âm lượng tổng", "master", "Master"], ["music", "Nhạc nền", "music", "Music"], ["star", "Hiệu ứng âm thanh", "sfx", "SFX"], ["bell", "Âm thanh giao diện", "ui", "UI"]]:
 		var key: String = spec[2]
 		var bus: String = spec[3]
@@ -543,16 +573,95 @@ func build_audio() -> void:
 		try.custom_minimum_size = Vector2(140, 42)
 		line.add_child(try)
 		option_row(str(spec[0]), str(spec[1]), "", line)
-	option_row("mic", "Giọng nói", "Âm lượng chat thoại", null, true)
 	var outputs := AudioServer.get_output_device_list()
 	var speaker := choice_list(Array(outputs).map(func(n): return "Loa mặc định" if n == "Default" else n), maxi(0, outputs.find(str(a.output_device))), func(i): a.output_device = outputs[i], 340)
 	speaker.name = "Output"
 	option_row("speaker", "Thiết bị loa", "", speaker)
-	var inputs := AudioServer.get_input_device_list()
-	var mic := choice_list(Array(inputs).map(func(n): return "Micro mặc định" if n == "Default" else n), maxi(0, inputs.find(str(a.input_device))), func(i): a.input_device = inputs[i], 340)
-	mic.name = "Input"
-	option_row("mic", "Thiết bị micro", "Dùng cho chat thoại khi có.", mic)
+	option_row("mic", "Thiết bị micro", "Micro dùng cho voice chat.", mic)
 	option_row("monitor", "Tắt tiếng khi thu nhỏ cửa sổ", "Tự tắt âm khi game không được chọn.", switch("audio", "mute_unfocused"))
+
+## Voice chat (docs/VOICE.md): on/off, channel, talk mode and key, volumes,
+## sensitivity, noise gate, a mic test and per-match mutes.
+func build_voice() -> void:
+	var v: Dictionary = draft.voice
+	heading("GIỌNG NÓI (VOICE CHAT)")
+	option_row("mic", "Bật voice chat", "Nói chuyện với người chơi trong trận online (chỉ app PC).", switch("voice", "enabled"))
+	var channels := ["all", "team"]
+	var channel := choice_list(["Kênh toàn bộ: cả phòng", "Kênh đội: chỉ đồng đội"], channels.find(str(v.channel)), func(i): v.channel = channels[i], 340)
+	channel.name = "VoiceChannel"
+	option_row("people", "Kênh thoại", "Đấu tự do không chia đội; kênh đội dùng cho Đại Chiến Boss.", channel)
+	var modes := ["ptt", "open"]
+	var mode := choice_list(["Nhấn để nói (giữ phím)", "Mic mở (tự gửi khi nói)"], modes.find(str(v.mode)), func(i): v.mode = modes[i], 340)
+	mode.name = "VoiceMode"
+	option_row("mic", "Chế độ nói", "Nhấn để nói chỉ bật micro khi bạn giữ phím.", mode)
+	voice_key_button = candy(str(v.key), func(): voice_key_button.text = "Nhấn một phím…"; status_label.text = "Nhấn phím muốn dùng để nói (Esc để hủy).", "sky", 17)
+	voice_key_button.name = "VoiceKey"
+	voice_key_button.custom_minimum_size = Vector2(200, 46)
+	option_row("keyboard", "Phím nói", "Bấm rồi nhấn phím mới. Không trùng phím chơi.", voice_key_button)
+	option_row("mic", "Âm lượng micro của bạn", "", percent_slider("voice", "mic_volume"))
+	option_row("people", "Âm lượng giọng nói người khác", "", percent_slider("voice", "voice_volume"))
+	option_row("mic", "Độ nhạy micro", "Cao hơn: bắt được giọng nhỏ hơn (mic mở, lọc ồn).", percent_slider("voice", "sensitivity"))
+	option_row("shield", "Lọc tiếng ồn", "Không gửi âm thanh nhỏ như tiếng bàn phím, quạt.", switch("voice", "noise_gate"))
+	var test := HBoxContainer.new()
+	test.add_theme_constant_override("separation", 12)
+	test.custom_minimum_size = Vector2(620, 0)
+	mic_meter = ProgressBar.new()
+	mic_meter.name = "MicTestLevel"
+	mic_meter.show_percentage = false
+	mic_meter.max_value = 1.0
+	mic_meter.custom_minimum_size = Vector2(0, 16)
+	mic_meter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mic_meter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mic_meter.add_theme_stylebox_override("background", box(Color("c9d9ec"), Color.TRANSPARENT, 8))
+	mic_meter.add_theme_stylebox_override("fill", box(MINT, Color.TRANSPARENT, 8))
+	test.add_child(mic_meter)
+	var try := candy("▶ Bắt đầu kiểm tra", func(): pass, "mint", 15)
+	try.name = "MicTest"
+	try.custom_minimum_size = Vector2(200, 42)
+	try.pressed.connect(func():
+		if VoiceChat.testing:
+			VoiceChat.stop_test()
+		else:
+			VoiceChat.start_test()
+		try.text = "■ Dừng kiểm tra" if VoiceChat.testing else "▶ Bắt đầu kiểm tra")
+	test.add_child(try)
+	option_row("mic", "Kiểm tra micro", "Nói thử: thanh xanh nhảy theo giọng (không gửi đi).", test)
+	heading("DANH SÁCH CHẶN GIỌNG NÓI (CHỈ TRONG TRẬN)")
+	var others: Array = OnlineArena.snapshot.get("players", []).filter(func(p): return str(p.get("id", "")) != str(OnlineArena.me().get("id", ""))) if OnlineArena.connected else []
+	if others.is_empty():
+		var none := text("Danh sách hiện khi bạn đang ở phòng online có người khác.", 15, MUTED, body)
+		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for p in others:
+		var id := str(p.get("id", ""))
+		var mute := candy("Bỏ chặn" if VoiceChat.blocked.has(id) else "Tắt voice", func(): pass, "coral" if VoiceChat.blocked.has(id) else "ghost", 15)
+		mute.name = "Block_" + id
+		mute.custom_minimum_size = Vector2(160, 42)
+		mute.pressed.connect(func():
+			VoiceChat.toggle_block(id)
+			mute.text = "Bỏ chặn" if VoiceChat.blocked.has(id) else "Tắt voice")
+		option_row("people", str(p.get("name", "")), "", mute)
+
+func _input(event: InputEvent) -> void:
+	if voice_key_button == null or not is_instance_valid(voice_key_button) or voice_key_button.text != "Nhấn một phím…":
+		return
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	get_viewport().set_input_as_handled()
+	var code := (event as InputEventKey).keycode
+	if code == KEY_ESCAPE:
+		voice_key_button.text = str(draft.voice.key)
+		status_label.text = ""
+	elif code in MATCH_KEYS:
+		status_label.text = "Phím %s đã dùng trong trận; chọn phím khác." % OS.get_keycode_string(code)
+	else:
+		draft.voice.key = OS.get_keycode_string(code)
+		voice_key_button.text = str(draft.voice.key)
+		status_label.text = "Phím nói: %s (bấm LƯU để giữ)." % draft.voice.key
+
+func _process(delta: float) -> void:
+	super(delta)
+	if mic_meter and is_instance_valid(mic_meter):
+		mic_meter.value = VoiceChat.level if VoiceChat.testing else 0.0
 
 func preview(key: String) -> void:
 	if key == "music":
@@ -810,7 +919,7 @@ func build_language() -> void:
 
 func reset_section() -> void:
 	var fresh := Settings.defaults()
-	var sections: Array = {"display": ["display"], "audio": ["audio"], "game": ["game"], "language": ["language"], "controls": ["controls"]}.get(current, [])
+	var sections: Array = {"display": ["display"], "audio": ["audio", "voice"], "game": ["game"], "language": ["language"], "controls": ["controls"]}.get(current, [])
 	for section in sections:
 		draft[section] = fresh[section]
 	if current == "language":

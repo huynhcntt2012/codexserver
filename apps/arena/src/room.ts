@@ -9,6 +9,7 @@ import {
 } from './ingest.js';
 import { findMap, HEROES, type MapDef } from './maps.js';
 import { BotBrain } from './bots.js';
+import { VOICE_ALL, VOICE_TYPE, VoiceLimiter, voiceFrame } from './voice.js';
 
 /** Practice rooms: humans plus server bots up to this many seats. */
 export const PRACTICE_SEATS = 4;
@@ -29,7 +30,8 @@ export class ArenaRoom extends Room {
   readonly protocol: 1 | 2 = 1;
   number = 0;
   maxClients = 8;
-  maxMessagesPerSecond = 40;
+  /** Moves and actions plus ~17 voice frames a second while talking. */
+  maxMessagesPerSecond = 60;
   game = new Arena();
   /** sessionId -> account, from the verified JWT; never from client messages. */
   protected accounts = new Map<string, { accountId: string; name: string }>();
@@ -57,6 +59,9 @@ export class ArenaRoom extends Room {
     this.onMessage(0, (client, action: unknown) => {
       this.game.input(client.sessionId, action);
     });
+    this.onMessageBytes(VOICE_TYPE, (client, data: Uint8Array) =>
+      this.relayVoice(client, data),
+    );
     this.game.onRoundEnd = (result) => this.reportRound(result);
     // Each item use the simulation accepted is consumed once from the API stock.
     let uses = 0;
@@ -166,6 +171,22 @@ export class ArenaRoom extends Room {
   members(): string[] {
     return [...this.accounts.values()].map((a) => a.accountId);
   }
+  private voice = new VoiceLimiter();
+
+  /** Free-for-all rounds have no teams: the team channel reaches nobody. */
+  protected voiceTeam = false;
+
+  /** Forwards one voice frame from a seated player to its listeners. */
+  protected relayVoice(client: Client, data: Uint8Array): void {
+    if (!this.accounts.has(client.sessionId)) return;
+    const frame = voiceFrame(client.sessionId, data);
+    if (!frame || !this.voice.allow(client.sessionId, Date.now())) return;
+    for (const other of this.clients) {
+      if (other === client || !this.accounts.has(other.sessionId)) continue;
+      if (frame.channel === VOICE_ALL || this.voiceTeam)
+        other.sendBytes(VOICE_TYPE, frame.bytes);
+    }
+  }
 
   onJoin(
     client: Client,
@@ -200,6 +221,7 @@ export class ArenaRoom extends Room {
   onLeave(client: Client) {
     this.game.removePlayer(client.sessionId);
     this.accounts.delete(client.sessionId);
+    this.voice.forget(client.sessionId);
     this.reportRoom();
   }
 
