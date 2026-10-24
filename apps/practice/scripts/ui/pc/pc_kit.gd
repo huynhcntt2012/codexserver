@@ -409,8 +409,9 @@ static func pill_style(kind: String, tone := 1.0, sink := 0) -> StyleBoxTexture:
 	style.texture_margin_top = PILL_EDGE
 	style.texture_margin_bottom = PILL_EDGE
 	style.modulate_color = Color(tone, tone, tone)
-	style.content_margin_left = 20
-	style.content_margin_right = 20
+	# Same side padding as the old flat buttons, so layouts keep their widths.
+	style.content_margin_left = 10
+	style.content_margin_right = 10
 	style.content_margin_top = 6 + sink
 	style.content_margin_bottom = 10 - sink
 	return style
