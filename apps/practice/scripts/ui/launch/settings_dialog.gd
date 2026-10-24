@@ -25,7 +25,7 @@ func _ready() -> void:
 	api_field.name = "ApiUrl"
 	api_field.position = Vector2(370, 325)
 	api_field.size = Vector2(540, 44)
-	api_field.placeholder_text = "https://api.sunifactory.com"
+	api_field.placeholder_text = AuthSession.PUBLIC_API
 	Ui.apply_input(api_field, Ui.AQUA, Ui.AQUA_DARK, 18, 3)
 	add_child(api_field)
 	public_button.text = "MÁY CHỦ BỤP BỤP"
@@ -34,7 +34,7 @@ func _ready() -> void:
 	Ui.apply_button(public_button, Ui.CREAM, Ui.AQUA, 17)
 	add_child(public_button)
 	public_button.pressed.connect(func():
-		api_field.text = "https://api.sunifactory.com"
+		api_field.text = AuthSession.PUBLIC_API
 		connection_status.text = "Đã chọn máy chủ online. Kiểm tra rồi nhấn ÁP DỤNG."
 	)
 	check_button.text = "KIỂM TRA"

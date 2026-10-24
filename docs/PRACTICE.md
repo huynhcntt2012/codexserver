@@ -89,9 +89,10 @@ file `.pck` cùng thư mục; ZIP cùng tên nằm tại `build/practice`.
 
 ### Tài khoản trên PC
 
-Trong **Cài đặt**, nhập API tài khoản rồi **Áp dụng**. Mặc định loopback
-`http://127.0.0.1:8000`; để dùng máy chủ hiện có, nhập
-`https://api.sunifactory.com`. Có thể đặt `SUNI_API_URL` trước khi mở app.
+Trong **Cài đặt**, nhập API tài khoản rồi **Áp dụng**. Mặc định là máy chủ online
+`https://api.sunifactory.com` (arena tự suy ra `https://arena.sunifactory.com`); máy
+đã lưu mặc định cũ `http://127.0.0.1:8000` cũng tự chuyển sang máy chủ này. Để thử
+stack local, nhập `http://localhost:8000` hoặc đặt `SUNI_API_URL` trước khi mở app.
 Máy chủ từ xa yêu cầu HTTPS; cấu hình được lưu trong thư mục user của Godot.
 
 Chọn **Đăng ký** để tạo tài khoản (tên 3–24 ký tự a-z, 0-9, \_;

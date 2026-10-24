@@ -1,6 +1,10 @@
 extends Node
 ## Account credentials are sent only to the configured API. Tokens stay in RAM.
-var api_url := "http://127.0.0.1:8000"
+## The public Bụp Bụp server; local stacks use SUNI_API_URL or the settings box.
+const PUBLIC_API := "https://api.sunifactory.com"
+## The default before the public server existed; a saved copy of it means "default".
+const OLD_DEFAULT_API := "http://127.0.0.1:8000"
+var api_url := PUBLIC_API
 var account_name := ""
 var account_id := ""
 var busy := false
@@ -13,6 +17,8 @@ func _ready() -> void:
 	var config := ConfigFile.new()
 	config.load("user://launch_preferences.cfg")
 	api_url = config.get_value("network", "api_url", api_url)
+	if api_url == OLD_DEFAULT_API:
+		api_url = PUBLIC_API
 	if not OS.get_environment("SUNI_API_URL").is_empty():
 		api_url = OS.get_environment("SUNI_API_URL")
 	# The web build's CSP only allows same-origin requests: use the site's /api proxy.
