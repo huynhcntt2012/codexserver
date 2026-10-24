@@ -6,7 +6,7 @@ test('switching auth forms preserves input entered immediately after navigation'
   page,
   baseURL,
 }) => {
-  await page.goto(baseURL);
+  await page.goto(`${baseURL}/classic/`);
   await expect(page.locator('#auth-title')).toHaveText('Đăng nhập');
   await page.evaluate(() => {
     document.getElementById('auth-switch').click();
@@ -64,8 +64,8 @@ test('desktop and mobile browsers authenticate, play a round, and retain account
   const screenshots = process.env.SUNI_CAPTURE_DIR || 'build/web-screenshots';
   await mkdir(screenshots, { recursive: true });
   try {
-    await a.goto(baseURL);
-    await b.goto(baseURL);
+    await a.goto(`${baseURL}/classic/`);
+    await b.goto(`${baseURL}/classic/`);
     await expect(a.locator('#join')).toBeEnabled();
     await a.screenshot({ path: `${screenshots}/web-home.png`, fullPage: true });
     await b.screenshot({
@@ -79,7 +79,7 @@ test('desktop and mobile browsers authenticate, play a round, and retain account
     ).toBe(true);
     await expect(a.locator('#rooms-panel')).toBeHidden();
     await expect(a.locator('#board')).toBeHidden();
-    await a.goto(`${baseURL}/#rooms`);
+    await a.goto(`${baseURL}/classic/#rooms`);
     await expect(a.locator('#auth-panel')).toBeVisible();
     await a.getByRole('link', { name: 'Đăng ký', exact: true }).click();
     await expect(a).toHaveURL(/#register$/);
@@ -188,4 +188,40 @@ test('desktop and mobile browsers authenticate, play a round, and retain account
     await desktop.close();
     await mobile.close();
   }
+});
+
+test('character chooser loads five supplied characters and supports keyboard dismissal', async ({
+  page,
+  baseURL,
+}) => {
+  await page.goto(`${baseURL}/classic/`);
+  await page.getByRole('button', { name: 'Nhân vật', exact: true }).click();
+  const dialog = page.locator('#characters');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-character]')).toHaveCount(5);
+  await page.locator('[data-character="4"]').click();
+  await expect(page.locator('[data-character="4"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(
+    await dialog
+      .locator('img')
+      .evaluateAll((images) =>
+        images.every((image) => image.complete && image.naturalWidth > 0),
+      ),
+  ).toBe(true);
+  await page.locator('#characters-confirm').click();
+  await expect(dialog).toBeHidden();
+  await page.locator('#characters-open').click();
+  await expect(page.locator('[data-character="4"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.screenshot({
+    path: 'build/web-screenshots/web-characters.png',
+    fullPage: true,
+  });
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
 });

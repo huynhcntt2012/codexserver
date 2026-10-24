@@ -1,0 +1,43 @@
+# Robot Bom Dây Cót (Clockwork Bomb Robot) boss art
+
+Source: GameBoom_Robot_Boss_Event_DevPack.zip (spec v1.0, 2026-10-20), supplied
+by the project owner in a Claude Code session on 2026-10-19:
+- assets/03_robot_boss_directional_original.png (1254x1254, transparent; the
+  sheet the spec names as the master model: 4 x 4 frames, rows walk down,
+  left, right, up)
+  SHA-256 185940d444b43a821f9497d6f64cf6151f0f40fda3e89e2cf8256ee47ef7d86c
+  Kept as tools/source/clockwork_bot_directional.webp (WebP quality 0.92)
+  SHA-256 75a2bafcc04192c158ae6b3f0ca9d5f6cb6a8630176345def8e220c8b60fbf6d
+- The pack's other images (01 walk concept, an identical-looking copy of 03;
+  02 seven-skill storyboard; 04 explosion reference; 05 arena mockup) are
+  reference only and are not shipped.
+
+The pack itself says the images are AI-generated concept art, not a
+production atlas. Origin and rights were not independently verified; they
+carry no author, name, logo or text from Boom Online. Confirm ownership and
+have art QA normalise the frames before a commercial release.
+
+tools/slice_robot.gd cut the 16 frames into assets/boss/clockwork_bot/
+walk_<dir>/01..04.png (256x256, one scale for all, feet on the bottom edge)
+and idle/01.png (= walk_down/01). Specks of the sheet's halo (blobs under 3 %
+of the robot) were removed. No pixels were painted. Robot bombs in game use
+the project's own assets/bombs/strong_black.png.
+
+Output SHA-256 (relative to assets/boss):
+accdebc70ff32cdda6e6d81b2dd4eee69ed4dbfe7ce06ce4b2f5915564001500  ./clockwork_bot/idle/01.png
+accdebc70ff32cdda6e6d81b2dd4eee69ed4dbfe7ce06ce4b2f5915564001500  ./clockwork_bot/walk_down/01.png
+13ae7e481ce3ff3eef21044057b794e8b35b0ad3dc522c3c6decd2baf9d18061  ./clockwork_bot/walk_down/02.png
+e4b98f632b85e88c1c1cf596811479be7579ba1ca1ef0071f6c88a86eaef3e38  ./clockwork_bot/walk_down/03.png
+4c1f27c18f29f41d8023be30ae56e85d8e3884cf25551de764a32d1f8945dfeb  ./clockwork_bot/walk_down/04.png
+f66aa51cd237ea0a6c67385d327e968a1e83de97e6ba2b024a39d00f107422cc  ./clockwork_bot/walk_left/01.png
+f6e0b467fe7a0ffbd458cc2bd77db1d18e7147dffb64098d39590a0a8da38ccd  ./clockwork_bot/walk_left/02.png
+f84b132bb5a1fa5c9e5c4fce56b301fc6ee642e2aae65149d5cb3a3d8499bb65  ./clockwork_bot/walk_left/03.png
+8da41453743aeadcaaf6fa70e77f63ab3203abb1c0bdb402a65bb48061c69ee5  ./clockwork_bot/walk_left/04.png
+6c3da6380dc15a35dbc8710d29364a238bfc9553b6c053d329b954656a05920a  ./clockwork_bot/walk_right/01.png
+a3b7b17b5245de95e000c88a756572bfc4b9e482e4e758c22f50b79853f926e7  ./clockwork_bot/walk_right/02.png
+613c42205d883eb59f75ea2cab46205569b755b830c4268c0f74dec142f4759b  ./clockwork_bot/walk_right/03.png
+74e5312de79564008d7ea6f4713031ca874bab4be58056690187db26d645eb59  ./clockwork_bot/walk_right/04.png
+df88eb08f6615c962d48db68834d2de002baa508a605273cd9c2490129053f52  ./clockwork_bot/walk_up/01.png
+db4758d5a9973c2b32a7d53147c947e0f4cc7d200b061103f4e65d78ede43330  ./clockwork_bot/walk_up/02.png
+7e907aebf668647a772d07a420a96ce1814073956f24f27ca1cd5e3bd1eeb1af  ./clockwork_bot/walk_up/03.png
+31b188c063b9375a4a64d3fdefa55092fe9d644b413c9dab2e05a30d6b8865af  ./clockwork_bot/walk_up/04.png

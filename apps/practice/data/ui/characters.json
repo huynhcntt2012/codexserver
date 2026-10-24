@@ -1,0 +1,57 @@
+[
+  {
+    "id": "bombo",
+    "name": "BOMBO",
+    "desc": "Thủ lĩnh vui tính, thích những quả bom màu xanh.",
+    "stats": {
+      "speed": 3,
+      "bombs": 2,
+      "range": 2
+    },
+    "portrait": "res://assets/characters/portraits/bombo.png"
+  },
+  {
+    "id": "mimi",
+    "name": "MIMI",
+    "desc": "Nhanh nhẹn, đáng yêu và tràn đầy năng lượng.",
+    "stats": {
+      "speed": 4,
+      "bombs": 2,
+      "range": 2
+    },
+    "portrait": "res://assets/characters/portraits/mimi.png"
+  },
+  {
+    "id": "zin",
+    "name": "ZIN",
+    "desc": "Dũng cảm, luôn sẵn sàng bước vào đấu trường.",
+    "stats": {
+      "speed": 3,
+      "bombs": 3,
+      "range": 2
+    },
+    "portrait": "res://assets/characters/portraits/zin.png"
+  },
+  {
+    "id": "lala",
+    "name": "LALA",
+    "desc": "Năng động, mang tới niềm vui mỗi trận đấu.",
+    "stats": {
+      "speed": 4,
+      "bombs": 1,
+      "range": 3
+    },
+    "portrait": "res://assets/characters/portraits/lala.png"
+  },
+  {
+    "id": "kai",
+    "name": "KAI",
+    "desc": "Bình tĩnh, khéo léo khi chọn vị trí đặt bom.",
+    "stats": {
+      "speed": 3,
+      "bombs": 2,
+      "range": 3
+    },
+    "portrait": "res://assets/characters/portraits/kai.png"
+  }
+]

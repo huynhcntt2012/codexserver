@@ -57,6 +57,10 @@ func _run() -> void:
 	scene._set_login_mode(false)
 	_check(scene.password_input.text.is_empty(), "Switching to guest must clear the password")
 	scene._join()
+	while scene.net.busy:
+		await process_frame
+	_check(scene.room_browser.visible, "Room picker must open")
+	scene._enter_room("", true)
 	while not scene.net.connected or scene.snapshot.get("players", []).size() != 1:
 		await process_frame
 	await process_frame
@@ -96,14 +100,22 @@ func _run() -> void:
 	_check(scene.arena_view.sparks.is_empty() and scene.arena_view.rings.is_empty(), "New rounds must clear transient effects")
 	_check(not scene.ready_button.disabled, "Players must be able to ready for the next round")
 	scene._leave()
+	while scene.net.busy:
+		await process_frame
 	_check(not scene.net.connected and scene.snapshot.is_empty(), "Leave must clear match state")
 	_check(scene.form.visible and scene.arena_view.snapshot.is_empty(), "Leave must restore the preview and form")
 	_check(scene.lobby_view.visible and scene.arena_view.sparks.is_empty(), "Leave must restore the lounge and clear effects")
 	second.disconnect_game()
 	scene._join()
+	while scene.net.busy:
+		await process_frame
+	_check(scene.room_browser.visible, "Room picker must open")
+	scene._enter_room("", true)
 	while not scene.net.connected:
 		await process_frame
 	scene._leave()
+	while scene.net.busy:
+		await process_frame
 	timeout.stop()
 	scene.queue_free()
 	second.queue_free()

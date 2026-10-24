@@ -1,0 +1,46 @@
+# Map blocks (walls and crates)
+
+Source: one sheet image of 28 props (7 x 4) on a white background, supplied
+by the project owner in a Claude Code session on 2026-10-19, kept at
+`tools/source/map_blocks.webp` (WebP, 469006 bytes).
+SHA-256: b15d04bc01be444c68131c5b531bcc8707f18bbc4001424339b05437131ae426
+
+It looks like image-generator output; its origin and rights were not
+independently verified, and it carries no author, name, logo or text from Boom
+Online. Confirm ownership before a commercial release.
+
+`tools/slice_map_blocks.gd` removed the white background and its grey shadows
+(flood fill from the sheet border; white inside a prop is kept), cut each prop
+and scaled it into `assets/obstacles/<name>/00.png` (128x128, standing on the
+bottom edge). No pixels were painted. `tools/render_level_previews.gd` draws
+`assets/map_previews/<id>.png` from these props and the existing tiles/heroes.
+
+Output SHA-256 (relative to assets/obstacles):
+afbb934c86ea19d5bbbbd4b222687eeee22411bc147157650fbd499e970100e6  ./brick_wall/00.png
+dfe5b39cc7425e96c0b31dfaa267efbc07ca0acd7f8bf5c6f501c940542b8d7b  ./stone_block/00.png
+7c576e16b13d3ac579396c9b3378e645efa6d5f4140d71d5bfd112fae1f8c223  ./mossy_stone/00.png
+f8b1fe7e1df09cbb5c576fc5dc492c842e0c28da6afc72d098600ac64c4beae6  ./wood_box/00.png
+adeeefbb7827926cdac6202f1c8e70a622c801b9d8ec20c40dc46cfeb9d5b293  ./metal_crate/00.png
+864c459ce67507ccbcbdfd243411b6a15523d1c8394eb9dde68f9ed1d84717a9  ./tnt_barrel/00.png
+ccc91e8279d6ac7cfc46391f0b77b82ff3a3edcc8c097e8be284d3c304ed9f36  ./rusty_barrel/00.png
+d7ad7abef8047b2f2e767f926c8b35280d635ac153ec44ceb2ec82f0f94f2069  ./tree_stump/00.png
+11c476d2003339e2568b268ecd6070e82e91c0c82dcb4cf0ea4bd6c2accc8b2d  ./round_tree/00.png
+d9a433b67df41a4a33391a7ba5e4dd71c2419a8449aca0e6b51ce3cea6cbd744  ./pine_tree/00.png
+0e447f20b12c4239846a8159aaf62e16914e18002143d5a22e6efb5c44d4057b  ./flower_bush/00.png
+7e1ac037d2efb98854b9f7f659a010761f71236379d4c16c47c6e0caac8dc2cf  ./cactus/00.png
+a07b8377f07322b75f90d2f494cabf0c53604bddef1016d8b5506241f9228fd6  ./bamboo/00.png
+0fb5ea23bfa30fbe94dd3f1c01664dada32ef359ff04930eec7b1910b45055ea  ./sandbags/00.png
+fc0e5bcc8a84fe2e10a27c444c254cf409014a364a121d99f0a080acef2e2d58  ./traffic_cone/00.png
+4cf96696b884b7e65dc4e676c186fea292c15b5a951c8dbc7b39008366208d5b  ./road_barrier/00.png
+8b2354fb095209874f30bdddcf078b12f8323b5c53073d30d43b71f32dec39fe  ./treasure_chest/00.png
+62f7e877df4f76d3ee45b68546cbdd2b8e04dac698a3a5e60db5b5de403dab81  ./ice_block/00.png
+32735a62bb9ab8dddd3211ac836a73edd760c8ef278f0b0b6126e2722d161112  ./crystal_block/00.png
+78c7a54839e19d806cedc1a925c08a4da42074c9189afcf66697d7faa1de1c4b  ./mushroom/00.png
+39df886a5b35fcd822bcc2f4f4cbb4f891865fb996f14fef15be2263be013696  ./pumpkin/00.png
+4c92ab3bb4f7118427694c47843cd990b169a8c9c168e18337eb1ead26758fa1  ./water_barrel/00.png
+c78cd8aa1877c7ce9be944248ff248ea757651006393dc06eb8d4e6b16c035e8  ./hazard_crate/00.png
+687b59d82b77466289639368e157f0e7b3d5868e31c6b9d79cf2bc6e9f8f522c  ./stone_lantern/00.png
+e135ad753a2228d93a2f73f1f4135f7130afb9aeedd85078845318e59c003c67  ./cracked_brick/00.png
+462698fd1c81a109b5c00de83d2713f7c2391fbb4f6292639f9a038dec3511cc  ./broken_box/00.png
+c9e65e5bad27b955ccfcf0c11373ccc8db75d419a262ec05fd513eed8ce6bb64  ./cracked_ice/00.png
+922baa7e33849bf5e399e5b90e97543868b98b055534281c74d29d57c5f256fe  ./cracked_stone/00.png

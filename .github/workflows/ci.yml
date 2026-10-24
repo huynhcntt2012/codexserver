@@ -51,6 +51,17 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npx playwright install --with-deps --only-shell chromium
+      - run: bash scripts/install-godot.sh /tmp/suni-godot
+      - run: bash scripts/install-godot-templates.sh
+      - name: Validate and export practice game
+        env:
+          GODOT: /tmp/suni-godot/godot
+        run: |
+          python3 apps/practice/tools/verify_step3.py
+          python3 scripts/build-practice.py --web-only
+          "$GODOT" --headless --path apps/practice --script res://tests/headless_smoke.gd
+          "$GODOT" --headless --path apps/practice --script res://tests/gameplay.gd
+          "$GODOT" --headless --path apps/practice --script res://tests/boss.gd
       - name: Create ephemeral CI configuration
         run: |
           echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)" >> .env
@@ -65,6 +76,7 @@ jobs:
           path: |
             build/web-screenshots
             build/web-test-results
+            docs/screenshots/step3
       - if: failure()
         run: docker compose logs --tail=120
       - if: always()

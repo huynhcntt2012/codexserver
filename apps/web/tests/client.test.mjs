@@ -5,7 +5,7 @@ import {
   ArenaClient,
   encodeAction,
   validateCredentials,
-} from '../public/network.mjs';
+} from '../public/classic/network.mjs';
 
 test('only intent enums can be encoded, with the Colyseus wire format', () => {
   assert.deepEqual([...encodeAction('bomb')], [13, 0, 164, 98, 111, 109, 98]);

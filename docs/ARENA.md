@@ -6,7 +6,9 @@ khai lại arena. Local: <http://127.0.0.1:2567/documents>.
 
 Tài liệu mô tả những gì đã có trong `apps/arena`, dành cho dev frontend, gameplay
 và backend. Web là client đang phát triển; Godot là client cũ. Cả hai dùng cùng
-room `arena` và snapshot version 1. Phiên bản đang khóa trong
+room `arena` và snapshot version 1. App PC (`apps/practice`) dùng room `arena2`
+và snapshot version 2 (chọn bản đồ, số phòng), xem
+[Phòng v2](#phong-v2-app-pc-room-arena2-va-snapshot-version-2). Phiên bản đang khóa trong
 [package.json](../apps/arena/package.json): `@colyseus/core` 0.17.52,
 `@colyseus/ws-transport` 0.17.13.
 
@@ -107,7 +109,7 @@ Luồng tích hợp:
    nghĩa** JWT được chấp nhận. Nhận `JOIN_ROOM` (10) rồi gửi ACK `[10]`.
 5. Nhận snapshot, gửi action theo định dạng dưới đây. Gửi `[12]` để rời phòng.
 
-Adapter có sẵn: [web network.mjs](../apps/web/public/network.mjs) và
+Adapter có sẵn: [web network.mjs](../apps/web/public/demo/network.mjs) và
 [Godot network.gd](../apps/client/scripts/network.gd). Đây là adapter cho wire
 protocol hiện tại, không phải SDK Colyseus tổng quát.
 
@@ -116,11 +118,13 @@ protocol hiện tại, không phải SDK Colyseus tổng quát.
 WebSocket dùng binary frame. Serializer là `none`, đã tắt Schema patches;
 không gửi action dưới dạng JSON text thuần.
 
-| Chiều           | Định dạng                          | Nội dung                                                           |
-| --------------- | ---------------------------------- | ------------------------------------------------------------------ |
-| Client → server | `[13, 0, 0xa0 + length, ...ASCII]` | `ROOM_DATA` (13), message type số `0`, MsgPack fixstr chứa action  |
-| Server → client | `[17, 1, ...UTF8_JSON]`            | `ROOM_DATA_BYTES` (17), message type số `1`, toàn bộ snapshot JSON |
-| Client → server | `[12]`                             | `LEAVE_ROOM`                                                       |
+| Chiều           | Định dạng                              | Nội dung                                                              |
+| --------------- | -------------------------------------- | --------------------------------------------------------------------- |
+| Client → server | `[13, 0, 0xa0 + length, ...ASCII]`     | `ROOM_DATA` (13), message type số `0`, MsgPack fixstr chứa action     |
+| Server → client | `[17, 1, ...UTF8_JSON]`                | `ROOM_DATA_BYTES` (17), message type số `1`, toàn bộ snapshot JSON    |
+| Client → server | `[17, 2, channel, ...audio]`           | Voice (app PC, [VOICE.md](VOICE.md)): 60 ms mu-law 16 kHz, ≤ 960 byte |
+| Server → client | `[17, 2, channel, n, ...id, ...audio]` | Voice chuyển tiếp; `id` (session) do server gắn                       |
+| Client → server | `[12]`                                 | `LEAVE_ROOM`                                                          |
 
 Action hợp lệ: `up`, `down`, `left`, `right`, `bomb`, `ready`.
 Ví dụ `bomb` là `[13, 0, 164, 98, 111, 109, 98]`. Server lấy danh tính từ
@@ -147,6 +151,38 @@ và `bombs[].owner` là session ID, không phải account ID. `slot` thuộc 0�
 cùng đơn vị và đồng hồ với `now`. Chỉ đọc winner như kết quả khi `finished`;
 `null` ở các phase khác không có nghĩa ván đã hòa. Khi `finished`, bom/lửa còn
 lại được giữ trong snapshot tới reset, không tiếp tục mô phỏng gameplay.
+
+## Phòng v2 (app PC): room `arena2` và snapshot version 2
+
+Room `arena` và snapshot v1 giữ nguyên, nên web và Godot cũ không đổi. App PC
+dùng room riêng `arena2`; client cũ không thấy phòng này trong `/rooms`.
+
+- Tạo phòng: `POST /matchmake/create/arena2` với `{ "token", "map", "hero"? }`;
+  `map` là một trong 15 id trong `maps.ts` (park, frost, coast và 12 map Boom World 17×13). Map lạ hoặc thiếu
+  thì lỗi, không tạo phòng. `joinOrCreate/arena2` lọc theo `map`
+  (`filterBy(['map'])`); `joinById/<roomId>` nhận `{ token, hero? }`.
+- `hero` thuộc `bombo`, `mimi`, `zin`, `lala`, `kai` và chỉ dùng để vẽ nhân vật.
+  Giá trị lạ được thay bằng nhân vật theo slot.
+- Bản đồ 15×11 hoặc 17×13 lấy layout từ `apps/practice/levels/*.json`
+  ([maps.ts](../apps/arena/src/maps.ts), test so khớp với file level).
+  Có 8 điểm xuất phát; thùng trong phạm vi 2 ô quanh điểm xuất phát bị bỏ.
+  Luật giữ như v1: 1 bom/người, tầm nổ 2, chưa có vật phẩm.
+- Snapshot v2 = v1 cộng `version: 2`, `map`, `number` (001–999, duy nhất
+  trong process), `roomKey` (khóa chat phòng của API
+  `arena:<process>:<roomId>`), `players[].hero`. `width`/`height` là 15/11.
+  Khi `phase` là `finished` có thêm `matchId` (`<process>.<roomId>.<round>`), là id
+  để client hỏi EXP đã chốt (`GET /v1/matches/{matchId}/exp`, [PROGRESSION.md](PROGRESSION.md)).
+- `GET /rooms/v2` cần Bearer JWT (cùng limit 120/IP/phút với `/rooms`), trả
+  `{ version: 2, rooms: [{ roomId, number, map, phase, players, maxPlayers,
+ready, joinable, accountIds }] }` cho phòng đang chờ **và** đang chơi.
+  `joinable` chỉ đúng khi đang chờ và còn ghế. `accountIds` là ID tài khoản
+  đang ngồi, dùng cho bộ lọc bạn bè; không có tên, token hay sessionId.
+- Sự kiện ingest gửi kèm `map_name`, nên lịch sử phòng/trận ghi đúng bản đồ.
+- Phòng luyện tập (`practice: true`): riêng tư, 4 ghế, bot server lấp ghế trống
+  ([bots.ts](../apps/arena/src/bots.ts)); xem [INVITES.md](INVITES.md).
+- Bản đồ do admin phát hành ([MAPS.md](MAPS.md)): `map` không có sẵn thì arena hỏi
+  `GET {API_URL}/v1/maps` (cache 15 giây), kiểm tra lại layout và 8 ghế rồi mới dựng
+  phòng; bản đồ chưa phát hành hoặc lỗi bị từ chối (400).
 
 ## Xác thực, giới hạn và lỗi cần xử lý
 
@@ -175,9 +211,10 @@ lại được giữ trong snapshot tới reset, không tiếp tục mô phỏng
 ## Phạm vi chưa có
 
 - Reconnect/resume, giữ chỗ khi mất mạng, vào giữa trận, chế độ xem riêng.
-- Chat, đội, phòng có mật khẩu, quyền chủ phòng/kick hoặc tùy chỉnh luật/map.
+- Đội, phòng có mật khẩu, quyền chủ phòng/kick, tùy chỉnh luật. Chat phòng do
+  API phụ trách; chọn bản đồ chỉ có ở room `arena2`.
 - Power-up, tăng số bom/tầm nổ, gameplay theo inventory/VIP, bot.
-- Xếp hạng, matchmaking theo kỹ năng, lịch sử kết quả lưu DB, replay.
+- Xếp hạng, matchmaking theo kỹ năng, replay.
 - Đồng bộ state bằng delta/Schema, ACK/sequence cho input, lag compensation.
 - Lưu/khôi phục trận khi restart, shared presence/matchmaking cho nhiều replica.
 

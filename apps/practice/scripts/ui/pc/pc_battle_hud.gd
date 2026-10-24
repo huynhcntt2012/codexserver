@@ -1,0 +1,275 @@
+extends "res://scripts/ui/pc/pc_kit.gd"
+## Full-screen battle HUD. The window keeps any aspect (no black bars): the arena
+## is scaled to fill the space left of a sidebar (map, time limit, players, exit)
+## and above a stats bar. Read-only view of `game` except pausing and the arena
+## placement it hands to `game.layout_arena`.
+const BANNER_TIME := 1.3
+const SIDEBAR := 260.0
+const BAR := 78.0
+const ItemUi := preload("res://scripts/ui/pc/battle_item_ui.gd")
+const MatchChat := preload("res://scripts/ui/pc/match_chat.gd")
+const VoicePanel := preload("res://scripts/ui/pc/voice_panel.gd")
+const BOT_LINES: Array = preload("res://scripts/ui/pc/pc_room.gd").BOT_LINES
+const GAP := 12.0
+## Offline bots say something every BOT_CHAT seconds or so (local only).
+const BOT_CHAT := Vector2(25.0, 45.0)
+
+var game: Node
+var map_label: Label
+var bots_label: Label
+var timer_label: Label
+var status_label: Label
+var banner: Label
+var players: Array[Dictionary] = []
+var stats: Dictionary = {}
+var sidebar: PanelContainer
+var bar: PanelContainer
+var frame: Panel
+var item_ui: RefCounted
+var arena_rect := Rect2()
+var laid_out_for := Rect2()
+var chat: Control
+var voice: Control
+var bot_clock := 0.0
+var seen_round := -1.0
+var alive_before: Dictionary = {}
+var rng := RandomNumberGenerator.new()
+
+func _init() -> void:
+	super("sky")
+	fill_screen = false
+
+func _ready() -> void:
+	name = "PcBattleHud"
+	setup()
+	sky.hide()
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Thin frame around the arena; transparent inside so the board stays visible.
+	frame = Panel.new()
+	var rim := box(Color.TRANSPARENT, Color("0d2f5c"), 18, 8, 0)
+	rim.draw_center = false
+	rim.shadow_color = Color(0.02, 0.12, 0.3, 0.35)
+	rim.shadow_size = 10
+	frame.add_theme_stylebox_override("panel", rim)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.add_child(frame)
+	item_ui = ItemUi.new(self, func(i): game.battle_items.select(i), func(): game.battle_items.use_selected(), func(): game.battle_items.toggle_mount())
+	build_sidebar()
+	build_bar()
+	# Offline chat: your lines, the bots' and match events stay on this PC.
+	chat = MatchChat.new(self, send_chat)
+	chat.team_note = "Luyện tập offline: mỗi người một đội."
+	canvas.add_child(chat)
+	voice = VoicePanel.new(self, open_voice_settings)
+	canvas.add_child(voice)
+	banner = title_text("BẮT ĐẦU!", 96, Color.WHITE, canvas)
+	banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	banner.add_theme_constant_override("outline_size", 22)
+
+func build_sidebar() -> void:
+	sidebar = card(Color("1567ae", 0.96), Color("74d3f0"), 22, 4, 12)
+	sidebar.mouse_filter = Control.MOUSE_FILTER_PASS
+	canvas.add_child(sidebar)
+	var stack := column(8, sidebar)
+	var head := row(6, stack)
+	map_label = stretch(title_text("", 20, Color.WHITE, head))
+	var pause := round_icon("gear", func(): game._pause_game(), "ghost", 40)
+	pause.tooltip_text = "Tạm dừng (Esc)"
+	pause.focus_mode = Control.FOCUS_NONE
+	head.add_child(pause)
+	text("● Luyện tập offline", 13, Color("7ff0c2"), stack)
+	var clock := PanelContainer.new()
+	clock.add_theme_stylebox_override("panel", lipped(Color("0d3f78"), Color("08284f"), 5))
+	stack.add_child(clock)
+	var clock_line := row(8, clock)
+	text("GIỚI HẠN", 15, Color("9fd7ff"), clock_line)
+	timer_label = title_text("", 34, Color.WHITE, clock_line)
+	timer_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var bots_line := row(6, stack)
+	text("Bot còn lại", 15, Color("d5f3ff"), bots_line)
+	spacer(bots_line)
+	bots_label = title_text("", 26, CORAL, bots_line)
+	bots_label.tooltip_text = "Bot còn lại"
+	text("NGƯỜI CHƠI", 14, Color("9fd7ff"), stack)
+	for i in 4:
+		var entry := card(Color("e9f6ff"), Color("9fd7ff"), 14, 3, 6)
+		stack.add_child(entry)
+		var line := row(8, entry)
+		var face_frame := card(Color("ffe9b0"), Color.WHITE, 24, 2, 0)
+		face_frame.custom_minimum_size = Vector2(40, 40)
+		line.add_child(face_frame)
+		var face := picture("", Vector2(38, 38))
+		face_frame.add_child(face)
+		var words := column(-2, line)
+		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var who := stretch(text("", 15, INK, words))
+		var state := text("", 12, MINT, words)
+		var kills := title_text("", 18, SUN, line)
+		kills.tooltip_text = "Hạ gục"
+		players.append({"line": entry, "face": face, "name": who, "state": state, "kills": kills})
+	spacer(stack, true)
+	item_ui.build_panel(stack)
+	var leave := candy("THOÁT RA", func(): game._pause_game(), "coral", 22)
+	leave.name = "Leave"
+	leave.tooltip_text = "Tạm dừng để về sảnh, chơi lại hoặc tiếp tục"
+	leave.focus_mode = Control.FOCUS_NONE
+	leave.custom_minimum_size = Vector2(0, 48)
+	stack.add_child(leave)
+
+func build_bar() -> void:
+	bar = card(Color("1567ae", 0.96), Color("74d3f0"), 20, 4, 8)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.add_child(bar)
+	var line := row(10, bar)
+	item_ui.build_bar(line)
+	spacer(line)
+	for spec in [["lives", "res://assets/items/heart.png"], ["bombs", "res://assets/items/extra_bomb.png"], ["range", "res://assets/items/flame.png"], ["speed", "res://assets/items/shoe.png"]]:
+		var chip := card(Color("e9f6ff"), Color("9fd7ff"), 14, 2, 4)
+		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		line.add_child(chip)
+		var chip_line := row(2, chip)
+		chip_line.add_child(picture(spec[1], Vector2(26, 26)))
+		stats[spec[0]] = text("", 14, INK, chip_line)
+	var score := card(Color("fff4d4"), SUN, 14, 2, 4)
+	score.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.add_child(score)
+	var score_line := row(6, score)
+	text("Điểm", 14, INK, score_line)
+	stats["score"] = title_text("", 20, SUN, score_line)
+	# Status toast and key hints float over the top edge of the arena.
+	status_label = text("", 15, Color.WHITE, canvas)
+	status_label.name = "Status"
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.add_theme_constant_override("outline_size", 8)
+	status_label.add_theme_color_override("font_outline_color", Color("0d2f5c"))
+	status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+## Board size of the loaded map in pixels (15x11 or 17x13 tiles of 64 px).
+func arena_size() -> Vector2:
+	return Vector2(game.columns * game.TILE, game.rows * game.TILE)
+
+## Places sidebar, bar and arena for the current window; the arena keeps the
+## map's proportions and grows to the largest size that fits.
+func layout() -> void:
+	var area := canvas.size
+	var key := Rect2(area, arena_size())
+	if key == laid_out_for or area.x <= 0.0:
+		return
+	laid_out_for = key
+	var side_x := area.x - SIDEBAR - GAP
+	sidebar.position = Vector2(side_x, GAP)
+	sidebar.size = Vector2(SIDEBAR, area.y - GAP * 2)
+	var left := Rect2(GAP, GAP, side_x - GAP * 2, area.y - BAR - GAP * 3)
+	bar.position = Vector2(GAP, area.y - BAR - GAP)
+	bar.size = Vector2(left.size.x, BAR)
+	var board := arena_size()
+	var fit := minf(left.size.x / board.x, left.size.y / board.y)
+	var size := board * fit
+	arena_rect = Rect2(left.position + (left.size - size) / 2.0, size)
+	frame.position = arena_rect.position - Vector2(8, 8)
+	frame.size = arena_rect.size + Vector2(16, 16)
+	banner.position = arena_rect.position
+	banner.size = arena_rect.size
+	chat.place(Vector2(GAP + 8, bar.position.y - GAP))
+	status_label.position = arena_rect.position + Vector2(0, 6)
+	status_label.size = Vector2(arena_rect.size.x, 26)
+	# Canvas units -> viewport units for the 2D world under the HUD.
+	game.layout_arena(Rect2(arena_rect.position * canvas.scale, arena_rect.size * canvas.scale), get_viewport_rect().size)
+
+func refresh() -> void:
+	if game.player.is_empty():
+		return
+	map_label.text = str(game.current_level.get("name", "")).capitalize()
+	bots_label.text = str(game.remaining_bots)
+	var seconds := int(ceil(game.remaining))
+	timer_label.text = "%d:%02d" % [seconds / 60, seconds % 60]
+	timer_label.add_theme_color_override("font_color", Color("ffe17b") if seconds <= 30 else Color.WHITE)
+	for i in players.size():
+		var entry: Dictionary = players[i]
+		(entry.line as Control).visible = i < game.fighters.size()
+		if i >= game.fighters.size():
+			continue
+		var actor: Dictionary = game.fighters[i]
+		var hero_index: int = game.HEROES.find(actor.hero)
+		(entry.face as TextureRect).texture = HeroPortrait.texture(actor.hero)
+		(entry.face as TextureRect).modulate.a = 1.0 if actor.alive else 0.45
+		(entry.name as Label).text = ("Bot " if actor.bot else "") + game.HERO_NAMES[hero_index].capitalize()
+		(entry.name as Label).add_theme_color_override("font_color", game.HERO_COLORS[hero_index].darkened(0.25))
+		(entry.state as Label).text = ("Đang chơi" if actor.bot else "Tim %d/3" % int(actor.lives)) if actor.alive else "Bị loại"
+		(entry.state as Label).add_theme_color_override("font_color", MINT.darkened(0.15) if actor.alive else CORAL)
+		(entry.kills as Label).text = "×%d" % int(actor.get("kills", 0))
+	stats["lives"].text = "%d/3" % int(game.player.lives)
+	stats["bombs"].text = "×%d" % int(game.player.bomb_capacity)
+	stats["range"].text = "%d" % int(game.player.bomb_range)
+	stats["speed"].text = "%.1f" % float(game.player.speed)
+	item_ui.render(game.battle_items.view())
+	stats["score"].text = grouped(game.score)
+	status_label.text = game.status_message if game.status_timeout > 0.0 else "Space: bom · 1-6: chọn vật phẩm · Ctrl: dùng · Q: thú cưỡi · Esc: tạm dừng"
+	banner.visible = game.game_state == "playing" and game.elapsed < BANNER_TIME
+	banner.modulate.a = clampf((BANNER_TIME - game.elapsed) / 0.4, 0.0, 1.0)
+
+func _process(delta: float) -> void:
+	super._process(delta)
+	if not is_visible_in_tree():
+		return
+	# Battle fills the monitor like the menus; no letterbox bars.
+	ScreenFill.set_fill(get_tree(), true)
+	layout()
+	refresh()
+	follow_match(delta)
+	# The voice pill sits right of the chat pill, or of the open chat panel.
+	voice.place(chat.position + Vector2(chat.WIDTH + 12 if chat.is_open() else 182, 0))
+
+func fighter_name(actor: Dictionary) -> String:
+	var hero_index: int = game.HEROES.find(actor.hero)
+	return ("Bot " if actor.bot else "") + game.HERO_NAMES[hero_index].capitalize()
+
+## System lines (start, knock-outs) and the bots' chatter for the chat panel.
+func follow_match(delta: float) -> void:
+	if game.player.is_empty():
+		return
+	if game.game_state == "playing" and game.elapsed < seen_round:
+		seen_round = -1.0  # a new round restarted the clock
+	if seen_round < 0.0 and game.game_state == "playing":
+		seen_round = 0.0
+		alive_before.clear()
+		chat.add_message("system", "", "Trận đấu bắt đầu! Hạ %d bot để thắng." % int(game.remaining_bots))
+		bot_clock = rng.randf_range(4.0, 8.0)
+	seen_round = maxf(seen_round, float(game.elapsed))
+	for actor in game.fighters:
+		var key := fighter_name(actor)
+		if alive_before.get(key, true) and not actor.alive:
+			chat.add_message("system", "", "%s đã bị loại." % key)
+		alive_before[key] = actor.alive
+	if game.game_state != "playing":
+		return
+	bot_clock -= delta
+	if bot_clock <= 0.0:
+		bot_clock = rng.randf_range(BOT_CHAT.x, BOT_CHAT.y)
+		bot_says()
+
+func bot_says() -> void:
+	var bots: Array = game.fighters.filter(func(a): return a.bot and a.alive)
+	if bots.is_empty():
+		return
+	var actor: Dictionary = bots[rng.randi() % bots.size()]
+	chat.add_message("player", fighter_name(actor), BOT_LINES[rng.randi() % BOT_LINES.size()], str(actor.hero))
+
+func send_chat(message: String) -> void:
+	chat.add_message("player", fighter_name(game.player), Settings.clean_chat(message), str(game.player.hero), false, true)
+	if rng.randf() < 0.6:
+		get_tree().create_timer(rng.randf_range(1.0, 2.5)).timeout.connect(bot_says)
+
+## Pauses and opens the voice settings on the pause screen (it draws above
+## this HUD). Returns the settings page.
+func open_voice_settings() -> Control:
+	if game.game_state == "playing":
+		game._pause_game()
+	var pause: Control = game.result.get_node("PcResult")
+	pause.open_settings()
+	pause.settings_page.audio_tab = "voice"
+	pause.settings_page.show_section("audio")
+	return pause.settings_page

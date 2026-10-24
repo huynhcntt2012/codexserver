@@ -1,8 +1,8 @@
-# Suni Bomb Arena
+# Bụp Bụp! / Suni Bomb Arena
 
 ## Chơi trên website — hướng phát triển hiện tại
 
-Bản web ở `apps/web` dùng API FastAPI và arena Colyseus hiện có: trang đăng ký/đăng nhập riêng, danh sách phòng chờ để chọn hoặc tạo phòng,
+Trang quảng bá ở `/` ([docs/PORTAL.md](docs/PORTAL.md)); bản web chơi thử ở `/demo/` (`apps/web/public/demo`) dùng API FastAPI và arena Colyseus hiện có: trang đăng ký/đăng nhập riêng, danh sách phòng chờ để chọn hoặc tạo phòng,
 sảnh sẵn sàng 2–8 người, di chuyển, đặt bom, kết quả và ván tiếp theo.
 Điều khiển bằng bàn phím hoặc nút cảm ứng, không cần cài ứng dụng.
 
@@ -11,16 +11,24 @@ sảnh sẵn sàng 2–8 người, di chuyển, đặt bom, kết quả và ván
 ```bash
 # Chuẩn bị .env như hướng dẫn bên dưới, rồi chạy:
 docker compose up -d --build --wait
-# Mở http://127.0.0.1:8081 trong hai tab để chơi thử.
+# Mở http://127.0.0.1:8081/demo/ trong hai tab để chơi thử.
 ```
 
 Web dùng `/api/` và `/arena/` cùng origin, chuyển tiếp tới API và WebSocket.
 Không cần đổi CORS hoặc nhập địa chỉ máy chủ trong giao diện. Phiên tài khoản
 chỉ giữ trong tab; tải lại trang cần đăng nhập lại.
 
-Đã dừng đóng gói desktop tự động trong CI; không tiếp tục cập nhật ứng dụng Linux.
-Mã Godot và các thay đổi có sẵn được giữ để tham khảo. Phần mô tả Godot bên dưới
-là tài liệu bản desktop cũ.
+Giao diện web và Windows hiện dùng bộ PNG trong hai ZIP người dùng cung cấp:
+Bombo, Mimi, Zin, Lala, Kai cùng nền xanh đậm, sân cỏ và bom nước.
+Xem [bộ nhân vật mới](docs/BOOM_ART.md) và [bản sửa di chuyển](docs/MOVEMENT.md).
+Desktop được đóng gói thủ công; CI chưa tự xuất bản desktop.
+
+**Chơi với bot (Step 3):** mở `/practice/` hoặc nút Chơi với bot trên trang `/demo/`.
+Cửa hàng/Trang bị demo dùng chung bản PC và Web: [hướng dẫn UI](docs/UI_SHOP_EQUIPMENT.md).
+Năm nhân vật với 120 frame di chuyển, 11 WAV, ba bản đồ, ba đối thủ AI,
+3 tim và 180 giây. Đây là chế độ chơi đơn; xem [hướng dẫn và build](docs/PRACTICE.md).
+Khi clone mới, cần export Godot theo hướng dẫn này trước khi build image web
+để đường dẫn `/practice/` tải được game.
 
 Xem [hướng dẫn web](docs/WEB.md), [danh sách công việc](docs/TASKS.md) và
 [kết quả kiểm thử](docs/VALIDATION.md).

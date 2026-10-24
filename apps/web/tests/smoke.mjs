@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { ArenaClient } from '../public/network.mjs';
+import { ArenaClient } from '../public/classic/network.mjs';
 
 // Run only against a development stack: creates a test account and a guest.
 const base = process.env.SUNI_WEB_URL || 'http://127.0.0.1:8081';
@@ -19,16 +19,28 @@ async function until(predicate, timeout = 15000) {
 }
 
 try {
+  // The site root is the public portal; /demo/ hosts the PC app's web build and
+  // the earlier JS client (tested below) lives at /classic/.
   const response = await fetch(base);
   assert.equal(response.status, 200);
-  assert.match(await response.text(), /Suni · Bomb Arena/);
+  assert.match(await response.text(), /BỤP BỤP! – Đặt bom nước/);
   assert.match(
     response.headers.get('content-security-policy'),
     /connect-src 'self'/,
   );
+  const demo = await fetch(`${base}/demo/`);
+  assert.equal(demo.status, 200);
+  assert.match(await demo.text(), /\/practice\/engine\/index\.html/);
+  const engine = await fetch(`${base}/practice/engine/index.pck`, {
+    method: 'HEAD',
+  });
+  assert.equal(engine.status, 200);
+  const classic = await fetch(`${base}/classic/`);
+  assert.equal(classic.status, 200);
+  assert.match(await classic.text(), /Bụp Bụp! · Đấu trường bóng nước/);
   assert.equal((await fetch(`${base}/.env`)).status, 404);
   assert.match(
-    (await fetch(`${base}/app.mjs`)).headers.get('content-type'),
+    (await fetch(`${base}/classic/app.mjs`)).headers.get('content-type'),
     /javascript/,
   );
   await assert.rejects(

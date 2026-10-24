@@ -1,0 +1,54 @@
+# Animated hero portraits (idle loop)
+
+Source: one sheet image of the five heroes in six idle poses (1448x1086,
+opaque WebP on a flat #333e4f background with drop shadows), supplied by the
+project owner in a Claude Code session on 2026-10-21, kept at
+`tools/source/hero_portraits_idle.webp` (338546 bytes).
+SHA-256: c9fa5541abcb700ed63d5650cd4105f3e312bcc7a0821b5279bdb3cbad5a08ce
+It replaces a hop sheet supplied on 2026-10-20, which is no longer used.
+
+Rows match the project's heroes (blue boy = bombo, pink girl = mimi, red boy =
+zin, golden girl = lala, green boy = kai); columns are one idle loop: stand,
+laugh, stand, wink, giggle, stand. It looks like image-generator output made
+for this project's heroes; its origin and rights were not independently
+verified, and it carries no author, name, logo or text from Boom Online.
+Confirm ownership before a commercial release.
+
+`tools/slice_hero_portraits.gd` turned the flat background into transparency
+(the drop shadows and anti-aliased edges into soft alpha, un-composited from
+the background colour), split the grid at its emptiest pixel columns and, per
+column, rows; kept each cell's figure and scaled each hero's frames by one
+factor into `assets/characters/portraits/<hero>/01-06.png` (160x160). No
+pixels were painted. The still `<hero>.png` portraits stay as the fallback.
+
+Output SHA-256 (relative to assets/characters/portraits):
+89ce51f414f6278dcbdb6b9443c7b683cd4c37acfa43dad9cf9cf15cffb0b21d  bombo/01.png
+0231241156d41ee94e3bf14b70872fbf532c61a4c8536512224221611d258006  bombo/02.png
+75d9f7276f3be5590368284caf494de9c815be45de059d299826f3e5ac5d29bf  bombo/03.png
+7032f7478d0f5b522c8729f3eb79b712af38d0b43089441900e1e5abfa14d113  bombo/04.png
+4897990f1a8b6a61ac699e1c0b81e01f7c776abd5226507d7b132bacb096bedb  bombo/05.png
+82bd9eb44e3234fa5faed5cff5c98067ebb2fdd3a30cd941d5466628bf57c117  bombo/06.png
+8eb0329c2b51602ceda5306d4038e5fe77dd58fe0d7dc86962f8b29f4a132e51  kai/01.png
+66a4ca314e1fea85ea381f0d39de8eaac37e3b5148d9a73673bb112096d5fb5e  kai/02.png
+d4a9d9be0216a8c70eae743816afbb0ede1a9d3a8b11f12990f8cfeab6d8a794  kai/03.png
+25b3919c66d8e535d9730c5a609faaff35293d21f7c30b6a26767f0769aeb965  kai/04.png
+14151f5c7b847b8a1856d2358007658af0e66bed9f3c113344793eaf37e64410  kai/05.png
+e59ed121552f1642add09ff6e984f89caeca8c0b21f2cc80f05a24d369f27cb3  kai/06.png
+653cd6fc9aea89088577050ff87d439484591ccf6e56efc2ccb89d261ccef371  lala/01.png
+2471095a6476fa864bb469173def57af8fff0552a3c4e9345bdcf05c15c88835  lala/02.png
+5188f625276671f8de036f83cec95ac5826f4b0d319c7d786e00cd7ba1c8d33b  lala/03.png
+849d2cf1df269f7e8b3c1c0cdeeff6f6a6dcddc4348c7ee8ab98af07ba02c677  lala/04.png
+3809da5d6c9da4392da253ad0017683463624e24ad72ebb8036e49b50d11b6c0  lala/05.png
+ca1089480a32e8a114e909466141ad643af38c9b3543fdbc5bf3cc4647fbcc14  lala/06.png
+e006419358868448cd98083af14a2486bcc92fd0ccdfb9ec9136b3500852eee4  mimi/01.png
+b079e474bc56acec5eeb151b84d615c9e3971829e51b8a6abbcc2a6b24ba3ba2  mimi/02.png
+23992974e31c088c93a33322f7c9bba2016f26242d581c6de98bce6ce9c976c5  mimi/03.png
+249ea56d7aa8d6fd8eb6ba0430b7808d06de2c9388f23c266d546261933b55dc  mimi/04.png
+2a8f0c743807afe15252545e4d4bc8e875a6998c31edf77a81aa1f771045cead  mimi/05.png
+b23a1830a4ce48d37311675b1e3e0b487ebff3fcddd7e034f6dca40ba37c865b  mimi/06.png
+2c46bf1f8a929cb48f880cb9c78e88e176efd126418bee07e7001d478f08e7a0  zin/01.png
+0419673d444be30a7d2801f2848331d2307a2b8b18ef8e7a8182c9d778a94675  zin/02.png
+08adf41ce06b0c75c46732707ead120aaf52fbbd4c24492c74fc782def328ecb  zin/03.png
+65af771747b3c9fa9684b5b7b9c1cf1b59a2ae2a3865d1a3fcd75c338ecfa1ec  zin/04.png
+650bc2a4edfbfcadae9e4861a40d684cb19cd967bb9bd5fb68391f51fd1972fe  zin/05.png
+e97d4910e489df8afbd416593e333e22e5d6612107e35f8f3a8237baf9abc508  zin/06.png

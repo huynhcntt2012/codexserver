@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#113f6b" />
+    <title>Bụp Bụp! · Chơi trên web</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/demo/demo.css" />
+    <script type="module" src="/demo/demo.mjs"></script>
+  </head>
+  <body>
+    <header>
+      <a href="/">← Trang chủ</a>
+      <h1>Bụp Bụp! · Bản web</h1>
+      <span class="hint">Cùng bản với app PC · lần đầu tải mất vài giây</span>
+      <a href="/download/">Tải app PC</a>
+      <button id="fullscreen" type="button">Toàn màn hình</button>
+    </header>
+    <!-- The same Godot build as the PC app (apps/practice), exported for the web. -->
+    <iframe
+      id="game"
+      title="Bụp Bụp! — Đấu trường bóng nước"
+      src="/practice/engine/index.html"
+      allow="autoplay; fullscreen"
+    ></iframe>
+  </body>
+</html>

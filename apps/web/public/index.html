@@ -3,211 +3,309 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0b1820" />
+    <title>BỤP BỤP! – Đặt bom nước, đấu trí cùng bạn bè</title>
     <meta
       name="description"
-      content="Suni Bomb Arena — đặt bom, né nhanh và chơi cùng bạn bè ngay trên trình duyệt."
+      content="BỤP BỤP! – game đặt bom nước vui nhộn, đấu trí cùng bạn bè. Tải miễn phí cho Windows hoặc chơi demo trên Web."
     />
-    <title>Suni · Bomb Arena</title>
-    <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/style.css" />
-    <script type="module" src="/app.mjs"></script>
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#13306b" />
+    <link rel="canonical" href="https://boom.sunifactory.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BỤP BỤP!" />
+    <meta
+      property="og:title"
+      content="BỤP BỤP! – Đặt bom nước, đấu trí cùng bạn bè"
+    />
+    <meta
+      property="og:description"
+      content="BỤP BỤP! – game đặt bom nước vui nhộn, đấu trí cùng bạn bè. Tải miễn phí cho Windows hoặc chơi demo trên Web."
+    />
+    <meta property="og:url" content="https://boom.sunifactory.com/" />
+    <meta
+      property="og:image"
+      content="https://boom.sunifactory.com/img/gameplay-online.webp"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/assets/characters/portraits/bombo.png" />
+    <link rel="preload" as="image" href="/assets/ui/launch/logo_bupbup.png" />
+    <link rel="stylesheet" href="/portal.css?v=8563786c09" />
+    <script type="module" src="/portal.js?v=8563786c09"></script>
   </head>
-  <body>
-    <header class="topbar">
-      <a class="brand" href="/" aria-label="Suni Bomb Arena"
-        ><span class="brand-icon">S</span> SUNI
-        <span class="brand-sub">BOMB ARENA</span></a
-      >
-      <span class="edition"
-        >PHIÊN BẢN WEB <span class="pill">PLAYTEST</span></span
-      >
+  <body data-page="home">
+    <a class="skip" href="#main">Bỏ qua tới nội dung</a>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="logo" href="/"
+          ><img
+            src="/assets/ui/launch/logo_bupbup.png"
+            alt="BỤP BỤP!"
+            width="165"
+            height="56"
+        /></a>
+      </div>
     </header>
-    <main>
-      <nav class="steps" aria-label="Các bước vào chơi">
-        <span data-step="auth">01 · Tài khoản</span>
-        <span data-step="rooms">02 · Chọn phòng</span>
-        <span data-step="lobby">03 · Sẵn sàng</span>
-        <span data-step="game">04 · Vào trận</span>
-      </nav>
-      <section id="auth-panel" class="auth-layout" aria-labelledby="auth-title">
-        <div class="auth-intro">
-          <p class="eyebrow">MỘT SÂN ĐẤU. TÁM PHI CÔNG.</p>
-          <h1>Hẹn nhau.<br /><em>Trong đấu trường.</em></h1>
-          <p class="muted">
-            Đăng nhập, chọn phòng và chờ đồng đội.<br />Một ván vui bắt đầu khi
-            tất cả sẵn sàng.
-          </p>
-          <div class="pilot-mark" aria-hidden="true"><span></span></div>
-          <p class="eyebrow">NEON GARDEN · 2–8 NGƯỜI CHƠI</p>
-        </div>
-        <div class="side-panel auth-card">
-          <p class="eyebrow">CHÀO MỪNG PHI CÔNG</p>
-          <h2 id="auth-title" tabindex="-1">Đăng nhập</h2>
-          <p id="auth-description" class="muted">
-            Đăng nhập để xem danh sách phòng chờ.
-          </p>
-          <form id="auth-form">
-            <div id="credentials">
-              <label for="username">Tên tài khoản</label>
-              <input
-                id="username"
-                name="username"
-                autocomplete="username"
-                placeholder="Ví dụ: phi_cong_01"
-                minlength="3"
-                maxlength="24"
-                pattern="[a-z0-9_]{3,24}"
-                required
+    <main id="main">
+      <section class="hero">
+        <div class="wrap">
+          <div class="hero-side left">
+            <a class="event-badge" id="event-badge" href="/events/">
+              <img
+                src="/assets/ui/launch/mascot_pip.svg"
+                alt=""
+                width="64"
+                height="64"
               />
-              <p class="field-hint">3–24 ký tự: chữ thường, số hoặc dấu _</p>
-              <label for="password">Mật khẩu</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autocomplete="current-password"
-                minlength="10"
-                maxlength="128"
-                placeholder="Từ 10 ký tự"
-                required
-              />
-              <div id="confirmation" hidden>
-                <label for="confirm">Nhập lại mật khẩu</label>
-                <input
-                  id="confirm"
-                  name="confirmation"
-                  type="password"
-                  autocomplete="new-password"
-                  minlength="10"
-                  maxlength="128"
-                  disabled
-                />
-              </div>
-            </div>
-            <button class="primary" id="join" type="submit">Đăng nhập →</button>
-          </form>
-          <p class="auth-switch">
-            <span id="auth-switch-copy">Chưa có tài khoản?</span>
-            <a id="auth-switch" href="#register">Đăng ký</a>
-          </p>
-        </div>
-      </section>
-      <section
-        id="rooms-panel"
-        class="rooms-panel"
-        aria-labelledby="rooms-title"
-        hidden
-      >
-        <div class="intro">
-          <div>
-            <p class="eyebrow">CHỌN ĐIỂM HẸN CỦA BẠN</p>
-            <h1 id="rooms-title" tabindex="-1">
-              Danh sách <em>phòng chờ.</em>
-            </h1>
-            <p>Vào một phòng bên dưới, hoặc tạo phòng mới và rủ bạn bè.</p>
-          </div>
-          <div id="session-panel" class="account-menu">
-            <span id="session-name"></span>
-            <button class="text-button" id="logout">Đăng xuất</button>
-          </div>
-        </div>
-        <div class="room-toolbar">
-          <p id="rooms-summary" class="muted" role="status">
-            Đang tải phòng chờ…
-          </p>
-          <div class="room-actions">
-            <button id="refresh-rooms" class="secondary">Làm mới</button>
-            <button id="create-room" class="primary">+ Tạo phòng mới</button>
-          </div>
-        </div>
-        <p id="rooms-empty" class="empty-state" hidden>
-          Chưa có phòng chờ nào. Tạo phòng mới để mời mọi người cùng chơi!
-        </p>
-        <div id="rooms-list" class="rooms-list"></div>
-        <p class="field-hint">
-          Danh sách tự cập nhật mỗi 5 giây. Chỉ hiển thị phòng đang chờ; mỗi
-          phòng tối đa 8 người.
-        </p>
-      </section>
-      <section id="play-panel" hidden aria-label="Phòng chơi">
-        <div class="intro">
-          <div>
-            <p class="eyebrow">HẸN NHAU TRONG SẢNH</p>
-            <h1 id="play-title" tabindex="-1">Phòng chờ</h1>
-          </div>
-          <div class="connection">
-            <span id="connection-dot"></span
-            ><span id="connection">Chưa vào phòng</span>
-          </div>
-        </div>
-        <div id="play-layout" class="game-layout lobby-layout">
-          <section class="arena-panel" aria-label="Sân đấu">
-            <div class="panel-bar">
               <span
-                ><span class="live-dot"></span> NEON GARDEN
-                <small>/ 01</small></span
-              ><span id="round">2–8 NGƯỜI CHƠI</span>
-            </div>
-            <div class="board-wrap">
-              <canvas
-                id="board"
-                width="720"
-                height="624"
-                aria-label="Bản đồ trận đấu; dùng WASD hoặc phím mũi tên để di chuyển, Space đặt bom"
-              ></canvas>
-              <div class="board-overlay" id="overlay">
-                <span class="eyebrow" id="overlay-tag"
-                  >SÂN ĐẤU ĐÃ SẴN SÀNG</span
-                >
-                <h2 id="overlay-title">Chuẩn bị vào trận.</h2>
-                <p id="overlay-detail">
-                  Trận đấu bắt đầu khi tất cả người chơi sẵn sàng.
-                </p>
-              </div>
-            </div>
-            <div class="board-footer">
-              <span><kbd>W A S D</kbd> / <kbd>↑ ↓ ← →</kbd> Di chuyển</span
-              ><span><kbd>SPACE</kbd> Đặt bom</span>
-            </div>
-          </section>
-          <aside class="side-panel">
-            <div id="room-panel" hidden>
-              <p class="eyebrow" id="room-id">PHÒNG CHƠI</p>
-              <h2 id="room-title">Sảnh chờ</h2>
-              <p class="muted" id="room-hint">
-                Cần ít nhất hai người để bắt đầu.
-              </p>
-              <ol id="roster" class="roster"></ol>
-              <button id="ready" class="primary">
-                Sẵn sàng <span>[R]</span></button
-              ><button id="leave" class="secondary">Rời phòng</button>
-            </div>
-          </aside>
-        </div>
-        <div
-          id="touch-controls"
-          class="touch-controls"
-          aria-label="Điều khiển cảm ứng"
-          hidden
-        >
-          <div class="dpad">
-            <button data-action="up" aria-label="Lên">↑</button
-            ><button data-action="left" aria-label="Trái">←</button
-            ><button data-action="down" aria-label="Xuống">↓</button
-            ><button data-action="right" aria-label="Phải">→</button>
+                ><span class="tag">Sự kiện mới</span
+                ><strong>Sự kiện hằng tuần</strong
+                ><small>Nhận quà mỗi ngày</small></span
+              >
+            </a>
           </div>
-          <button class="bomb-button" data-action="bomb">ĐẶT BOM</button>
+          <div class="hero-copy">
+            <div class="hero-cast" aria-hidden="true">
+              <img
+                src="/assets/characters/portraits/zin.png"
+                alt=""
+                width="104"
+                height="104"
+              />
+              <img
+                src="/assets/characters/portraits/mimi.png"
+                alt=""
+                width="104"
+                height="104"
+              />
+              <img
+                src="/assets/characters/portraits/bombo.png"
+                alt=""
+                width="130"
+                height="130"
+              />
+              <img
+                src="/assets/characters/portraits/lala.png"
+                alt=""
+                width="104"
+                height="104"
+              />
+              <img
+                src="/assets/characters/portraits/kai.png"
+                alt=""
+                width="104"
+                height="104"
+              />
+            </div>
+            <h1 class="hero-title" id="hero-title">
+              Đặt bom nước<span>Đấu trí cùng bạn bè!</span>
+            </h1>
+            <p class="ribbon" id="hero-sub">
+              Trận đấu vui nhộn · 5 nhân vật · 15 bản đồ
+            </p>
+            <div class="hero-cta">
+              <a
+                class="btn btn-sun btn-lg"
+                href="/download/"
+                data-cta="download"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14" /></svg
+                >Tải game ngay</a
+              >
+              <a
+                class="btn btn-sky btn-lg"
+                href="/demo/"
+                data-demo
+                data-cta="play"
+                ><svg
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M7 4.5v15l12.5-7.5z" /></svg
+                >Chơi demo</a
+              >
+            </div>
+            <ul class="platforms" aria-label="Nền tảng">
+              <li>
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M3 5.2 10.4 4v7.3H3zm8.5-1.4L21 2.4v8.9h-9.5zM3 12.7h7.4V20L3 18.8zm8.5 0H21v8.9l-9.5-1.4z"
+                  /></svg
+                >Windows
+              </li>
+              <li>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path
+                    d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"
+                  /></svg
+                >Web Demo
+              </li>
+              <li class="soon">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M6 9h12v8a1.5 1.5 0 0 1-1.5 1.5H15V21h-2v-2.5h-2V21H9v-2.5H7.5A1.5 1.5 0 0 1 6 17zM6.2 8a5.8 5.8 0 0 1 11.6 0z"
+                  /></svg
+                >Sắp có Android
+              </li>
+              <li class="soon">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8s-1.8-.8-3-.8C7 7.3 5.5 8.3 4.7 9.8c-1.7 2.9-.4 7.2 1.2 9.6.8 1.2 1.7 2.5 3 2.4 1.2 0 1.6-.8 3-.8s1.8.8 3 .8c1.3 0 2.1-1.2 2.9-2.4.9-1.3 1.3-2.6 1.3-2.7 0 0-2.6-1-2.7-4.1zM14.1 5.6c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.7-1.3z"
+                  /></svg
+                >Sắp có iOS
+              </li>
+            </ul>
+          </div>
+          <div class="hero-side">
+            <button
+              class="video-card"
+              type="button"
+              data-gallery="0"
+              aria-label="Xem ảnh gameplay"
+            >
+              <img
+                src="/img/gameplay-online.webp"
+                alt=""
+                width="300"
+                height="169"
+              />
+              <span class="play"
+                ><span
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M7 4.5v15l12.5-7.5z" /></svg></span
+              ></span>
+              <span class="caption">Xem gameplay</span>
+            </button>
+          </div>
         </div>
       </section>
-      <p id="status" role="status" aria-live="polite">
-        Đăng nhập hoặc tạo tài khoản để bắt đầu.
-      </p>
+
+      <div class="wrap">
+        <nav class="features" aria-label="Điểm nổi bật">
+          <a class="feature" href="/characters/"
+            ><span class="art"
+              ><img
+                src="/assets/ui/launch/mascot_pip.svg"
+                alt=""
+                width="80"
+                height="84" /></span
+            ><strong>5 Nhân vật đặc biệt</strong
+            ><small>Phong cách đa dạng</small></a
+          >
+          <a class="feature" href="/maps/"
+            ><span class="art"
+              ><img
+                src="/assets/level_previews/park.png"
+                alt=""
+                width="114"
+                height="84" /></span
+            ><strong>15 Bản đồ phong phú</strong
+            ><small>Nhiều chủ đề hấp dẫn</small></a
+          >
+          <a class="feature" href="/guide/#items"
+            ><span class="art"
+              ><img
+                src="/assets/items/ice.png"
+                alt=""
+                width="84"
+                height="84" /></span
+            ><strong>Vật phẩm độc đáo</strong
+            ><small>Chiến thuật bất ngờ</small></a
+          >
+          <a class="feature" href="/events/"
+            ><span class="art"
+              ><img
+                src="/assets/items/mystery.png"
+                alt=""
+                width="84"
+                height="84" /></span
+            ><strong>Sự kiện hằng tuần</strong
+            ><small>Quà tặng cực hot</small></a
+          >
+          <a class="feature" href="/rankings/"
+            ><span class="art"
+              ><img
+                src="/assets/ui/launch/mascot_nop.svg"
+                alt=""
+                width="80"
+                height="84" /></span
+            ><strong>Cộng đồng sôi động</strong><small>Tham gia ngay!</small></a
+          >
+        </nav>
+
+        <section class="section" aria-labelledby="news-title">
+          <div class="section-head">
+            <h2 id="news-title">Tin tức mới nhất</h2>
+            <a href="/news/">Xem tất cả →</a>
+          </div>
+          <div class="grid grid-3 home-news" id="home-news"></div>
+        </section>
+
+        <section class="section" aria-labelledby="heroes-title">
+          <div class="section-head">
+            <h2 id="heroes-title">Nhân vật</h2>
+            <a href="/characters/">Xem tất cả →</a>
+          </div>
+          <div class="grid grid-5" id="home-characters"></div>
+        </section>
+
+        <section class="section" aria-labelledby="maps-title">
+          <div class="section-head">
+            <h2 id="maps-title">Bản đồ</h2>
+            <a href="/maps/">Xem 15 bản đồ →</a>
+          </div>
+          <div class="grid grid-4" id="home-maps"></div>
+        </section>
+      </div>
+
+      <div class="wrap">
+        <section class="cta-band">
+          <h2>Sẵn sàng đặt quả bom nước đầu tiên?</h2>
+          <p>
+            Miễn phí · Không cần thẻ thanh toán · Chơi cùng bạn bè hoặc luyện
+            tập với bot
+          </p>
+          <div class="hero-cta">
+            <a class="btn btn-sun btn-lg" href="/download/" data-cta="download"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14" /></svg
+              >Tải game ngay</a
+            ><a class="btn btn-sky btn-lg" href="/demo/" data-demo
+              ><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M7 4.5v15l12.5-7.5z" /></svg
+              >Chơi demo</a
+            >
+          </div>
+        </section>
+      </div>
     </main>
-    <footer>
-      <span
-        >SUNI <span class="muted">/ Trò chơi nhỏ, những trận vui.</span></span
-      ><span>Đồ họa nguyên bản · <a href="/LICENSE.txt">MIT License</a></span>
-    </footer>
+    <footer class="site-footer"></footer>
   </body>
 </html>

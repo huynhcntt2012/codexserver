@@ -1,0 +1,110 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/launch/hero_stage.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/launch/mascot_pip.png" id="2"]
+
+[ext_resource type="Texture2D" path="res://assets/ui/launch/mascot_nop.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/ui/launch/fx_bubble.png" id="4"]
+
+[node name="HeroStage" type="Control"]
+mouse_filter = 2
+
+script = ExtResource("1")
+
+[node name="Pip" type="TextureRect" parent="."]
+offset_left = 65.0
+offset_top = 203.0
+offset_right = 369.0
+offset_bottom = 538.0
+texture = ExtResource("2")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+[node name="Nop" type="TextureRect" parent="."]
+offset_left = 912.0
+offset_top = 203.0
+offset_right = 1216.0
+offset_bottom = 538.0
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+
+[node name="Bubble1" type="TextureRect" parent="."]
+offset_left = 94.0
+offset_top = 255.0
+offset_right = 136.0
+offset_bottom = 297.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+
+[node name="Bubble2" type="TextureRect" parent="."]
+offset_left = 343.0
+offset_top = 224.0
+offset_right = 366.0
+offset_bottom = 247.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+
+[node name="Bubble3" type="TextureRect" parent="."]
+offset_left = 910.0
+offset_top = 184.0
+offset_right = 941.0
+offset_bottom = 215.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+
+[node name="Bubble4" type="TextureRect" parent="."]
+offset_left = 1170.0
+offset_top = 298.0
+offset_right = 1216.0
+offset_bottom = 344.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+
+[node name="Bubble5" type="TextureRect" parent="."]
+offset_left = 373.0
+offset_top = 465.0
+offset_right = 393.0
+offset_bottom = 485.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+
+[node name="Bubble6" type="TextureRect" parent="."]
+offset_left = 869.0
+offset_top = 431.0
+offset_right = 887.0
+offset_bottom = 449.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+
+[node name="Bubble7" type="TextureRect" parent="."]
+offset_left = 1031.0
+offset_top = 566.0
+offset_right = 1059.0
+offset_bottom = 594.0
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
+
+

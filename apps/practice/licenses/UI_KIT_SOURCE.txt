@@ -1,0 +1,40 @@
+# Mailbox UI kit (buttons and icons)
+
+Source: "button.zip" (9 PNG, 1448x1086 or 1254x1254, RGBA), supplied by the
+project owner in a Claude Code session on 2026-10-23 with the request to make
+the buttons and icons consistent.
+ZIP SHA-256: 15135434b0de0c8ec4d0ce3fe102dbc8aa5b65ba509ce0ae645105e1981f0860
+
+The PNGs were re-saved unchanged as lossless WebP in
+apps/practice/tools/source/ui_kit (original file name -> WebP, PNG SHA-256):
+- 1b5fbca0-4447-4370-bf14-875dd39c9745.png -> currency.webp
+  fd5e5672ef8efc7668181f3b9c1af5a885d61d81599206542ee891280d8e82a7
+- 2245f0c2-8021-4573-96b2-f2b99c13da53.png -> close.webp
+  3a8d0fe848c45952a409acacae78d7243f51b0b583e54a52ab27a4b547bceede
+- 2c8e7652-416c-4da0-a98f-4d34dde0f67e.png -> tabs.webp
+  b5e52987df57be02c56d49f312522b3b9d0108ca294cf38918990a9e8340a564
+- 80da3a18-b724-4bc5-b001-6b713c467528.png -> bulk_buttons.webp
+  f31019936d864814649ed24e9aa4d9f692b5f7305df9b4455b05533108cdecbb
+- 857a3f97-9a8a-40f6-8969-c0ef0ecaf7c4.png -> categories.webp
+  499fbd3b39157ced8fbc6e38b75c5be656133ba635c7cb55b6ba993a3bca1a5e
+- c7992757-901e-4580-a584-85aab309b21f.png -> mail_badge.webp
+  a1fbabcc695cff89e4a45faae3c41ef2128bc3330ff8fa62c1bf557e93b103f9
+- cd461f0e-33f3-42f1-a2ca-2d5ce95eeb7a.png -> status.webp
+  8afc9db62b4278d92954ac516e634a3665276e03549811b0cd48fdeb8aa42a02
+- eec5fe29-e225-422f-97be-62fb901092e8.png -> action_buttons.webp
+  2646b6a0b3c7608d1de0f4cf552a76e4b5a41f9ac077f066170a126b8baad599
+- fbb361f0-12df-4b5d-9fd1-9da94427c0df.png -> winged_mail.webp
+  f22aa84bb080588c160364551d723ef79614e25ff8d06ac1834fecf5cc54da96
+
+tools/slice_ui_kit.gd cut them into apps/practice/assets/ui/kit: whole
+stickers (icon_*.png), blank pill buttons rebuilt from each button's own left
+cap and clean middle column (button_*.png; ghost, lavender and off are the
+blue pill recoloured) and the small icon at the start of each button keyed off
+its body colour (glyph_*.png). The words baked into the kit buttons are not
+used; labels are drawn by Godot. Only cutting, keying, recolouring and
+scaling; no pixels painted.
+
+Origin and rights of the kit were not independently verified (the images look
+AI-generated and carry no author). They contain no name, logo or text from
+Boom Online. Confirm ownership before a commercial release; not relicensed
+under MIT.

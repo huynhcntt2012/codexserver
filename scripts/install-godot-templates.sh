@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install only the desktop release templates into a project-local data directory.
+# Install desktop and single-threaded web release templates locally.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 version=4.4.1
@@ -15,7 +15,7 @@ if [[ ! -f "build/downloads/$archive" ]]; then
 fi
 printf '%s  %s\n' "$checksum" "build/downloads/$archive" | sha512sum --check
 unzip -jo "build/downloads/$archive" \
-  templates/linux_release.x86_64 templates/windows_release_x86_64.exe templates/version.txt \
+  templates/linux_release.x86_64 templates/windows_release_x86_64.exe templates/web_nothreads_release.zip templates/version.txt \
   -d "$destination"
 chmod +x "$destination/linux_release.x86_64"
-echo "Desktop templates installed in $destination"
+echo "Desktop and web templates installed in $destination"

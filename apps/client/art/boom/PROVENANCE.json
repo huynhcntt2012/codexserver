@@ -1,0 +1,30 @@
+{
+  "source": "Game_Boom_Godot_Demo.zip and Game_Boom_Starter_Assets.zip supplied by user",
+  "note": "Source describes original AI-generated starter art. Imported unchanged; no claim of exclusive ownership or final commercial clearance.",
+  "files": {
+    "backdrop.png": "a9654ade1b485cd5d9341187d6b5b03042ea901a5dcb70645f18033e1b4dbcc8",
+    "spritesheets/bombo.png": "7aaf6ceaf614bf7249b63a1ad6c4b922fa412019247d1bab02d0b88756548408",
+    "spritesheets/mimi.png": "625497c6d8b7ee8d7be7c6c39210f03c6227874ff36b60ede63d8cc27d48e99e",
+    "spritesheets/zin.png": "25e753fcdee442980c42d74a20d195cfdb3ba471605329d731b1ccc34429a951",
+    "spritesheets/lala.png": "f6399839983c7c4976f48c49322797d0bbf0b7042370e1295ac79c091f053fb5",
+    "spritesheets/kai.png": "d482c5f3a43342dd6a64488ed2da8b64e29774e5e28a4f1485f86301f7cc055c",
+    "characters/portraits/bombo.png": "55a304d7c7fea52efee31740dad0e7de61d45b8ab5e63aacf933add6b1b4eccb",
+    "characters/portraits/mimi.png": "0a635c9490144b3f9cc58902c61120f67478cae0dd091f10836619052db27d90",
+    "characters/portraits/zin.png": "b782525f80b43c5e83cf67ee9640d79b2fa432d95517d4656d15e29cb44ab04a",
+    "characters/portraits/lala.png": "cd1536c21c8e309f662ff93e60df31b8f85016beacaaf2af6dfc0ed73e77d4c3",
+    "characters/portraits/kai.png": "4a00cadde93ad96916627298b5ff2abf2e3a938396498809bd1716d1c31ccb43",
+    "tiles/grass/0_0.png": "683d88b26ea39e60777e7aac00881ecbd7f75028cb945967846e58cafaa28ae9",
+    "tiles/grass/0_1.png": "55a8c84a717aace36a41a6ae526639c1354053049131e81730bcac8be2634900",
+    "tiles/grass/1_0.png": "d30750d6d7d9d3cb4c08ac71a8a274a53264e849fe7103dcbac88b02eb297a07",
+    "tiles/grass/1_1.png": "ab841a0c846178a53459c6b245f8cd8fbdb3496be0ea53c97a65c17760d0f76f",
+    "obstacles/stone_wall/00.png": "dca0b951bf41df3ccd12a9d11a3dffba2bb07235a710676c9f4bef3a26a034a6",
+    "obstacles/wood_crate/00.png": "d399c319c79467d3f3280c65a20dab3ad1a37afa056dd582640d8c815019b101",
+    "bombs/water_blue.png": "60ebb2090d1e0272522fbde1af16b05ce0fd99495b242793bac06318a8ae363c",
+    "effects/water_splash/00.png": "46175e5e0aa824a4e45f800cf86d95d3d69fc72fd410f1d88beb67dff03bd279",
+    "effects/water_splash/01.png": "dd483ceaf6f312417bdf083593ab26ee56f3e762ee0b56f1b6e28b5cb1f9934a",
+    "effects/water_splash/02.png": "850c4d899b9d8c49036e242ef0243b3496ff922e78f62dba4e93ecc1394ed68f",
+    "effects/water_splash/03.png": "2c8cba14a8c5eec01171747f5d3d546a78cb1077d38ba5fbb3bc41df6ff2243b",
+    "effects/water_splash/04.png": "436836574a6a10b0443e884a6b49f01a22b472dba4365a64ba02570a3d130230",
+    "effects/water_splash/05.png": "073482dbca577c48bb1537fafbfb429cff0e6e411b45102859c9b434b77a053a"
+  }
+}

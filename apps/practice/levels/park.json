@@ -1,0 +1,55 @@
+{
+  "id": "park",
+  "name": "CÔNG VIÊN KẸO",
+  "subtitle": "Dễ • Thùng gỗ và bụi cây",
+  "theme": "grass",
+  "crate": "wood_box",
+  "wall": "pine_tree",
+  "bomb": "water_blue",
+  "fx": "water_splash",
+  "bot_step": 0.39,
+  "bot_bomb": 3.0,
+  "bg": "#8ACD65",
+  "columns": 15,
+  "rows": 11,
+  "layout": [
+    "###############",
+    "#.......C.....#",
+    "#.#.#.#.#C#.#.#",
+    "#...C.C..CC...#",
+    "#.#C#C#.#C#.#.#",
+    "#.............#",
+    "#.#C#.#.#.#.#.#",
+    "#...C.........#",
+    "#.#.#C#.#.#.#.#",
+    "#.....C.......#",
+    "###############"
+  ],
+  "spawns": [
+    [
+      1,
+      1
+    ],
+    [
+      13,
+      1
+    ],
+    [
+      13,
+      9
+    ],
+    [
+      1,
+      9
+    ]
+  ],
+  "walls": [
+    "pine_tree",
+    "stone_block"
+  ],
+  "crates": [
+    "wood_box",
+    "flower_bush",
+    "tree_stump"
+  ]
+}

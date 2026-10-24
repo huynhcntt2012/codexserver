@@ -6,6 +6,8 @@ extends Node
 signal snapshot_received(snapshot: Dictionary)
 signal status_changed(message: String)
 signal account_changed
+signal rooms_opened
+signal rooms_received(rooms: Array)
 
 var session_id := ""
 var room_id := ""
@@ -77,7 +79,7 @@ func logout() -> void:
 	account_changed.emit()
 
 
-func join_game(api_url: String, arena_url: String, username := "", password := "", register := false) -> void:
+func join_game(api_url: String, arena_url: String, username := "", password := "", register := false, browse_only := false) -> void:
 	if busy or connected:
 		return
 	username = username.strip_edges()
@@ -101,17 +103,71 @@ func join_game(api_url: String, arena_url: String, username := "", password := "
 			status_changed.emit(("Đăng ký thất bại: " if register else "Sign-in failed: ") + reason)
 			return
 		token = auth.access_token
+		_token_deadline = Time.get_ticks_msec() + maxi(0, int(auth.get("expires_in", 0)) - 10) * 1000
 		if not username.is_empty():
 			_access_token = token
 			account_name = username
 			_account_api = api_url.strip_edges().trim_suffix("/")
 			_token_deadline = Time.get_ticks_msec() + maxi(0, int(auth.get("expires_in", 0)) - 10) * 1000
 			account_changed.emit()
-	status_changed.emit("Finding an arena...")
+	if browse_only:
+		_access_token = token
+		_account_api = api_url.strip_edges().trim_suffix("/")
+		busy = false
+		rooms_opened.emit()
+		await list_rooms(arena_url)
+		return
+	await _reserve(arena_url, token, "joinOrCreate/arena")
+
+
+func list_rooms(arena_url: String) -> void:
+	if busy or connected:
+		return
+	if _access_token.is_empty() or Time.get_ticks_msec() >= _token_deadline:
+		logout()
+		status_changed.emit("Phiên đã hết hạn. Hãy đăng nhập lại.")
+		return
+	busy = true
+	var error := _http.request(arena_url.strip_edges().trim_suffix("/") + "/rooms", ["Authorization: Bearer " + _access_token])
+	if error != OK:
+		busy = false
+		rooms_received.emit([])
+		status_changed.emit("Không tải được phòng. Kiểm tra URL và thử Làm mới.")
+		return
+	var response: Array = await _http.request_completed
+	busy = false
+	if response[0] != HTTPRequest.RESULT_SUCCESS or response[1] != 200:
+		rooms_received.emit([])
+		if response[1] == 401:
+			logout()
+		status_changed.emit("Không tải được phòng (HTTP %s). Thử Làm mới hoặc đăng nhập lại." % response[1])
+		return
+	var data: Variant = JSON.parse_string(response[3].get_string_from_utf8())
+	if not data is Dictionary or not data.get("rooms") is Array:
+		rooms_received.emit([])
+		status_changed.emit("Danh sách phòng không hợp lệ.")
+		return
+	rooms_received.emit(data.rooms)
+	status_changed.emit("Chọn phòng hoặc tạo phòng mới.")
+
+
+func join_selected(arena_url: String, selected_room := "", create := false) -> void:
+	if busy or connected:
+		return
+	if _access_token.is_empty() or Time.get_ticks_msec() >= _token_deadline:
+		logout()
+		status_changed.emit("Phiên đã hết hạn. Hãy đăng nhập lại.")
+		return
+	if not create and selected_room.is_empty():
+		return
+	busy = true
+	await _reserve(arena_url, _access_token, "create/arena" if create else "joinById/" + selected_room.uri_encode())
+
+
+func _reserve(arena_url: String, token: String, route: String) -> void:
+	status_changed.emit("Đang vào phòng…")
 	var endpoint := arena_url.strip_edges().trim_suffix("/")
-	var seat := await _post(
-		endpoint + "/matchmake/joinOrCreate/arena", {"token": token}
-	)
+	var seat := await _post(endpoint + "/matchmake/" + route, {"token": token})
 	if not seat.has("roomId") or not seat.has("sessionId") or not seat.has("processId"):
 		busy = false
 		var reason := _request_error if not _request_error.is_empty() else "Invalid room response. Check Arena URL."
