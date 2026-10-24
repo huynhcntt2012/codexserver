@@ -92,6 +92,7 @@ var match_chat: Control
 var voice_panel: Control
 var alive_seen: Dictionary = {}
 var voice_on := false
+var room_voice: Control
 var item_ui: RefCounted
 var selected_slot := 0
 var seen_effects: Dictionary = {}  # "<by>:<at>:<kind>" -> true
@@ -194,6 +195,10 @@ func build_room(root: VBoxContainer) -> void:
 	invite_button.name = "InviteFriends"
 	invite_button.tooltip_text = "Mời bạn bè vào phòng này"
 	actions.add_child(invite_button)
+	# Voice already runs while seated; the card gives the mic and speaker controls.
+	room_voice = preload("res://scripts/ui/pc/voice_strip.gd").new(self, open_voice_settings, true)
+	room_voice.name = "RoomVoice"
+	right.add_child(room_voice)
 	build_chat(right)
 
 func seat_card(index: int) -> PanelContainer:
@@ -211,7 +216,15 @@ func seat_card(index: int) -> PanelContainer:
 	who.clip_text = true
 	who.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var state := pill("", MUTED, Color.WHITE, 13, stack)
-	seats.append({"holder": holder, "face": face, "name": who, "state": state, "index": index})
+	# Lit while this seat's player is talking on voice.
+	# On the portrait's top-right corner, so it never shifts the card's layout.
+	var mic := Glyph.new("mic", MINT.darkened(0.15), 30)
+	mic.name = "Speaking"
+	mic.position = Vector2(80, -6)
+	mic.size = Vector2(30, 30)
+	mic.modulate.a = 0.0
+	face.add_child(mic)
+	seats.append({"holder": holder, "face": face, "name": who, "state": state, "index": index, "mic": mic, "id": ""})
 	return holder
 
 func build_chat(parent: Control) -> void:
@@ -361,6 +374,7 @@ func render_room(snap: Dictionary) -> void:
 		if i < players.size():
 			var p: Dictionary = players[i]
 			var mine := str(p.id) == OnlineArena.session_id
+			seat.id = str(p.id)
 			seat.face.texture = HeroPortrait.texture(hero_of(p))
 			seat.name.text = str(p.name) + (" (Bạn)" if mine else "")
 			seat.name.add_theme_color_override("font_color", INK)
@@ -370,6 +384,7 @@ func render_room(snap: Dictionary) -> void:
 			seat.state.get_parent().show()
 			frame.border_color = SUN if mine else Color("cfe6fb")
 		else:
+			seat.id = ""
 			seat.face.texture = null
 			seat.name.text = "Ghế trống"
 			seat.name.add_theme_color_override("font_color", MUTED)
@@ -1440,6 +1455,13 @@ func _process(delta: float) -> void:
 			VoiceChat.start()
 		else:
 			VoiceChat.stop()
+	if room_view.visible:
+		for seat in seats:
+			var id := str(seat.id)
+			var talking: bool = id != "" and (VoiceChat.is_speaking(id) or (id == OnlineArena.session_id and VoiceChat.talking))
+			(seat.mic as Control).modulate.a = 1.0 if talking else 0.0
+			if talking:
+				(seat.holder.get_theme_stylebox("panel") as StyleBoxFlat).border_color = MINT
 	if room_view.visible or battle_view.visible:
 		chat_clock -= delta
 		if chat_clock <= 0.0:

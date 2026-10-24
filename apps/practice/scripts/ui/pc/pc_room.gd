@@ -94,6 +94,11 @@ func _ready() -> void:
 	map_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	map_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	switch.add_child(round_icon("right", func(): pick_map(1), "sun", 44))
+	# Bots cannot hear: voice starts once friends join the online room (+ Mời).
+	var voice = preload("res://scripts/ui/pc/voice_strip.gd").new(self, open_voice_settings, false)
+	voice.name = "RoomVoice"
+	voice.offline_note = "Voice: mời bạn bè để nói chuyện"
+	side.add_child(voice)
 	build_chat(side)
 	ready_label = text("", 15, INK, side)
 	ready_label.name = "ReadyStatus"
@@ -341,6 +346,11 @@ func open_online(map_id: String) -> void:
 		game.show_pc_screen("online")
 	else:
 		notice("PHÒNG LUYỆN TẬP", OnlineArena.last_error)
+
+func open_voice_settings() -> void:
+	open_settings()
+	settings_page.audio_tab = "voice"
+	settings_page.show_section("audio")
 
 func pick_map(step: int) -> void:
 	game._select_level(posmod(game.selected_level + step, maps.size()))

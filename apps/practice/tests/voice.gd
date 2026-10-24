@@ -143,5 +143,33 @@ func run() -> void:
 	await capture("pc-settings-voice.png")
 	page.audio_tab = "general"
 	game.result.get_node("PcResult").close_settings()
+
+	# Waiting rooms: a voice strip; online seats light up for whoever talks.
+	var practice_room = game.pc_screens["room"]
+	check(practice_room.find_child("RoomVoice", true, false) != null, "Practice room has a voice strip")
+	var arena = root.get_node("OnlineArena")
+	var online = game.pc_screens["online"]
+	game.show_pc_screen("online")
+	arena.session_id = "me1"
+	var snap := {"version": 2, "phase": "waiting", "map": "park", "number": 7, "roomKey": "arena:test:room",
+		"grid": [], "bombs": [], "flames": [], "items": [],
+		"players": [{"id": "me1", "name": "huynh", "hero": "mimi", "slot": 0, "ready": false, "alive": true, "x": 1, "y": 1},
+			{"id": "bo", "name": "Bo", "hero": "bombo", "slot": 1, "ready": true, "alive": true, "x": 13, "y": 9}]}
+	arena.snapshot = snap
+	online._on_snapshot(snap)
+	voice.start()
+	await frames(2)
+	arena.voice_received.emit("bo", 1, frame)
+	await frames(1)
+	var strip: Control = online.find_child("RoomVoice", true, false)
+	check(strip != null and strip.status.text.contains("giữ V"), "Online room voice strip: " + (strip.status.text if strip else "missing"))
+	check(online.seats[1].mic.modulate.a > 0.5 and online.seats[0].mic.modulate.a < 0.5, "The talking player's seat lights up")
+	# Keep "Bo" talking while the screenshot is taken.
+	var talk := func(): arena.voice_received.emit("bo", 1, frame)
+	process_frame.connect(talk)
+	await capture("pc-room-voice.png")
+	process_frame.disconnect(talk)
+	voice.stop()
+	arena.snapshot = {}
 	print("VOICE_OK checks=%d" % checks if not failed else "VOICE_FAILED")
 	quit(1 if failed else 0)

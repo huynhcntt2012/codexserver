@@ -26,6 +26,9 @@ phát), [match_chat.gd](../apps/practice/scripts/ui/pc/match_chat.gd),
   cả đội, đấu tự do không ai nhận.
 - **Nhấn để nói** (mặc định, phím `V`): micro chỉ mở khi giữ phím. **Mic mở**: micro chạy
   suốt trận, chỉ gửi khi giọng vượt độ nhạy. Lọc tiếng ồn bỏ âm thanh nhỏ.
+- **Phòng chờ**: thanh voice dưới nút SẴN SÀNG (tắt/bật mic, tắt loa, cài đặt, "giữ V để nói");
+  ghế của người đang nói có micro xanh và viền xanh. Voice chạy ngay khi vào phòng online.
+  Phòng luyện tập chỉ có bot thì nhắc mời bạn bè (+ Mời).
 - Bảng **Voice**: người trong kênh (đang nói / đang nghe), **Tắt voice** từng người (chỉ
   trong trận), tắt mic, tắt loa, thanh mức micro. Offline chỉ báo voice dùng khi online.
 - Cài đặt › Âm thanh › **Cài đặt giọng nói**: bật/tắt, kênh, chế độ, phím nói (không trùng
